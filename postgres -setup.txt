@@ -1,0 +1,17 @@
+(Bellvirtenv) wyleu@sandbells:~/Bell $ sudo -u postgres psql
+psql (13.14 (Raspbian 13.14-0+deb11u1))
+Type "help" for help.
+
+postgres=# CREATE DATABASE Bells;
+CREATE DATABASE
+postgres=# CREATE USER bells WITH PASSWORD 'Boris';
+CREATE ROLE
+postgres=# ALTER ROLE bells SET client_encoding to 'utf8';
+ALTER ROLE
+postgres=# ALTER ROLE bells SET default_transaction_isolation TO 'read committed';;
+ALTER ROLE
+postgres=# ALTER ROLE bells SET timezone to 'utc';
+ALTER ROLE
+postgres=# GRANT ALL PRIVILEGES ON DATABASE Bells to bells;
+GRANT
+postgres=# 

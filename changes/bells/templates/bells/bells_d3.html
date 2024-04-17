@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head> 
+        <meta charset="UTF-8">
+        <title>{{tower.name}}</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+    </head>
+    <body>
+        <style>
+            .myclass{
+                color:'red'
+            }
+        </style>
+        <span class="tower">Tower {{tower.name}} </span>
+        <p>First Bell</p>
+        <p>Second Bell</p>
+        <p class="myclass">THird Bell</p>
+        <p>Fourth Bell</p>
+        <p class="myclass">Fifth Bell</p>
+
+         <svg width="500" height="500">
+            {% comment %} <rect
+                x="0" 
+                y="0" 
+                width="300" 
+                height="200" 
+                style="fill:rgb(200,100,0);stroke-width:8;stroke:rgb(0,0,0)"
+                rx="20"
+                ry="20" />
+            <circle 
+                cx="50" 
+                cy="50" 
+                r="40" 
+                stroke="green" 
+                stroke-width="4" 
+                fill="yellow" /> {% endcomment %}
+        </svg>         
+
+        <script>
+ 
+            var nodes =  [ 
+            { id: "mammal", group: 0, label: "Mammals", level: 1 },
+            { id: "dog"   , group: 0, label: "Dogs"   , level: 2 },
+            { id: "cat"   , group: 0, label: "Cats"   , level: 2 },
+            { id: "fox"   , group: 0, label: "Foxes"  , level: 2 }, 
+            { id: "elk"   , group: 0, label: "Elk"    , level: 2 },
+            { id: "insect", group: 1, label: "Insects", level: 1 },
+            { id: "ant"   , group: 1, label: "Ants"   , level: 2 },
+            { id: "bee"   , group: 1, label: "Bees"   , level: 2 },  
+            { id: "fish"  , group: 2, label: "Fish"   , level: 1 },
+            { id: "carp"  , group: 2, label: "Carp"   , level: 2 },
+            { id: "pike"  , group: 2, label: "Pikes"  , level: 2 } 
+      ]
+            var links = [
+            { target: "mammal", source: "dog" , strength: 0.7 },
+            { target: "mammal", source: "cat" , strength: 0.7 },
+            { target: "mammal", source: "fox" , strength: 0.7 },
+            { target: "mammal", source: "elk" , strength: 0.7 },
+            { target: "insect", source: "ant" , strength: 0.7 },
+            { target: "insect", source: "bee" , strength: 0.7 },
+            { target: "fish"  , source: "carp", strength: 0.7 },
+            { target: "fish"  , source: "pike", strength: 0.7 },
+            { target: "cat"   , source: "elk" , strength: 0.1 },
+            { target: "carp"  , source: "ant" , strength: 0.1 },
+            { target: "elk"   , source: "bee" , strength: 0.1 },
+            { target: "dog"   , source: "cat" , strength: 0.1 },
+            { target: "fox"   , source: "ant" , strength: 0.1 },
+            { target: "pike"  , source: "dog" , strength: 0.1 }
+          ]
+
+          {% comment %} {
+            0: "mammal",
+            1: "insect",
+            2: "fish"
+          } {% endcomment %}
+
+
+            const width = window.innerWidth
+            const height = window.innerHeight
+            const svg = d3.select('svg')
+            .attr('width', width)
+            .attr('height', height)
+
+            var nodes = [{}, {}, {}, {}, {}, {}, {}]
+            
+            var simulation = d3.forceSimulation(nodes)
+              .force('charge', d3.forceManyBody())
+              .force('center', d3.forceCenter(width / 2, height / 2))
+              .on('tick', ticked);
+
+              function ticked() {
+                var u = d3.select('svg')
+                  .selectAll('circle')
+                  .data(nodes)
+                  .join('circle')
+                  .attr('r', 5)
+                  .attr('cx', function(d) {
+                    return d.x
+                  })
+                  .attr('cy', function(d) {
+                    return d.y
+                  });
+              }
+
+
+ 
+        </script>
+    </body>
+</html>

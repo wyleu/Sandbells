@@ -1,0 +1,21 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('draw/', views.some_draw, name='draw'),
+    path('clock/analogue/', views.clock_analogue, name = 'analogue_clock'),
+    path('clock/', views.clock, name = 'clock'),
+    path('d3_clock/', views.some_d3, name='D3_clock'),
+    path('portrait/<int:number>/<str:to_name>/', views.portrait_view, name='portrait_view'),
+    path('portrait/<int:number>/<str:to_name>/<str:from_name>/', views.portrait_view, name='tofrom_portrait_view'),
+    path('pattern/<int:number>/', views.pattern_list, name = 'patterns_list'),
+    path('<int:tower_id>/d3/',views.some_d3_base ,name= 'tower_D3'),
+    path('<int:tower_id>/json/',views.tower_detail_json ,name= 'tower_json'),
+    path('<int:tower_id>/pdf/', views.some_pdf_view, name='tower_pdf'),
+    path('<int:number>/', views.index, name='number_index'),
+    path('<int:number>/<str:to_name>/', views.index, name='to_index_view'),
+    path('<int:number>/<str:to_name>/<str:from_name>/', views.index, name='tofrom_index_view'),
+    path('', views.index, name='index'),
+
+
+]

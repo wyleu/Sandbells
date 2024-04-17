@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="{% static "bells/path.js" %}"></script>
+
+  <meta charset="utf-8">
+<link rel="stylesheet" href="{% static "bells/style.css" %}">
+
+{% block title%}
+<title>Title from D3</title>
+{% endblock title%}
+</head>
+<body>
+
+{% block svg_screen%}{% endblock svg_screen%}
+{% block play_params %}{% endblock play_params%}
+{% block bell_display%}{% endblock bell_display%} 
+{% block clock_analogue%}{% endblock clock_analogue%}
+{% comment %} {% block jsapp %}{% endblock %} {% endcomment %}
+{% comment %} {% block testcode%}{% endblock %} {% endcomment %}
+{% comment %} {% block digital%}{% endblock digital%} {% endcomment %}
+{% comment %} {% block clock_digital%}{% endblock clock_digital%} {% endcomment %}
+{% block console_scum%}{% endblock console_scum%}
+
+
+
+{% comment %} <svg width="1000" height="1000" xmlns="http://www.w3.org/2000/svg">
+
+  <path d="M 10 10 H 90 V 90 H 10 L 10 10"/>
+  <path d="M 70 70 H 90 V 90 H 10 L 10 10"/>
+  <path d="M 140 50 a 210,210 0 1,0 420,0 " style="fill: rgb(0, 0, 245);"></path>
+  <path d="M 660 50 a 210,210 0 1,0 -420,0" style="fill: rgb(245, 0, 0);"></path>
+
+  <!-- Points -->
+  <circle cx="10" cy="10" r="2" fill="red"/>
+  <circle cx="90" cy="90" r="2" fill="red"/>
+  <circle cx="90" cy="10" r="2" fill="red"/>
+  <circle cx="10" cy="90" r="2" fill="red"/> {% endcomment %}
+</body>
+{% comment %} <footer>
+{%block footer%}
+{% endblock footer%}
+<address class="shadow">
+  <a href="/admin/">Sandbells</a>.
+</address>
+</footer> {% endcomment %}
+</html>

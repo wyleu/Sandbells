@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <title>{% block title%}Pattern Lists{% endblock %}</title>
+<head>
+
+
+<meta charset="utf-8">
+<link rel="stylesheet" href="{% static "bells/style.css" %}">
+
+
+{%block portrait%}
+{% endblock portrait%}
+{%block body%}
+<div class="body">
+    <table border="1" width= "100%">
+        <th class="changeheader" colspan="4">
+        </th>
+        <tr></tr>
+        {% for line in patterns %}
+            <tr class="patternname">
+                <td class="patternname">{{line.name}}</td>
+                <td class="patternname">
+                    {% for char in line.pattern %}
+                        <span class="charfrom
+                        ">{{char}}</span>
+                    {% endfor%}
+                </td>
+            </tr>
+        {% endfor %}
+        </table>
+</div>
+{% endblock body%}
+{%block footer%}
+<div class="footer">
+    <table border="1" width= "100%">
+        </tr>
+        <td><div class="branding shadow">Sandbells</div></td>
+        <tr>
+        </tr>
+    </table>
+{% comment %} <style>
+    .grad {
+        height: 400px;
+        background: linear-gradient(to bottom, #33ccff 0%, #ff99cc 100%)
+    }
+    </style>
+    <div class="grad"></div> {% endcomment %}
+{% comment %} <div class="branding shadow"><a href="/admin/">Sandbells</a></div> {% endcomment %}
+</div>
+{% endblock footer%}
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <title>{% block title%}{{from_pattern.name}} to {{to_pattern.name}} on {{from_pattern.number}}{% endblock %}</title>
+<head>
+
+
+<meta charset="utf-8">
+<link rel="stylesheet" href="{% static "bells/style.css" %}">
+
+
+{%block portrait%}
+{% endblock portrait%}
+{%block body%}
+<div class="body">
+    <table class="frontpage_layout">
+    <tr>
+        <td class="portrait_td_select shadow">
+        {% include "bells/frontpage_display.html" %}
+      </td>
+    </tr>
+    </table>
+</div>
+{% endblock body%}
+{%block footer%}
+{% comment %} <style>
+    .grad {
+        height: 400px;
+        background: linear-gradient(to bottom, #33ccff 0%, #ff99cc 100%)
+    }
+    </style>
+    <div class="grad"></div> {% endcomment %}
+{% comment %} <div class="branding shadow"><a href="/admin/">Sandbells</a></div> {% endcomment %}
+{% endblock footer%}
+</body>
+</html>

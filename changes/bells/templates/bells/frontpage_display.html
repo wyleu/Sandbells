@@ -1,0 +1,62 @@
+
+
+    <table class="frontpage_table_display">
+        <tr>
+            <th class="changeheader" colspan="5">
+                {% if  forloop.last and forward_and_back %}
+                    {{ to_pattern.name}} To 
+                    {{ from_pattern.name}} 
+                {% else %}
+                    {{ from_pattern.name}} To 
+                    {{ to_pattern.name}}
+                {% endif%}
+
+            </th>
+        </tr>
+            {% for line in res %}
+                <tr class="frontpage_tr_display">
+                    <td class="pattern_counter">{{line.index}}</td>
+                    <td class="changebody">
+                        {% for char in line.pattern %}
+                            <span class="
+                            {% if line.pattern == rounds %}     
+                                {% if char == line.swappair.0 or char == line.swappair.1  %} largechar largecharround
+                                {% else %} largechar largecharround shadow
+                                {% endif %}
+                            {% elif line.pattern in from_pattern.pattern %}
+                                {% if char == line.swappair.0 or char == line.swappair.1  %} largechar largecharfrom
+                                {% else %} largechar largecharfrom shadow
+                                {% endif %}
+                            {% elif line.pattern in to_pattern.pattern %}
+                            {% if char == line.swappair.0 or char == line.swappair.1  %} largechar largecharto
+                                {% else %} largechar largecharto shadow
+                                {% endif %}   
+                            {% else %}
+                                {% if char == line.swappair.0 or char == line.swappair.1  %} plainchar swapchar shadow
+                                {% else %} plainchar
+                                {% endif %}
+                            {% endif %}
+                            ">{{char}}</span>
+                        {% endfor %}
+                    </td>
+                        {% if "Lead" in line.first%}
+                            <td class="swap swap_small shadow">{{line.first}}</td>
+                        {%else%}
+                            <td class="swap shadow">{{line.first}}</td>
+                        {%endif%}
+                    <td class="swap shadow">{{line.second}}</td>
+                    {% if forloop.last and line.third == '' %}
+                        <td>
+                            <div class="branding shadow">Sandbells</div>
+                        </td>
+                    {% else %}
+                        {% if "Back" in line.third%}
+                            <td class="swap swap_small shadow">{{line.third}}</td>
+                        {%else%}
+                            <td class="swap shadow">{{line.third}}</td>
+                        {%endif%}
+                    {% endif %}
+                </tr>
+            {% endfor %}
+    </table>
+

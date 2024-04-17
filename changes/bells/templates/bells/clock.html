@@ -1,0 +1,514 @@
+
+{% extends "bells/d3.html" %}
+{% load static %}
+
+{% block play_params %}
+    <div id="digital-clock"></div>
+    <div class="params gradient shadow">
+        <h2>Track 1</h2>
+        <button 
+            id="play" 
+            class="button1" 
+            type="button" 
+            color="#4CAF50"
+            onclick="toggle_play()"
+            value="Button Value"
+            >PLAY &gt</button> 
+        <label for="bpm"><button id="bpm" class="bpm">120</button> BPM</label>
+        <label for="swing"><button id="swing" class="swing">0</button>% Swing</label>
+        <label for="inputdevice">Input Device: <select id="inputdevice"><option>Please choose</option><option></option></select></label>
+        <label for="device">Output Device: <select id="device" class="device"><option>Please choose</option><option></option></select></label>
+        <label for="channel">Output Channel: <select id="channel">
+            <option value="0000">1</option>
+            <option value="0001">2</option>
+            <option value="0010">3</option>
+            <option value="0011">4</option>
+            <option value="0100">5</option>
+            <option value="0101">6</option>
+            <option value="0110">7</option>
+            <option value="0111">8</option>
+            <option value="1000">9</option>
+            <option value="1001">10</option>
+            <option value="1010">11</option>
+            <option value="1011">12</option>
+            <option value="1100">13</option>
+            <option value="1101">14</option>
+            <option value="1110">15</option>
+            <option value="1111">16</option>
+        </select></label>
+    </div>
+{% endblock play_params%}
+{% block jsapp%}
+    <script>
+        var timer_worker;			        // a slot the web worker can run in
+        var timer_toggle = true;            // a toggle variable for the timer event
+        var play                            // Play status 
+
+        if (typeof (timer_worker) == "undefined") {
+            timer_worker = new Worker("{% static 'bells/timer_task.js' %}");
+            timer_worker.addEventListener('message', function (e) {
+                if (typeof (e.data.step) != "undefined") {
+                    if (timer_toggle){
+                        $( "#play" ).css( "border", "3px solid red" );
+                    }
+                    else{
+                        $( "#play" ).css( "border", "3px solid green" );
+                    }
+                timer_toggle = !timer_toggle;
+                console.log('Message Back!');       
+                }
+            });
+        };
+        timer_worker.postMessage({ 'cmd': 'bpm', 'bpm': $("#bpm").html() });
+        timer_worker.postMessage({ 'cmd': 'swing', 'swing': $("#swing").html() });
+        timer_worker.postMessage({ 'cmd': 'start' });
+        console.log("Loaded timer_task");
+
+        function toggle_play(){
+            if(typeof(play) != "undefined"){
+                console.log("Function TOGGLE PLAY");
+                play = !play;
+                timer_worker.postMessage({ 'cmd': 'bpm', 'bpm': $("#bpm").html() });
+                timer_worker.postMessage({ 'cmd': 'swing', 'swing': $("#swing").html() });
+                if(play){
+                    timer_worker.postMessage({ 'cmd': 'start' });
+                    console.log("POSTED START");
+                }
+                else{
+                    timer_worker.postMessage({ 'cmd': 'stop' });
+                    console.log("Posted STOP");
+                }
+            }
+            else{
+                play = true;
+            }
+        }
+    </script>
+{% endblock jsapp%}
+{% block testcode%}
+  <svg class="shadow">
+    <rect x="10" y="10" width="200" height="100" fill="lightgreen" />
+  </svg>
+    <canvas id="myCanvas" class="shadow" width="200" height="200" style="border:5px solid black">
+    </canvas>
+    <div class="canvasbetween shadow">
+    A squash of text...
+    </div>
+    <canvas id="myCanvas2" class="shadow" width="200" height="600" style="border:10px solid">
+    </canvas>
+
+    <script>
+        var c = document.getElementById("myCanvas2");
+        var ctx = c.getContext("2d");
+        
+        // Create gradient
+        var grd = ctx.createLinearGradient(0, 0, 200, 0);
+        grd.addColorStop(0, "red");
+        grd.addColorStop(1, "white");
+        
+        // Fill with gradient
+        ctx.fillStyle = grd;
+        ctx.fillRect(10, 10, c.height, c.width);
+    </script>
+    <section>
+        <nav>
+        <ul>
+            <li><a href="#">London</a></li>
+            <li><a href="#">Paris</a></li>
+            <li><a href="#">Tokyo</a></li>
+        </ul>
+        </nav>
+        
+        <article class="shadow">
+        <h1>London</h1>
+        <p>London is the capital city of England. It is the most populous city in the  United Kingdom, with a metropolitan area of over 13 million inhabitants.</p>
+        <p>Standing on the River Thames, London has been a major settlement for two millennia, its history going back to its founding by the Romans, who named it Londinium.</p>
+        </article>
+    </section>
+    <div class="control shadow">
+        <div class="room" id="kitchen">
+            <div class="lightbulb on">Initial  Kitchen Lightbult ON!</div>
+            <div class="switch">KITCHEN SWitch 1</div>
+            <div class="switch">KITCHEN Switch 2</div>
+            <div class="clapper">KITCHEN Clapper</div>
+        </div>
+        <div class="room" id="bedroom">
+            <div class="lightbulb on">Initial Bedroom Lightbulb on!</div>
+            <div class="switch"> BEDROOM 1 SWITCH</div>
+            <div class="switch">BEDROOM 2 SWITCH</div>
+            <div class="clapper">BEDROOM CLAPPER</div>
+            
+        </div>
+        <div id="master_switch">MASTER SWITCH</div>
+        <div id="result">Result String</div>
+    </div>
+    <script>
+        $( ".lightbulb" ).on( "light:toggle", function( event ) {
+            console.log(" Lightbulb on event....");
+            var light = $( this );
+            if ( light.is( ".on" ) ) {
+                light.trigger( "light:off" );
+            } else {
+                light.trigger( "light:on" );
+            }
+        }).on( "light:on", function( event ) {
+            $( this ).removeClass( "off" ).addClass( "on" );
+        }).on( "light:off", function( event ) {
+            $( this ).removeClass( "on" ).addClass( "off" );
+        });
+        
+        $( ".switch, .clapper" ).click(function() {
+            var room = $( this ).closest( ".room" );
+            room.find( ".lightbulb" ).trigger( "light:toggle" );
+            console.log("Switch clappr Event...");
+        });
+        
+        $( "#master_switch" ).click(function() {
+            var lightbulbs = $( ".lightbulb" );
+            console.log("Master SWITCH  Event...");
+            // Check if any lightbulbs are on
+            if ( lightbulbs.is( ".on" ) ) {
+                lightbulbs.trigger( "light:off" );
+            } else {
+                lightbulbs.trigger( "light:on" );
+            }
+        });
+
+    
+    $( ".switch, .clapper" ).click(function() {
+        console.log("switch clicker click");
+        var room = $( this ).closest( ".room" );
+        room.find( ".lightbulb" ).trigger( "light:toggle" );
+    });
+    </script>
+{% endblock testcode%}
+{% block clock_digital%}
+    <script>
+        const DIGIT_WIDTH   = 70;
+        const DIGIT_PADDING = 0.15 * DIGIT_WIDTH;
+        const BAR_HEIGHT    = 0.2 * (DIGIT_WIDTH - 2*DIGIT_PADDING);
+        const BAR_SPACE     = 0.1 * BAR_HEIGHT;
+        const BAR_WIDTH     = DIGIT_WIDTH - 2*DIGIT_PADDING - BAR_HEIGHT;
+        const DIGIT_HEIGHT  = 2*DIGIT_PADDING + 2*BAR_WIDTH + BAR_HEIGHT + 4*BAR_SPACE;
+        const DOT_WIDTH     = 2*DIGIT_PADDING + BAR_HEIGHT;
+        const DOT_SPACE     = (DIGIT_HEIGHT - 2*DIGIT_PADDING - 2*BAR_HEIGHT) / 3;
+        const COLOR_ON      = '#70fbfd';
+        const COLOR_OFF     = '#181917';
+
+        const barPath = (() => {
+        var p = path()
+        p.moveTo(0, BAR_HEIGHT / 2);
+        p.lineTo(BAR_HEIGHT / 2, 0);
+        p.lineTo(BAR_WIDTH - BAR_HEIGHT / 2, 0);
+        p.lineTo(BAR_WIDTH, BAR_HEIGHT / 2);
+        p.lineTo(BAR_WIDTH - BAR_HEIGHT / 2, BAR_HEIGHT);
+        p.lineTo(BAR_HEIGHT / 2, BAR_HEIGHT);
+        p.closePath();
+        return p.toString();
+    })();
+
+        function barData (v) {
+            return [
+            { // top
+                x   : BAR_HEIGHT/2,
+                y   : 0,
+                rot : 0,
+                on  : [0, 2, 3, 5, 6, 7, 8, 9].indexOf(v) > -1
+            },
+            { // top left
+                x   : BAR_HEIGHT - BAR_SPACE,
+                y   : BAR_HEIGHT/2 + BAR_SPACE,
+                rot : 90,
+                on  : [0, 4, 5, 6, 8, 9].indexOf(v) > -1
+            },
+            { // top right
+                x   : BAR_WIDTH + BAR_HEIGHT + BAR_SPACE,
+                y   : BAR_HEIGHT/2 + BAR_SPACE,
+                rot : 90,
+                on  : [0, 1, 2, 3, 4, 7, 8, 9].indexOf(v) > -1
+            },
+            { // middle
+                x   : BAR_HEIGHT/2,
+                y   : BAR_WIDTH + 2*BAR_SPACE,
+                rot : 0,
+                on  : [2, 3, 4, 5, 6, 8, 9].indexOf(v) > -1
+            },
+            { // bottom left
+                x   : BAR_HEIGHT - BAR_SPACE,
+                y   : BAR_WIDTH + BAR_HEIGHT/2 + 3*BAR_SPACE,
+                rot : 90,
+                on  : [0, 2, 6, 8].indexOf(v) > -1
+            },
+            { // bottom right
+                x   : BAR_WIDTH + BAR_HEIGHT + BAR_SPACE,
+                y   : BAR_WIDTH + BAR_HEIGHT/2 + 3*BAR_SPACE,
+                rot : 90,
+                on  : [0, 1, 3, 4, 5, 6, 7, 8, 9].indexOf(v) > -1
+            },
+            { // bottom
+                x   : BAR_HEIGHT/2,
+                y   : 2*BAR_WIDTH + 4*BAR_SPACE,
+                rot : 0,
+                on  : [0, 2, 3, 5, 6, 8, 9].indexOf(v) > -1
+            }
+            ];
+        }
+
+
+    const svg2 = d3.selectAll('#digital-clock').append('svg')
+    .attr('width', 6*DIGIT_WIDTH + 2*DOT_WIDTH)
+    .attr('height', DIGIT_HEIGHT)
+    .attr('border', "Solid 5px black")
+    .append('g'); 
+    
+    // Create black background.
+    svg2.append('rect')
+    .attr('width', 6*DIGIT_WIDTH + 2*DOT_WIDTH)
+    .attr('height', DIGIT_HEIGHT)
+    .attr('fill', '#666');
+
+    // Create clock.
+    const clock = svg2.append('g')
+    .attr('transform', 'translate(' + DIGIT_PADDING + ',' + DIGIT_PADDING + ')');
+
+    // Create digits.
+    const digits = clock.selectAll('.digit').data([1, 2, 3, 4, 5, 6])
+    .enter()
+    .append('g')
+        .attr('class', 'digit')
+        .attr('transform', (d, i) => 'translate(' + (i*DIGIT_WIDTH + Math.floor(i/2)*DOT_WIDTH) + ',0)');
+
+    // Create bars for each digit.
+    digits.selectAll('.bar').data(d => barData(d))
+    .enter()
+    .append('path')
+        .attr('class', 'bar')
+        .attr('d', barPath)
+        .attr('fill', d => d.on ? COLOR_ON : COLOR_OFF)
+        .attr('transform', d => 'translate(' + d.x + ',' + d.y + ') rotate(' + d.rot + ')');
+
+    // [x, y] positions for dots.
+    const dotData = [
+        [2*DIGIT_WIDTH, DOT_SPACE],
+        [2*DIGIT_WIDTH, 2*DOT_SPACE + BAR_HEIGHT],
+        [4*DIGIT_WIDTH + DOT_WIDTH, DOT_SPACE],
+        [4*DIGIT_WIDTH + DOT_WIDTH, 2*DOT_SPACE + BAR_HEIGHT]
+    ];
+    // Create dots.
+    clock.selectAll('.dot').data(dotData)
+        .enter()
+        .append('rect')
+        .attr('class', 'dot')
+        .attr('x', d => d[0])
+        .attr('y', d => d[1])
+        .attr('width', BAR_HEIGHT)
+        .attr('height', BAR_HEIGHT)
+        .attr('fill', COLOR_ON);
+
+    function update () {
+
+        const date = new Date();
+        const h = date.getHours() % 12;
+        const m = date.getMinutes();
+        const s = date.getSeconds();
+        svg2.selectAll('.digit').data([
+            h === 0 ? 1 : h > 9 ? 1 : -1,
+            h === 0 ? 2 : h > 9 ? h - 10 : h,
+            Math.floor(m / 10),
+            m % 10,
+            Math.floor(s / 10),
+            s % 10
+        ])
+        .selectAll('.bar').data(d => barData(d))
+        .attr('fill', d => d.on ? COLOR_ON : COLOR_OFF);
+    }
+
+    window.setInterval(update, 20);
+    </script>
+{% endblock clock_digital%}
+{% block bell_display %}
+    <script type="text/javascript">
+    // number of random nodes (gets crowded at >25 unless you change node diameter)
+    var num = 7;
+
+    // returns random int between 0 and num
+    function getRandomInt() {return Math.floor(Math.random() * (num));}
+
+    // nodes returns a [list] of {id: 1, fixed:true}
+    var nodes = d3.range(num).map(function(d) { return {id: d}; });
+
+    // links returns a [list] of {source: 0, target: 1} (values refer to indicies of nodes)
+    var links = d3.range(num).map(function(d) { return {source: getRandomInt(), target: getRandomInt()}; });
+
+    {% comment %} var colours = {{tower.name}};
+    console.log(colours); {% endcomment %}
+
+    var width = 500,    // 500
+        height = 500;   // 500
+
+    var force = d3.layout.force()
+        .nodes(nodes)
+        .links(links)
+        .size([width, height]);
+
+    // evenly spaces nodes along arc
+    var circleCoord = function(node, index, num_nodes){
+        var circumference = circle.node().getTotalLength();
+        var pointAtLength = function(l){return circle.node().getPointAtLength(l)};
+        var sectionLength = (circumference)/num_nodes;
+        var position = sectionLength*index; //+sectionLength/2;
+        return pointAtLength(circumference-position)
+    }
+
+    // fades out lines that aren't connected to node d
+    var is_connected = function(d, opacity) {
+        lines.transition().style("stroke-opacity", function(o) {
+            return o.source === d || o.target === d ? 1 : opacity;
+        });
+    }
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("class", "shadow");
+
+    {% comment %} 
+    Nicked form a page https://www.freshconsulting.com/insights/blog/d3-js-gradients-the-easy-way/
+    {% endcomment %}
+
+    var defs = svg.append("defs");
+
+    var gradient = defs.append("linearGradient")
+    .attr("id", "svgGradient")
+    .attr("x1", "0%")
+    .attr("x2", "100%")
+    .attr("y1", "0%")
+    .attr("y2", "100%");
+
+    gradient.append("stop")
+    .attr('class', 'start')
+    .attr("offset", "0%")
+    .attr("stop-color", "blue")
+    .attr("stop-opacity", 0.5);
+
+    gradient.append("stop")
+    .attr('class', 'end')
+    .attr("offset", "100%")
+    .attr("stop-color", "white")
+    .attr("stop-opacity", 0.5);
+
+
+
+    {% comment %} End of code  {% endcomment %}
+
+
+    // invisible circle for placing nodes
+    // it's actually two arcs so we can use the getPointAtLength() and getTotalLength() methods
+    var dim = width-80
+    var radius = dim/2
+    var finx = dim
+    var initx =   dim/2 + 40      //40
+    var inity =   40     //(dim/2+40)
+
+    {% comment %} var circle = svg.append("path")
+        .attr("d", "M 40, "+(dim/2+40)+" a "+dim/2+","+dim/2+" 0 1,0 "+dim+",0 a "+dim/2+","+dim/2+" 0 1,0 "+dim*-1+",0")
+        .style("fill", "#f5f5f5") {% endcomment %}
+
+    var circle = svg.append("path")
+        .attr("d", "M"+initx+", "+inity+" a "+radius+","+radius+" 0 1,0 0,"+finx+" a "+radius+","+radius+" 0 1,0 0,"+finx*-1)
+        .style("fill", "#f5f5f5")
+
+    var background = svg.append("path")
+            // d="M 10 10 H 90 V 90 H 10 L 10 10"
+        .attr("d", "M0 0 H "+height+"V "+ width + "H 0 L 0 0")
+        .attr("fill", "url(#svgGradient)");
+
+        {% comment %} .style("fill", "#f5c500") {% endcomment %}
+
+    var lineData = [ { "x": 1, "y": 20},  { "x": 80, "y": 80},
+        { "x": 160, "y": 40}, { "x": 240, "y": 160},
+        { "x": 320, "y": 20},  { "x": 400, "y": 240}];
+
+        var lineFunction = d3.svg.line()
+        .x(function(d) { return d.x; })
+        .y(function(d) { return d.y; })
+        .interpolate("cardinal");
+
+    {% comment %} var sillyline = svg.append("path")
+        .attr("d", lineFunction(lineData))
+        .attr("stroke", "url(#svgGradient)")
+        .attr("fill", "none"); {% endcomment %}
+    
+    force.start();
+
+    // set coordinates for container nodes
+    nodes.forEach(function(n, i) {
+        var coord = circleCoord(n, i, nodes.length)
+        n.x = coord.x
+        n.y = coord.y
+    });
+
+    // use this one for straight line links...
+    // var lines = svg.selectAll("line.node-link")
+    //   .data(links).enter().append("line")
+    //     .attr("class", "node-link")
+    //   .attr("x1", function(d) { return d.source.x; })
+    //   .attr("y1", function(d) { return d.source.y; })
+    //   .attr("x2", function(d) { return d.target.x; })
+    //   .attr("y2", function(d) { return d.target.y; });
+
+    // ...or use this one for curved line links
+    var lines = svg.selectAll("path.node-link")
+        .data(links).enter().append("path")
+        .attr("class", "node-link")
+        .attr("d", function(d) {
+            var dx = d.target.x - d.source.x,
+                dy = d.target.y - d.source.y,
+                dr = Math.sqrt(dx * dx + dy * dy);
+            return "M" + 
+                d.source.x + "," + 
+                d.source.y + "A" + 
+                dr + "," + dr + " 0 0,1 " + 
+                d.target.x + "," + 
+                d.target.y;
+        });
+
+    var gnodes = svg.selectAll('g.gnode')
+        .data(nodes).enter().append('g')
+        .attr("transform", function(d) {
+            return "translate("+d.x+","+d.y+")"
+        })
+        .classed('gnode', true);
+
+    var node = gnodes.append("circle")
+        .attr("r", 25)
+        .attr("class", "node")
+        .on("mouseenter", function(d) {
+            is_connected(d, 0.1)
+            node.transition().duration(100).attr("r", 25)
+            d3.select(this).transition().duration(100).attr("r", 30)
+        })
+        .on("mouseleave", function(d) {
+            node.transition().duration(100).attr("r", 25);
+            is_connected(d, 1);
+        });  
+
+    var labels = gnodes.append("text")
+        .attr("dy", 4)
+        .text(function(d){return d.id + 1})
+    </script>
+{% endblock bell_display %}
+{% block console_scum%}
+    <script>
+    console.log = function(message) {
+    document.getElementById('result').innerHTML = message;
+    };
+    </script>
+{% endblock console_scum %}
+
+{% comment %} {%block footer%}
+<footer>
+  <div id="result">Result String</div>
+<div class="branding"><a href="/admin/">Sandbells</a></div>
+</footer>
+{% endblock footer%} {% endcomment %}

@@ -1,0 +1,28 @@
+<table class="frontpage_table_select">
+    <tr>
+      <td>
+        {% for num in numbers%}
+          {% if num == number %}
+            <span class="frontpage_td_select_first_char shadow">{{num}}</span>
+          {% else %}
+            <a href="/{{num}}/"><span class="frontpage_td_select_other_char shadow">{{num}}</span></a>
+          {% endif %}
+        {% endfor %}
+      </td>
+    </tr>
+    <tr>
+      <td>&nbsp;</td>
+    </tr>
+    {% for item in to_patterns %}
+      <tr>
+        <td> 
+          <a href="/{{number}}/{{item.name}}/">
+            <span class="frontpage_td_select_first_char shadow">
+              {{item.name|slice:":1"}}</span><span 
+              class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}
+            </span>
+          </a>
+        </td>  
+      </tr>
+    {% endfor %}
+  </table>

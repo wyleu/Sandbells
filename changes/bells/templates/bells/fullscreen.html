@@ -1,0 +1,26 @@
+{% extends "bells/blank.html"%}
+{% load static %}
+
+{% block title%}
+{% endblock title%}
+
+{% block fullscreen %} 
+  <div class="frontpage_container">
+    {% if not rounds  %}
+      <div>  
+      {% include "bells/frontpage_analogue.html" %}
+      </div>
+    {% endif%}
+
+      
+      {% for res in result_block %}
+      <div>
+        {% include "bells/frontpage_display.html" %}
+      </div>
+      {% endfor%}
+
+      <div>
+      {% include "bells/frontpage_select.html" %}
+      </div> 
+    {% endblock fullscreen%}
+  </div>
