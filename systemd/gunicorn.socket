@@ -1,0 +1,10 @@
+[Unit]
+Description=gunicorn socket
+
+[Socket]
+ListenStream=/run/gunicorn.socket
+
+SocketUser=wyleu
+
+[Install]
+WantedBy=sockets.target
