@@ -9,7 +9,7 @@
 	var tick;
 	var tock;
 
-	var playtick = true;
+	var playtick = false;
 
 	console.log("Hello Sandbells");
 
@@ -193,7 +193,7 @@
 	function makeTick(){
 		tick = document.createElement("AUDIO");
 		if (tick.canPlayType("audio/ogg")) {
-			tick.setAttribute("src","/static/analogueClock/tick.ogg");
+			tick.setAttribute("src","/static/bells/tick.ogg");
 		}
  		//tick.setAttribute("controls", "controls");
 		document.body.appendChild(tick);
@@ -204,7 +204,7 @@
 	function makeTock(){
 		tock = document.createElement("AUDIO");
 		if (tock.canPlayType("audio/ogg")) {
-	tock.setAttribute("src","/static/analogueClock/tock.ogg");
+	tock.setAttribute("src","/static/bells/tock.ogg");
 	}
 	//tock.setAttribute("controls", "controls");
 	document.body.appendChild(tock);
