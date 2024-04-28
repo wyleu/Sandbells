@@ -232,8 +232,9 @@ text {
 }
 
 .changeheader {
-  font-size:medium;
-  
+  font-size:xx-large;
+  -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2));
 }
 .pattern_counter{
   color: red;
