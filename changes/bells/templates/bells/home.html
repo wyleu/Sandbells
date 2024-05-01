@@ -20,25 +20,31 @@
 {% endblock title%}
 </head>
 <body>
-    <!--
-    <iframe 
-        width="560" 
-        height="315" 
-        src="https://www.youtube.com/embed/oiMUFm-MWVU?si=Utbb7b5UqX-m1adx" 
-        title="YouTube video player" 
-        frameborder="0" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-        referrerpolicy="strict-origin-when-cross-origin" 
-        allowfullscreen>
-    </iframe> -->
+
+    <svg height="50px" width="500px" viewBox="-25 -25 400 400" class="clockSvg shadow">
+        <text x="1700" y="300" fill="red" stroke="black" font-size="100">Sandbells</text>
+        <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
+        <g class="units">
+            <line class="hour" x1="175" y1="175" x2="175" y2="75" stroke="#2c6d3a" stroke-width="6px"></line>
+            <line class="minute" x1="175" y1="175" x2="175" y2="56" stroke="#9a4f05" stroke-width="4px"></line>
+            <line class="second" x1="175" y1="175" x2="175" y2="43" stroke="#391d5b" stroke-width="3px"></line>
+        </g>
+        <g class="numbers"></g>
+        <g class="marks"></g>
+        <circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
+    </svg>
+    
+
+    <script type="text/javascript" src="/static/bells/pagesize.js"></script>
 
     <iframe src="http://localhost:8000/show/" 
-        height="1000px" 
-        width ="1000px" 
+        height="902px"
+        width ="1920px" 
         referrerpolicy="strict-origin-when-cross-origin" 
         onload="onLoad()" 
         onerror="onError()"
     </iframe> 
     {% block fullscreen %}{% endblock fullscreen %}
+
 </body>
 </html>
