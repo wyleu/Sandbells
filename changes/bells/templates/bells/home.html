@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+
+<!--   <script src="{% static "bells/path.js" %}"></script>
+  <script src="{% static "bells/bells.js" %}"></script> -->
+
+  <script src="{% static "bells/iframes.js" %}"></script> 
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="{% static "bells/style.css" %}">
+  <link rel="icon" type="image/x-icon" href="/static/bells/favicon.ico">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Tangerine">
+
+{% block title%}
+<title>Title from iFrame</title>
+{% endblock title%}
+</head>
+<body>
+    <!--
+    <iframe 
+        width="560" 
+        height="315" 
+        src="https://www.youtube.com/embed/oiMUFm-MWVU?si=Utbb7b5UqX-m1adx" 
+        title="YouTube video player" 
+        frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        referrerpolicy="strict-origin-when-cross-origin" 
+        allowfullscreen>
+    </iframe> -->
+
+    <iframe src="http://localhost:8000/show/" 
+        height="1000px" 
+        width ="1000px" 
+        referrerpolicy="strict-origin-when-cross-origin" 
+        onload="onLoad()" 
+        onerror="onError()"
+    </iframe> 
+    {% block fullscreen %}{% endblock fullscreen %}
+</body>
+</html>

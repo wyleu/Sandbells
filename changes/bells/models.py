@@ -15,11 +15,6 @@ class Pattern(models.Model):
     pub_date = models.DateTimeField(auto_now=True)
     history = models.TextField(blank=True)
     pattern = models.CharField(max_length=100, blank=True, unique=True)
-    # four = models.CharField(max_length=4, help_text="A Six bell representation",blank=True)
-    # five = models.CharField(max_length=5, help_text="A Six bell representation",blank=True)
-    # six = models.CharField(max_length=6, help_text="A Six bell representation",blank=True)
-    # seven = models.CharField(max_length=7, help_text="A Seven bell representation",blank=True)
-    # eight = models.CharField(max_length=8, help_text="A Eight bell representation",blank=True)
     order = models.SmallIntegerField(help_text="Ordering of patterns rounds should explicitly be 0",
                                       default=100)
     number = models.SmallIntegerField(editable=False, help_text ="Bells in Pattern (calculated)", default=0)

@@ -22,6 +22,11 @@ from bells.functions import (
     NonIntegerBellCount,
     NotFound)
 
+def home(request):
+    # Render the iframe container
+    context = {}
+    return render(request, 'bells/home.html', context)
+
 def index(request,  number = 8, to_name='', from_name="Rounds"):
 
     lines_per_page = 20
@@ -54,9 +59,12 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
                'to_patterns':to_patterns,
                'from_pattern':from_pattern,
                'number': int(number),
-               'numbers': sorted(numbers)}
+               'numbers': sorted(numbers)
+        }
     
-        return render(request, 'bells/fullscreen.html', context)
+        response = render(request, 'bells/fullscreen.html', context)
+        response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+        return response
         
     code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
     revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
@@ -102,7 +110,10 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
                'forward_and_back': forward_and_back,
                }
     
-    return render(request, 'bells/fullscreen.html', context)
+    response = render(request, 'bells/fullscreen.html', context)
+    response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    return response
+
 
 def tower_detail_json(request, tower_id=1):
     try:
@@ -280,6 +291,7 @@ def some_draw(request, bells=8):
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename='draw.pdf')
 
+# General functions
 
 def demuck_result(result):
     res_string = []
