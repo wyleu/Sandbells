@@ -20,7 +20,7 @@ li a {
   color: green;
 }
 html, body {
-  display: inline-block;   
+  /* display: inline-block; */  
   background-color: whitesmoke;
 }
 
