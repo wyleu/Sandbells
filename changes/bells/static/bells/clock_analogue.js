@@ -79,6 +79,11 @@
 			delete keyPressed[keyup];
 		//console.dir(keyPressed);
 			//console.log("A key released:-"+d3.event.key+"-"+d3.event.keyCode+"-Ctrl-"+d3.event.ctrlKey+"-Shift-"+d3.event.shiftKey);
+		})
+		.on('resize', function(){
+			const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+			const height = window.innerHeight|| document.documentElement.clientHeight|| document.body.clientHeight;
+			console.log(width, height);
 		});
 
 

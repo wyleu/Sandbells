@@ -30,6 +30,7 @@ ALLOWED_HOSTS = [
     'localhost',
     'rasppiseed.local',
     '192.168.0.40',
+    '192.168.0.93',
     '192.168.0.120',
     '127.0.0.1',
     'rasppidesk.local',

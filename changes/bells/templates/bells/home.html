@@ -19,14 +19,43 @@
 <title>Title from iFrame</title>
 {% endblock title%}
 </head>
+
 <body>
+
   <table>
     <tr><td>
-      <svg height="1000px" width="270px" viewBox="-25 450 400 400" class="clockSvg shadow">
+<!--       <p>Resize the browser window to fire the <code>resize</code> event.</p>
+      <p>Window height: <span id="height"></span></p>
+      <p>Window width: <span id="width"></span></p>
+      
+              
+              
+                  <script>
+                      const heightOutput = document.querySelector("#height");
+      const widthOutput = document.querySelector("#width");
+      
+      function reportWindowSize() {
+        heightOutput.textContent = window.innerHeight;
+        widthOutput.textContent = window.innerWidth;
+      }
+      
+      window.onresize = reportWindowSize;
+      
+                  </script> -->
+      <svg
+          id="clock"
+          height="1000px"
+          width="270px" 
+          viewBox="-25 450 400 400" 
+          class="clockSvg shadow">
 
-          <text x="180" y="1000" fill="red" stroke="black" font-size="30">Sandbells</text>
-          
-          <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
+          <g id = "posinfo" class="info">
+            <text id="posx" x="0" y="1050" fill="red" stroke="black" font-size="30">Pos:X</text>
+            <text id="posy" x="0" y="1100" fill="red" stroke="black" font-size="30">Pos:Y</text>
+            <text id="sandbells" x="120" y="1360" fill="red" stroke="black" font-size="30">Sandbells</text>
+          </g>
+
+            <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
           <g class="units">
               <line class="hour" x1="175" y1="175" x2="175" y2="75" stroke="#2c6d3a" stroke-width="6px"></line>
               <line class="minute" x1="175" y1="175" x2="175" y2="56" stroke="#9a4f05" stroke-width="4px"></line>
@@ -36,9 +65,10 @@
           <g class="marks"></g>
           <circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
       </svg>
-      
+
       <script type="text/javascript" src="{% static "bells/clock_analogue.js" %}"></script>
       <script type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>
+      
     </td><td>
       <iframe 
           src="http://sandbells.local/show/"
@@ -49,6 +79,7 @@
           onerror="onError()"
       </iframe> 
     </td></tr>
+
   </table>
     {% block fullscreen %}{% endblock fullscreen %}
 
