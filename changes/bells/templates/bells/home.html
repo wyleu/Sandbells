@@ -23,73 +23,66 @@
 <body>
 
   <table>
-    <tr><td>
-<!--       <p>Resize the browser window to fire the <code>resize</code> event.</p>
-      <p>Window height: <span id="height"></span></p>
-      <p>Window width: <span id="width"></span></p>
-      
-              
-              
-                  <script>
-                      const heightOutput = document.querySelector("#height");
-      const widthOutput = document.querySelector("#width");
-      
-      function reportWindowSize() {
-        heightOutput.textContent = window.innerHeight;
-        widthOutput.textContent = window.innerWidth;
-      }
-      
-      window.onresize = reportWindowSize;
-      
-                  </script> -->
-      <svg
-          id="clock"
-          height="1000px"
-          width="270px" 
-          viewBox="-25 450 400 400" 
-          class="clockSvg shadow">
+    <tr>
+      <td>
+        <svg
+            id="clock"
+            height="1000px"
+            width="270px" 
+            viewBox="-25 450 400 400" 
+            class="clockSvg shadow">
 
-          <g id = "posinfo" class="info">
-            <text id="posx" x="0" y="1050" fill="red" stroke="black" font-size="30">Pos:>:X</text>
-            <text id="posx_value" x="200" y="1050" fill="red" stroke="black" font-size="30">10000</text>
-            <text id="posy" x="0" y="1100" fill="red" stroke="black" font-size="30">Pos:^:Y</text>
-            <text id="posy_value" x="200" y="1100" fill="red" stroke="black" font-size="30">Pos:^:Y</text>
-            <text id="width" x="0" y="1150" fill="red" stroke="black" font-size="30">Width:>:X</text>
-            <text id="width_value" x="200" y="1150" fill="red" stroke="black" font-size="30">1000</text>
-            <text id="height" x="0" y="1200" fill="red" stroke="black" font-size="30">Height:^:Y</text>
-            <text id="height_value" x="200" y="1200" fill="red" stroke="black" font-size="30">1000</text>
-            <text id="ipaddr" x="0" y="1250" fill="red" stroke="black" font-size="30">IP Addr:</text>
-            <text id="ipaddr_value_value" x="200" y="1250" fill="red" stroke="black" font-size="30">1000</text>
+            <g id = "posinfo" class="info">
+              <text id="window_width" x="0" y="1050" fill="red" stroke="black" font-size="30">Win W</text>
+              <text id="window_width_value" x="200" y="1050" fill="red" stroke="black" font-size="30">10000</text>
+              <text id="window_height" x="0" y="1100" fill="red" stroke="black" font-size="30">Win H</text>
+              <text id="window_height_value" x="200" y="1100" fill="red" stroke="black" font-size="30">10000</text>
+              <text id="width" x="0" y="1150" fill="red" stroke="black" font-size="30">Width:>X</text>
+              <text id="width_value" x="200" y="1150" fill="red" stroke="black" font-size="30">1000</text>
+              <text id="height" x="0" y="1200" fill="red" stroke="black" font-size="30">Height:^Y</text>
+              <text id="height_value" x="200" y="1200" fill="red" stroke="black" font-size="30">1000</text>
+              <text id="ipaddr" x="0" y="1250" fill="red" stroke="black" font-size="30">IP Addr:</text>
+              <text id="ipaddr_value_value" x="200" y="1250" fill="red" stroke="black" font-size="30">1000</text>
+              <text id="lastkey" x="0" y="1300" fill="red" stroke="black" font-size="30">LastKey:</text>
+              <text id="lastkey_value" x="200" y="1300" fill="red" stroke="black" font-size="30"></text>
 
-            <text id="sandbells" x="120" y="1360" fill="red" stroke="black" font-size="30">Sandbells</text>
-          </g>
+              <text id="sandbells" x="220" y="1460" fill="red" stroke="black" font-size="30">Sandbells</text>
+            </g>
 
+              <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
+            <g class="units">
+                <line class="hour" x1="175" y1="175" x2="175" y2="75" stroke="#2c6d3a" stroke-width="6px"></line>
+                <line class="minute" x1="175" y1="175" x2="175" y2="56" stroke="#9a4f05" stroke-width="4px"></line>
+                <line class="second" x1="175" y1="175" x2="175" y2="43" stroke="#391d5b" stroke-width="3px"></line>
+            </g>
+            <g class="numbers"></g>
+            <g class="marks"></g>
+            <circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
+        </svg>
 
-
-            <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
-          <g class="units">
-              <line class="hour" x1="175" y1="175" x2="175" y2="75" stroke="#2c6d3a" stroke-width="6px"></line>
-              <line class="minute" x1="175" y1="175" x2="175" y2="56" stroke="#9a4f05" stroke-width="4px"></line>
-              <line class="second" x1="175" y1="175" x2="175" y2="43" stroke="#391d5b" stroke-width="3px"></line>
-          </g>
-          <g class="numbers"></g>
-          <g class="marks"></g>
-          <circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
-      </svg>
-
-      <script type="text/javascript" src="{% static "bells/clock_analogue.js" %}"></script>
-      <script type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>
-      
-    </td><td>
-      <iframe 
-          src="/show/"
-          height="1000px"
-          width ="1620px" 
-          referrerpolicy="strict-origin-when-cross-origin" 
-          onload="onLoad()" 
-          onerror="onError()"
-      </iframe> 
-    </td></tr>
+        <script type="text/javascript" src="{% static "bells/clock_analogue.js" %}"></script>
+        <script type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>
+        
+      </td><td>
+        <iframe 
+            src="/show/"
+            height="1000px"
+            width ="1130px" 
+            referrerpolicy="strict-origin-when-cross-origin" 
+            onload="onLoad()" 
+            onerror="onError()">
+        </iframe> 
+      </td><td>
+        <iframe 
+            src="/show/"
+            height = "1000px"
+            width="500"
+            referrerpolicy="strict-origin-when-cross-origin" 
+            onload="onLoad()" 
+            onerror="onError()">
+        </iframe>
+      </td>
+    </tr>
 
   </table>
     {% block fullscreen %}{% endblock fullscreen %}

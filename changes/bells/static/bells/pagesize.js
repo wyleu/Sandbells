@@ -9,7 +9,7 @@
 
 
 
-function reportWindowSize() {
+function processWindowSize() {
 
     var width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
     var height = window.innerHeight|| document.documentElement.clientHeight|| document.body.clientHeight;
@@ -18,8 +18,14 @@ function reportWindowSize() {
     .text(height);
     d3.select('#width_value')
     .text(width);
+    d3.select("#posinfo")
+    .attr('x', width + 200)
+    .attr('y', height + 2000);
+    d3.select('#clock')
+    .attr('height', height);
       };
 
-reportWindowSize();
-window.onresize = reportWindowSize
+
+processWindowSize();
+window.onresize = processWindowSize
 })();

@@ -26,54 +26,56 @@
 
 	d3.select("body")
 		.on("keydown", function(){
-		keyCode = d3.event.keyCode;
-		console.log("A key PRESSED:-"+d3.event.key+"-"+d3.event.keyCode+"-Ctrl-"+d3.event.ctrlKey+"-Shift-"+d3.event.shiftKey);
-			
-		keyPressed[keyCode] = true;      //Mute toggle clock noise.
+			keyCode = d3.event.keyCode;
+			console.log("A key PRESSED:-"+d3.event.key+"-"+d3.event.keyCode+"-Ctrl-"+d3.event.ctrlKey+"-Shift-"+d3.event.shiftKey);
+			d3.select('#lastkey_value')
+				.text(d3.event.keyCode);
 
-		if (keyCode == 77){    // m key
-			playtick = !playtick;
-			}
-					if (keyCode == 188){
-			if ("16" in keyPressed && "17" in keyPressed){
-						//console.log("188 & 16 SHIFT & 17 CONTROL recieved");
-						updatedecYpos();
-			}		      
-					
-			else if ("16" in keyPressed){
-						//console.log("188 & 16 SHIFT recieved");
-						updatedecXpos();
-			}
-			else if ("17" in keyPressed){
-				//console.log("188 & 17 CONTROL recieved");
-						updatedecYpos();
-			}
-			else {
-				//console.log("188 recieved");
-						updatedecScale();
-			}
+			keyPressed[keyCode] = true;      //Mute toggle clock noise.
+
+			if (keyCode == 77){    // m key
+				playtick = !playtick;
 				}
-		if (keyCode == 190){
-			if ("16" in keyPressed && "17" in keyPressed){
-						//console.log("190 & 16 SHIFT & 17 CONTROL recieved");
-						updateincYpos();
-			}		      
-					
-			else if ("16" in keyPressed){
-						//console.log("190 & 16 SHIFT recieved");
-						updateincXpos();
-			}
-			else if ("17" in keyPressed){
-				//console.log("190 & 17 CONTROL recieved");
-						updateincYpos();
-			}
-			else {
-				//console.log("190 recieved");
-						updateincScale();
-			}
-			}
-			// console.dir(keyPressed);
-		})
+						if (keyCode == 188){
+				if ("16" in keyPressed && "17" in keyPressed){
+							//console.log("188 & 16 SHIFT & 17 CONTROL recieved");
+							updatedecYpos();
+				}		      
+						
+				else if ("16" in keyPressed){
+							//console.log("188 & 16 SHIFT recieved");
+							updatedecXpos();
+				}
+				else if ("17" in keyPressed){
+					//console.log("188 & 17 CONTROL recieved");
+							updatedecYpos();
+				}
+				else {
+					//console.log("188 recieved");
+							updatedecScale();
+				}
+					}
+			if (keyCode == 190){
+				if ("16" in keyPressed && "17" in keyPressed){
+							//console.log("190 & 16 SHIFT & 17 CONTROL recieved");
+							updateincYpos();
+				}		      
+						
+				else if ("16" in keyPressed){
+							//console.log("190 & 16 SHIFT recieved");
+							updateincXpos();
+				}
+				else if ("17" in keyPressed){
+					//console.log("190 & 17 CONTROL recieved");
+							updateincYpos();
+				}
+				else {
+					//console.log("190 recieved");
+							updateincScale();
+				}
+				}
+				// console.dir(keyPressed);
+			})
 		.on('keyup', function(){
 			keyup = d3.event.keyCode;
 			delete keyPressed[keyup];
