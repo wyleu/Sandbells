@@ -27,6 +27,29 @@ def home(request):
     context = {}
     return render(request, 'bells/home.html', context)
 
+def menu(request, number = 8):
+    # Render menu 
+    numbers = set(
+        Pattern.objects.filter(
+        ).order_by('number')
+        .values_list('number', flat=True))
+
+    to_patterns = Pattern.objects.filter(
+        number=number
+        ).order_by('order','name') 
+
+    context = {
+        'number' : number,
+        'numbers' : numbers,
+        'to_patterns': to_patterns
+        }
+    
+    response=  render(request, 'bells/menu.html', context)
+    # The following allows content in iframe windows.
+    response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    return response
+
+
 def index(request,  number = 8, to_name='', from_name="Rounds"):
 
     lines_per_page = 20

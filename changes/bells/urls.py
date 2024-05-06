@@ -5,6 +5,7 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('show/',views.index, name="show"),
     path('draw/', views.some_draw, name='draw'),
+    path('menu/', views.menu, name ='menu'),
     path('clock/analogue/', views.clock_analogue, name = 'analogue_clock'),
     path('clock/', views.clock, name = 'clock'),
     path('d3_clock/', views.some_d3, name='D3_clock'),
