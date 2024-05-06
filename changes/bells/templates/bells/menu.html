@@ -4,16 +4,10 @@
 {% block title%}
 {% endblock title%}
 
-{% block fullscreen %} 
+{% block menu %} 
   <div class="frontpage_container">
-    {% comment %}{% if not rounds  %}{% endcomment %}
-<!--       <div>  
-      {% include "bells/frontpage_analogue.html" %}
-      </div> -->
-      {% comment %}{% endif%}{% endcomment %}
-
       <div>
         {% include "bells/frontpage_select.html" %}
       </div> 
   </div>
-  {% endblock fullscreen%}
+  {% endblock menu%}

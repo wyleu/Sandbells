@@ -1,0 +1,15 @@
+{% extends "bells/blank.html"%}
+{% load static %}
+
+{% block title%}
+{% endblock title%}
+
+{% block fullscreen %} 
+  <div class="frontpage_container">
+    {% for res in result_block %}
+      <div>
+        {% include "bells/frontpage_display.html" %}
+      </div>
+      {% endfor%}
+  </div>
+{% endblock fullscreen%}

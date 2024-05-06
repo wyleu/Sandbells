@@ -21,8 +21,6 @@ function processWindowSize() {
     d3.select("#posinfo")
     .attr('x', width + 200)
     .attr('y', height + 2000);
-    d3.select('#clock')
-    .attr('height', height);
       };
 
 

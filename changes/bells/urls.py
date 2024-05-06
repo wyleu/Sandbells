@@ -18,6 +18,9 @@ urlpatterns = [
     path('<int:number>/', views.index, name='number_index'),
     path('<int:number>/<str:to_name>/', views.index, name='to_index_view'),
     path('<int:number>/<str:to_name>/<str:from_name>/', views.index, name='tofrom_index_view'),
+    path('display/<int:number>/', views.display, name='display_number_index'),
+    path('display/<int:number>/<str:to_name>/', views.display, name='display_to_index_view'),
+    path('display/<int:number>/<str:to_name>/<str:from_name>/', views.display, name='display_tofrom_index_view'),
     path('', views.index, name='index'),
 
 
