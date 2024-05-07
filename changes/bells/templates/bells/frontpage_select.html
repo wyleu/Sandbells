@@ -16,12 +16,17 @@
     {% for item in to_patterns %}
       <tr>
         <td> 
-          <a href="/{{number}}/{{item.name}}/">
-            <span class="frontpage_td_select_first_char shadow">
-              {{item.name|slice:":1"}}</span><span 
-              class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}
+            <span 
+              class="frontpage_td_select_first_char shadow">
+                <h2 onclick='onPress(id, "/{{number}}/{{item.name}}/")'>
+                  {{item.name|slice:":1"}}
+                </h2>
             </span>
-          </a>
+            <span 
+              class="frontpage_td_select_other_char shadow">
+              {{item.name|slice:"1:"}}
+            </span>
+          
         </td>  
       </tr>
     {% endfor %}
