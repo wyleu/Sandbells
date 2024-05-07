@@ -1,13 +1,23 @@
 <table class="frontpage_table_select">
     <tr>
       <td>
-        {% for num in numbers%}
-          {% if num == number %}
-            <span class="frontpage_td_select_first_char shadow">{{num}}</span>
-          {% else %}
-            <a href="/{{num}}/"><span class="frontpage_td_select_other_char shadow">{{num}}</span></a>
-          {% endif %}
-        {% endfor %}
+          {% for num in numbers%}
+            {% if num == number %}
+            <button
+            onclick='onPress(id, "/display/{{num}}/")'
+            style="border:none;"
+            disabled="disabled">
+              <span class="frontpage_td_select_first_char shadow">{{num}}</span>
+            </button>
+            {% else %}
+              <button
+                onclick='onPress(id, "/display/{{num}}/")'
+                style="border:none;">
+                <span class="frontpage_td_select_other_char shadow">{{num}}</span>
+              </button>
+            {% endif %}
+          {% endfor %}
+        
       </td>
     </tr>
     <tr>
@@ -16,17 +26,11 @@
     {% for item in to_patterns %}
       <tr>
         <td> 
-            <span 
-              class="frontpage_td_select_first_char shadow">
-                <h2 onclick='onPress(id, "/{{number}}/{{item.name}}/")'>
-                  {{item.name|slice:":1"}}
-                </h2>
-            </span>
-            <span 
-              class="frontpage_td_select_other_char shadow">
-              {{item.name|slice:"1:"}}
-            </span>
-          
+          <button 
+            onclick='onPress(id, "/display/{{number}}/{{item.name}}/")'
+            style="border:none;">
+            <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
+          </button>
         </td>  
       </tr>
     {% endfor %}
