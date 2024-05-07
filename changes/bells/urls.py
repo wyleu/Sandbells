@@ -15,13 +15,13 @@ urlpatterns = [
     path('<int:tower_id>/d3/',views.some_d3_base ,name= 'tower_D3'),
     path('<int:tower_id>/json/',views.tower_detail_json ,name= 'tower_json'),
     path('<int:tower_id>/pdf/', views.some_pdf_view, name='tower_pdf'),
-    path('<int:number>/', views.index, name='number_index'),
-    path('<int:number>/<str:to_name>/', views.index, name='to_index_view'),
-    path('<int:number>/<str:to_name>/<str:from_name>/', views.index, name='tofrom_index_view'),
+    path('<int:number>/', views.display, name='number_index'),
+    path('<int:number>/<str:to_name>/', views.display, name='to_index_view'),   
+    path('<int:number>/<str:to_name>/<str:from_name>/', views.display, name='tofrom_index_view'),
     path('display/<int:number>/', views.display, name='display_number_index'),
     path('display/<int:number>/<str:to_name>/', views.display, name='display_to_index_view'),
     path('display/<int:number>/<str:to_name>/<str:from_name>/', views.display, name='display_tofrom_index_view'),
-    path('', views.index, name='index'),
+    path('', views.home, name='root_home'),
 
 
 ]
