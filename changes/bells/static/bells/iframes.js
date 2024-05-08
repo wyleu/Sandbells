@@ -8,8 +8,7 @@ function onError(){
 function onPress(id, bellstring){
 
     console.log("PRESSED!!" + bellstring);
-    d3.select("#ishow")
-       .attr('src', bellstring);
+
 }
 
 function onPressButton(id){

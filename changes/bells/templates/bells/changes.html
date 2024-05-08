@@ -1,16 +1,17 @@
+{% load static %}
 <table class="frontpage_table_select">
     <tr>
       <td>
           {% for num in numbers%}
             {% if num == number %}
-            <button
-            onclick='onPress(id, "/display/{{num}}/")'
+            <button 
+            class="changenumberbutton"
             disabled="disabled">
               <span class="frontpage_td_select_first_char shadow">{{num}}</span>
             </button>
             {% else %}
               <button
-                onclick='onPress(id, "/display/{{num}}/")'
+                class="changenumberbutton"
                 >
                 <span class="frontpage_td_select_other_char shadow">{{num}}</span>
               </button>
@@ -26,7 +27,10 @@
       <tr>
         <td> 
           <button 
-            onclick='onPress(id, "/display/{{number}}/{{item.name}}/")'
+            id="{{item.name}}"
+            number="{{number}}"
+            numbers="{{numbers}}"
+            class="changenamebutton"
             >
             <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
           </button>
@@ -34,3 +38,4 @@
       </tr>
     {% endfor %}
   </table>
+  <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>

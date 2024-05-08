@@ -5,9 +5,21 @@
 
     console.log(width, height);
 
+function establishChangePress(){
+    console.log('EstablishChangePress');
+    d3.selectAll('.changenamebutton')
+    .on("click", function(d, i ,e){
+
+        console.log(this.getAttribute('id'), d, i, e);
+        }
+    );
+};
 
 
-
+function processChangePress(bellstring){
+    d3.select("#ishow")
+    .attr('src', bellstring);
+};
 
 function processWindowSize() {
 
@@ -21,9 +33,9 @@ function processWindowSize() {
     d3.select("#posinfo")
     .attr('x', width + 200)
     .attr('y', height + 2000);
-      };
+    };
 
-
+establishChangePress();
 processWindowSize();
 window.onresize = processWindowSize
 })();
