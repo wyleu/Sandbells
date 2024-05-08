@@ -63,7 +63,7 @@ def menu(request, number = 8):
     
     response=  render(request, 'bells/menu.html', context)
     # The following allows content in iframe windows.
-    response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
 
@@ -103,7 +103,7 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
         }
     
         response = render(request, 'bells/fullscreen.html', context)
-        response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+        # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
         return response
         
     code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
@@ -151,7 +151,7 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
                }
     
     response = render(request, 'bells/fullscreen.html', context)
-    response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
 def display(request,  number = 8, to_name='', from_name="Rounds"):
@@ -190,7 +190,7 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):
         }
     
         response = render(request, 'bells/display.html', context)
-        response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+        # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
         return response
         
     code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
@@ -238,7 +238,7 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):
                }
     
     response = render(request, 'bells/display.html', context)
-    response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
 

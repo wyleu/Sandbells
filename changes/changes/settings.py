@@ -77,6 +77,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'csp.context_processors.nonce'
             ],
         },
     },
@@ -140,6 +141,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # https://django-csp.readthedocs.io/en/latest/configuration.html
 CSP_DEFAULT_SRC = ["'none'"]
+
+CSP_SCRIPT_SRC = ["'self'",
+    "http://sandbells.local"
+]
+CSP_INCLUDE_NONCE_IN = ["script-src"]
+
+CSP_STYLE_SRC = ["'self'", 'http://sandbells.local',]
+CSP_IMG_SRC=["'self'"]
+CSP_FRAME_SRC = ["'self'","http://sandbells.local",]
+CSP_MEDIA_SRC = ["'self'","http://sandbells.local",]
+CSP_FRAME_ANCESTORS = ["'self'","http://sandbells.local",]
+
+
 # When DEBUG is on we don't require HTTPS on our resources because in a local environment
 # we generally don't have access to HTTPS. However, when DEBUG is off, such as in our
 # production environment, we want all our resources to load over HTTPS
