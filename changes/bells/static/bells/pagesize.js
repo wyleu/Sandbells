@@ -5,21 +5,24 @@
 
     console.log(width, height);
 
+function processChangePress(bellstring){
+        d3.select("#ishow")
+        .attr('src', bellstring);
+    };
+
 function establishChangePress(){
     console.log('EstablishChangePress');
     d3.selectAll('.changenamebutton')
     .on("click", function(d, i ,e){
 
         console.log(this.getAttribute('id'), d, i, e);
+        processChangePress(this.getAttribute('id'))
         }
     );
 };
 
 
-function processChangePress(bellstring){
-    d3.select("#ishow")
-    .attr('src', bellstring);
-};
+
 
 function processWindowSize() {
 
