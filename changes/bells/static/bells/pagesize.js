@@ -11,25 +11,25 @@ function processChangePress(bellstring){
     };
 
 function processNumberPress(num){
-    console.log('Number Press', num);
+    //console.log('Number Press', num);
 
     d3.selectAll(".changenumberbutton")
     .filter(function(d){
-        console.log('First Number Filter ',d,this.getAttribute("num"), num);
+        //console.log('First Number Filter ',d,this.getAttribute("num"), num);
         return this.getAttribute("num") == num
     })
     .attr('disabled', "disabled");
 
     d3.selectAll(".changenumberbutton")
     .filter(function(d){
-        console.log('Second Number Filter ',d,this.getAttribute("num"), num);
+        //console.log('Second Number Filter ',d,this.getAttribute("num"), num);
         return this.getAttribute("num") != num
     })
     .attr('disabled', null);
 
     d3.selectAll('.change_displayed')
     .filter(function(d){
-         console.log('First Filter ',d,this.getAttribute("number"), num);
+         //console.log('First Filter ',d,this.getAttribute("number"), num);
          return this.getAttribute("number") == num
          }
         )
@@ -37,7 +37,7 @@ function processNumberPress(num){
 
     d3.selectAll('.change_displayed')
     .filter(function(d){
-         console.log('Second Filter ',d,this.getAttribute("number"), num);
+         // console.log('Second Filter ',d,this.getAttribute("number"), num);
          return this.getAttribute("number") != num 
          }
         )
@@ -50,7 +50,7 @@ function processNumberPress(num){
 
     d3.selectAll(".frontpage_td_select_other_char")
     .filter(function(d){
-        console.log('Light it up Filter ',d,this.getAttribute("number"), num);
+        // console.log('Light it up Filter ',d,this.getAttribute("number"), num);
         return this.getAttribute("number") == num 
         }
        )
@@ -63,13 +63,13 @@ function establishChangePress(){
     console.log('EstablishChangePress');
     d3.selectAll('.changenamebutton')
     .on("click", function(d, i ,e){
-        console.log(this.getAttribute('id'), d, i, e);
+        //console.log(this.getAttribute('id'), d, i, e);
         processChangePress(this.getAttribute('id'));
         }
     );
     d3.selectAll(".changenumberbutton")
     .on("click", function(d, i, e){
-        console.log('Number Change:-', this.getAttribute('id'), d, i, e);
+        //console.log('Number Change:-', this.getAttribute('id'), d, i, e);
         processNumberPress(this.getAttribute('number'));
         }
     );
