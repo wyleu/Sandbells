@@ -4,16 +4,24 @@
       <td>
           {% for num in numbers%}
             {% if num == number %}
-            <button 
-            class="changenumberbutton"
-            disabled="disabled">
-              <span class="frontpage_td_select_first_char shadow">{{num}}</span>
-            </button>
+              <button 
+                id = "{{ num }}_number" 
+                class="changenumberbutton"
+                number = "{{num}}"
+                disabled="disabled">
+                <span 
+                number = "{{num}}"
+                class="frontpage_td_select_first_char shadow">{{num}}</span>
+              </button>
             {% else %}
               <button
+                id = "{{ num }}_number"
                 class="changenumberbutton"
-                >
-                <span class="frontpage_td_select_other_char shadow">{{num}}</span>
+                number = "{{num}}"
+                  >
+                  <span 
+                  number = "{{num}}"
+                  class="frontpage_td_select_other_char shadow">{{num}}</span>
               </button>
             {% endif %}
           {% endfor %}
@@ -23,19 +31,25 @@
     <tr>
       <td>&nbsp;</td>
     </tr>
-    {% for item in to_patterns %}
-      <tr>
-        <td> 
-          <button 
-            id="/display/{{number}}/{{item.name}}/"
-            number="{{number}}"
-            numbers="{{numbers}}"
-            class="changenamebutton"
-            >
-            <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
-          </button>
-        </td>  
-      </tr>
+    {% for num in numbers%}
+      {% if num == number %}
+        {% for item in to_patterns %}
+            <tr class="change_displayed" 
+                number ="{{ item.number }}"
+                {% if item.number != num %} hidden {% endif %}>
+                <td > 
+                  <button 
+                    id="/display/{{item.number}}/{{item.name}}/"
+                    number="{{item.number}}"
+                    numbers="{{numbers}}"
+                    class="changenamebutton"
+                    >{{item.number}}-
+                    <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
+                  </button>
+                </td>         
+            </tr>
+        {% endfor %}
+      {% endif %}
     {% endfor %}
   </table>
   <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>

@@ -32,9 +32,11 @@ def home(request, number = 8 ):
         ).order_by('number')
         .values_list('number', flat=True))
 
+    numbers= sorted(numbers)
+
     to_patterns = Pattern.objects.filter(
-        number=number
-        ).order_by('order','name') 
+        #number=number
+        ).order_by('number', 'order','name') 
 
     context = {
         'number' : number,
@@ -52,8 +54,8 @@ def menu(request, number = 8):
         .values_list('number', flat=True))
 
     to_patterns = Pattern.objects.filter(
-        number=number
-        ).order_by('order','name') 
+        #number=number
+        ).order_by('number','order','name') 
 
     context = {
         'number' : number,

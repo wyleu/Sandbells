@@ -19,3 +19,4 @@ gunicorn ==      22.0.0
 MIDIUtil ==      1.2.1
 # psycopg2==       2.9.9
 typing-extensions==4.11.0
+py_midicsv  ==4.0.0
