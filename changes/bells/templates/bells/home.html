@@ -4,19 +4,9 @@
 <title>Title from iFrame</title>
 {% endblock title%}
   {% block display %}
-  <table>
-    <tr>
-      <td>
-        {% include "bells/svg_data.html" %}       
-      </td><td>
-        {% include "bells/iframe.html" %}
-      </td><td>
-        {% include "bells/changes.html" %}
-      </td>
-    </tr>
 
-  </table>
+    {% include "bells/iframe.html" %}
+    {% include "bells/svg_data.html" %}       
+    {% include "bells/changes.html" %}
+
   {% endblock display %}
-    
-</body>
-</html>

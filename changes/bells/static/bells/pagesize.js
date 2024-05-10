@@ -87,11 +87,35 @@ function processWindowSize() {
     .text(height);
     d3.select('#width_value')
     .text(width);
+
     d3.select("#posinfo")
     .attr('x', width + 200)
-    .attr('y', height + 2000);
-    };
+    .attr('y', height + 200);
 
+    fred = d3.select('#ishow')
+    .attr('height', height)
+    .attr('width', width-500);
+
+    let window_height_value = fred.attr("height");
+    let window_width_value = fred.attr("width");
+
+    d3.select('#window_height_value')
+    .text(window_height_value);
+    d3.select('#window_width_value')
+    .text(window_width_value);
+
+/*     var iframe = document.getElementById('ishow');
+    var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+    table_height_value = innerDoc.getAttribute('innerHeight');
+    table_width_value = innerDoc.getAttribute('innerWidth');
+
+    d3.select('#table_height_value')
+    .text(table_height_value);
+    d3.select('#table_width_value')
+    .text(table_height_value); */
+
+    };
 establishChangePress();
 processWindowSize();
 window.onresize = processWindowSize

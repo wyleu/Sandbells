@@ -2,6 +2,8 @@ from django.shortcuts import render
 
 import io
 import datetime
+import socket
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
@@ -26,6 +28,7 @@ def home(request, number = 8 ):
     # Render the iframe container
     context = {}
 
+
         # Render menu 
     numbers = set(
         Pattern.objects.filter(
@@ -37,8 +40,12 @@ def home(request, number = 8 ):
     to_patterns = Pattern.objects.filter(
         #number=number
         ).order_by('number', 'order','name') 
+    
+    hostname = socket.gethostname()
 
     context = {
+        'hostname': hostname,
+        'IPAddr': socket.gethostbyname(hostname),
         'number' : number,
         'numbers' : numbers,
         'to_patterns': to_patterns

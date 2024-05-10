@@ -31,6 +31,10 @@ footer{
   border-width: 1px;
   border-color: darkgoldenrod;
 }
+
+iframe {
+  border: 1em solid red;
+}
 svg {
 	/* width: 500px;
 	height: 500px; */
