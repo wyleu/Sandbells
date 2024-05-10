@@ -3,10 +3,9 @@
 {% block title%}
 <title>Title from iFrame</title>
 {% endblock title%}
+
   {% block display %}
-
+    {% include "bells/svg_data.html" %} 
     {% include "bells/iframe.html" %}
-    {% include "bells/svg_data.html" %}       
     {% include "bells/changes.html" %}
-
   {% endblock display %}

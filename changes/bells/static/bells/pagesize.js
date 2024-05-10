@@ -94,15 +94,29 @@ function processWindowSize() {
 
     fred = d3.select('#ishow')
     .attr('height', height)
-    .attr('width', width-500);
+    .attr('width', width-565);
 
-    let window_height_value = fred.attr("height");
-    let window_width_value = fred.attr("width");
+    try{
+        window_height_value = fred.attr("height");
+        window_width_value = fred.attr("width");
+    }
+    catch(err){
+   /*         document.getElementById("window_size").innerHTML = err.message;   */
+            console.log("BANG! " + err.message);
+            window_height_value = 'FRED';
+            window_height_value = 'GEORGE';
 
+    }
+
+    try{
     d3.select('#window_height_value')
     .text(window_height_value);
     d3.select('#window_width_value')
     .text(window_width_value);
+    }
+    catch(err){
+        console.log("BANG! " + err.message);
+    }
 
 /*     var iframe = document.getElementById('ishow');
     var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
