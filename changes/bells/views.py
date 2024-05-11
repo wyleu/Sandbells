@@ -42,7 +42,7 @@ def home(request, number = 8 ):
         ).order_by('number', 'order','name') 
     
     hostname = socket.gethostname()
-
+    # hostname -I  for ip address
     context = {
         'hostname': hostname,
         'IPAddr': socket.gethostbyname(hostname),
