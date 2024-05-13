@@ -34,7 +34,7 @@ footer{
 
 iframe {
   border: .1em solid red;
-  height:   "1080px";     /* Magic numbers */      
+  height:   "1000px";     /* 1080px Magic numbers */      
   width :   "1100px";
   border-color:brown;
   border-width:"15px";
@@ -93,7 +93,7 @@ svg {
   color: red;
   text-align: left;
   text-decoration:none;
-  font-size: 2.9vh;
+  font-size: 3.1vh;
 }
 .frontpage_td_select_other_char{
   /* align-items: left; */
@@ -101,8 +101,7 @@ svg {
   color: black;
   text-align: left;
   text-decoration:none;
-  font-size: 30px;
-  font-size: 2.7vh;
+  font-size: 2.9vh;
   -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
   filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2));
 }
@@ -121,6 +120,41 @@ svg {
   cursor: pointer;
 }
 
+.changebutton{
+  font-size: large;
+  margin: 4px;
+  color: rgb(221, 11, 74);
+}
+
+.changebutton hover{
+  font-size: large;
+  margin: 4px;
+  color: rgb(68, 44, 172);
+}
+
+.changenumberbutton{
+  font-size: large;
+  margin: 4px;
+  color: rgb(78, 207, 38);
+}
+
+.changenumberbutton hover{
+  font-size: large;
+  margin: 4px;
+  color: rgb(216, 162, 13);
+}
+
+.changenamebutton{
+  font-size: large;
+  margin: 1px;
+  color: aquamarine;
+}
+.changenamebutton hover {
+  font-size: large;
+  margin: 1px;
+  color: rgb(209, 38, 172);
+}
+
 .button1 {
   background-color: white;
   color: black;
@@ -129,17 +163,6 @@ svg {
 
 .button1:hover {
   background-color: #4CAF50;
-  color: white;
-}
-
-.button2 {
-  background-color: white;
-  color: black;
-  border: 2px solid #008CBA;
-}
-
-.button2:hover {
-  background-color: #008CBA;
   color: white;
 }
 
@@ -236,6 +259,11 @@ text {
 
 .frontpage_tr_display{
     pointer-events: none;
+}
+
+.change_td_displayed{
+  margin-top: 0px;
+  border: #4CAF50 20px;
 }
 
 .changeheader {
