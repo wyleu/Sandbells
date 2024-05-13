@@ -43,21 +43,7 @@ function processNumberPress(num){
         )
     .attr("hidden", 'hidden');
 
-
-    d3.selectAll(".frontpage_td_select_first_char")
-    .attr("class", "frontpage_td_select_other_char shadow");
-
-
-    d3.selectAll(".frontpage_td_select_other_char")
-    .filter(function(d){
-        // console.log('Light it up Filter ',d,this.getAttribute("number"), num);
-        return this.getAttribute("number") == num 
-        }
-       )
-    .attr("class", "frontpage_td_select_first_char shadow");
 };
-
-
 
 function establishChangePress(){
     console.log('EstablishChangePress');
@@ -74,8 +60,6 @@ function establishChangePress(){
         }
     );
 };
-
-
 
 
 function processWindowSize() {

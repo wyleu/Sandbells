@@ -153,3 +153,13 @@ class Bell(models.Model):
 
     def __str__(self):
         return ' '.join([self.bell, str(self.tower)])
+    
+
+class Function(models.Model):
+    name = models.CharField(max_length=60, help_text="function Name", unique=True)
+    order = models.PositiveSmallIntegerField(unique=True)
+    active = models.BooleanField(default=True)
+    function = models.CharField(max_length=255)
+
+    def __str__(self):
+        return ' '.join(self.name, str(self.order)) 

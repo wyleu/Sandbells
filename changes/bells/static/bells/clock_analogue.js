@@ -225,4 +225,20 @@
 		.attr("transform", function(d) { return "translate("+degree+"  160)"  });
 	}
 
+	function makeParamenters(){
+		var data = [{"x": 1000.0, "y": 1000.1}, {"x": 2000.0, "y": 2500}, {"x": 3000, "y": 500}];
+	
+		var circle = d3.select(".clockSvg")
+		.data(data);
+	
+		circle.exit().remove();
+	
+		circle.enter().append("circle")
+			.attr("r", 250)
+			.attr("cx", function(d) { return d.x; })
+			.attr("cy", function(d) { return d.y; });
+	};
+	
+	makeParamenters();
+
 })();

@@ -33,7 +33,7 @@ footer{
 }
 
 iframe {
-  border: .1em solid red;
+  border: .3em solid red;
   height:   "1000px";     /* 1080px Magic numbers */      
   width :   "1100px";
   border-color:brown;
@@ -81,9 +81,11 @@ svg {
 }
 
 .frontpage_table_select{
+  display: block;
   border-style: solid;
   border-width: 1px;
   white-space: nowrap;
+  vertical-align:top;
 }
 
 .frontpage_td_select_first_char{
