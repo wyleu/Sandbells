@@ -3,6 +3,7 @@ from django.shortcuts import render
 import io
 import datetime
 import socket
+import subprocess
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
@@ -41,11 +42,17 @@ def home(request, number = 8 ):
         #number=number
         ).order_by('number', 'order','name') 
     
-    hostname = socket.gethostname()
+    hostname = socket.gethostname().replace('"','')
     # hostname -I  for ip address
+##
+    p = subprocess.Popen(["hostname", "-I"], stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    
+
+
     context = {
         'hostname': hostname,
-        'IPAddr': socket.gethostbyname(hostname),
+        'IPAddr': [x.decode("utf-8").replace("'",'') for x in out.split()][0],
         'number' : number,
         'numbers' : numbers,
         'to_patterns': to_patterns
