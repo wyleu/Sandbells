@@ -47,7 +47,7 @@ def home(request, number = 8 ):
 ##
     p = subprocess.Popen(["hostname", "-I"], stdout=subprocess.PIPE)
     out, err = p.communicate()
-    
+    print([x.decode("utf-8").replace("'",'') for x in out.split()][0])
 
 
     context = {

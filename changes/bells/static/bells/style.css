@@ -34,16 +34,15 @@ footer{
 
 iframe {
   border: .3em solid red;
-  height:   "1000px";     /* 1080px Magic numbers */      
+  height:   "900px";     /* 1080px Magic numbers */      
   width :   "1100px";
   border-color:brown;
   border-width:"15px";
 }
 svg {
-	/* width: 500px;
-	height: 500px; */
-	border-style: solid;
-  border-width: 1px;
+	border-style: solid;     /* parameters set in svg_data.html*/
+  border-color:greenyellow;
+  border-width:"15px";
   box-sizing: border-box;
 }
 .shadow {
@@ -83,7 +82,8 @@ svg {
 .frontpage_table_select{
   display: block;
   border-style: solid;
-  border-width: 1px;
+  border-color:blue;
+  border-width:"15px";
   white-space: nowrap;
 }
 
@@ -94,7 +94,7 @@ svg {
   color: red;
   text-align: left;
   text-decoration:none;
-  font-size: 3.1vh;
+  font-size: 3.08vh;
 }
 .frontpage_td_select_other_char{
   /* align-items: left; */
@@ -102,7 +102,7 @@ svg {
   color: black;
   text-align: left;
   text-decoration:none;
-  font-size: 2.9vh;
+  font-size: 2.88vh;
   -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
   filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2));
 }
