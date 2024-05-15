@@ -76,94 +76,7 @@ def menu(request, number = 8):
     return response
 
 
-def index(request,  number = 8, to_name='', from_name="Rounds"):
-
-    lines_per_page = 20
-
-    from_patterns = Pattern.objects.filter(
-        number=number
-    ).order_by('order')  
-    to_patterns = Pattern.objects.filter(
-        number=number
-    ).order_by('order','name') 
-
-    numbers = set(Pattern.objects.filter().order_by('number').values_list('number', flat=True))
-
-    try:
-        from_pattern = Pattern.objects.get(
-            name__iexact = from_name,
-            number = number
-        )
-    except  Pattern.DoesNotExist:
-        raise NotFound("No From Pattern Found")
-    
-    try:
-        to_pattern = Pattern.objects.get(
-            name__iexact = to_name,
-            number = number
-        )
-    except  Pattern.DoesNotExist:
-        context = {
-               'from_patterns':from_patterns,
-               'to_patterns':to_patterns,
-               'from_pattern':from_pattern,
-               'number': int(number),
-               'numbers': sorted(numbers)
-        }
-    
-        response = render(request, 'bells/fullscreen.html', context)
-        # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
-        return response
-        
-    code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
-    revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
-
-    result = demuck_result_list(result)
-    revresult = demuck_result_list(revresult) 
-
-    if len(result) < lines_per_page:
-        forward_and_back = True
-    else:
-        forward_and_back = False
-        lines_per_page = int(1 + len(result) / 2 )
-
-    paginator1 = Paginator(result, lines_per_page)
-    page1 = paginator1.get_page(1).object_list
-
-    if forward_and_back:
-        # Two Forward & Back
-        paginator2 = Paginator(revresult, lines_per_page)
-        page2 = paginator2.get_page(1).object_list 
-    else:
-        paginator2 = Paginator(result, lines_per_page)
-        page2 = paginator2.get_page(2).object_list
-    
-    forwresult = demuck_result(page1)
-    revresult = demuck_result(page2)
-
-    rounds = ''.join([ str(no+1) for no in range(number)])
-
-    context = {'from_patterns':from_patterns,
-               'to_patterns':to_patterns,
-               'from_pattern':from_pattern,
-               'to_pattern':to_pattern,
-               "result": forwresult,
-               "revresult": revresult,
-               "result_block" : [forwresult, revresult],
-               'number': int(number),
-               'numbers': sorted(numbers),
-               'count': len(to_patterns),
-               'page1': page1,
-               'page2': page2,
-               'rounds': rounds,
-               'forward_and_back': forward_and_back,
-               }
-    
-    response = render(request, 'bells/fullscreen.html', context)
-    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
-    return response
-
-def display(request,  number = 8, to_name='', from_name="Rounds"):
+def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe contents
 
     lines_per_page = 20
 
@@ -207,6 +120,7 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):
 
     result = demuck_result_list(result)
     revresult = demuck_result_list(revresult) 
+    
 
     if len(result) < lines_per_page:
         forward_and_back = True
