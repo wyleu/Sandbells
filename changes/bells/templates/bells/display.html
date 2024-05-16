@@ -1,10 +1,11 @@
-{% extends "bells/blank.html"%}
+{% extends "bells/blank_iframe.html"%}
 {% load static %}
 
 {% block title%}
 {% endblock title%}
 
 {% block fullscreen %} 
+<div class="frontpage">
   <div class="frontpage_container">
     {% for res in result_block %}
       <div>
@@ -12,4 +13,23 @@
       </div>
       {% endfor%}
   </div>
+
+  <div class="drumkit">
+    <div class="pad" data-sound="bell1"><img src="{% static "/icons/kick.png" %}" alt="Bell 1"></div>
+    <div class="pad" data-sound="bell2"><img src="{% static "/icons/kick.png" %}" alt="Bell 2"></div>
+    <div class="pad" data-sound="bell3"><img src="{% static "/icons/kick.png" %}" alt="Bell 3"></div>
+    <div class="pad" data-sound="bell4"><img src="{% static "/icons/kick.png" %}" alt="Bell 4"></div>
+    <div class="pad" data-sound="bell5"><img src="{% static "/icons/kick.png" %}" alt="Bell 5"></div>
+    <div class="pad" data-sound="bell6"><img src="{% static "/icons/kick.png" %}" alt="Bell 6"></div>
+    <div class="pad" data-sound="bell7"><img src="{% static "/icons/kick.png" %}" alt="Bell 7"></div>
+    <div class="pad" data-sound="bell8"><img src="{% static "/icons/kick.png" %}" alt="Bell 8"></div>
+  </div>
+</div>
 {% endblock fullscreen%}
+
+{% block scripts %}
+
+<script src="{% static "/js/howler.min.js" %}"></script>
+<script src="{% static "/js/apps.js" %}" ></script>
+
+{% endblock scripts %}
