@@ -15,7 +15,7 @@ cd changes
 echo "permissions"
 chmod 777 /var/www/html/static/bells/*.*
 echo "collect static"
-python manage.py --noinput collectstatic
+python manage.py  collectstatic
 echo "permissions again..."
 chmod 777 /var/www/html/static/bells/*.*
 systemctl restart nginx.service
