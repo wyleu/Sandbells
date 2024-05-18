@@ -33,22 +33,21 @@ footer{
 }
 
 iframe {
-  border: .3em solid red;
+  border: .3em solid white;
   height:   "900px";     /* 1080px Magic numbers */      
   width :   "1100px";
-  border-color:brown;
-  border-width:"15px";
+  border-width:"1px";
 }
 svg {
 	border-style: solid;     /* parameters set in svg_data.html*/
-  border-color:greenyellow;
-  border-width:"15px";
+  border-color:white;
+  border-width:".1px";
   box-sizing: border-box;
 }
-.shadow {
+/* .shadow {
   -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .5));
   filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .5));
-}
+} */
 
 .script{
   font-family: 'Arial', serif;
@@ -88,8 +87,8 @@ svg {
 .frontpage_table_select{
   display: block;
   border-style: solid;
-  border-color:blue;
-  border-width:"15px";
+  border-color:white;
+  border-width:"1px";
   white-space: nowrap;
 }
 
@@ -109,8 +108,8 @@ svg {
   text-align: left;
   text-decoration:none;
   font-size: 2.9vh;
-  -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
-  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2));
+  /* -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2)); */
 }
 
 
@@ -173,6 +172,12 @@ svg {
   color: white;
 }
 
+.ring_button{
+  background-color: rgb(250, 242, 242);
+  margin: 0px;
+  border: none;
+}
+
 .lightbulb {
   background-color: red;
   color: black;
@@ -181,6 +186,7 @@ svg {
   margin: 15px;
   float: right;
 }
+
 
 .lightbulb.on {
   background-color: rgb(0, 255, 0);
@@ -264,9 +270,9 @@ text {
   display:table-cell; 
 }
 
-.frontpage_tr_display{
-    pointer-events: none;
-}
+/* .frontpage_tr_display{   */
+     /* pointer-events: none; */
+/* } */
 
 .change_td_displayed{
   margin-top: 0px;
@@ -275,8 +281,8 @@ text {
 
 .changeheader {
   font-size:xx-large;
-  -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
-  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2));
+/*   -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2)); */
 }
 .pattern_counter{
   color: red;
@@ -284,8 +290,8 @@ text {
   width:4%;
   text-decoration:none;
   font-size: x-large;
-  -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
-  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2));
+ /*  -webkit-filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .7));
+  filter: drop-shadow(4px 4px 3px rgba(0, 0, 0, .2)); */
 
 }
 
