@@ -61,7 +61,11 @@
                                class = "window_size"
                                >XxY
                             </div>
-                            <div class="branding shadow">Sandbells</div>
+                            {% if forloop.counter == 1 %}
+                                <div class="branding shadow">{{forloop.counter}}--Playing...</div>
+                            {% else %}
+                                <div class="branding shadow">{{forloop.counter}}-Sandbells</div>
+                            {% endif %}
                         </td>
                     {% else %}
                         {% if "Back" in line.third%}
