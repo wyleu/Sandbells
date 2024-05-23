@@ -34,7 +34,7 @@ const drumkit = document.querySelector('.drumkit');
  }
 
  function playBellStr(bell_numberstring){
-    soundToPlay = bellnumbers[1 + Number(bell_numberstring)];
+    soundToPlay = bellnumbers[Number(bell_numberstring) - 1];
     console.log('Playing '+ soundToPlay);
     bells.play(soundToPlay);
  }
