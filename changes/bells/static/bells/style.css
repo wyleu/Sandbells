@@ -416,7 +416,7 @@ text {
   align-items: center;
   margin: 10px;
   flex: 1 0 calc(10% - 20px);
-  background: radial-gradient(#e18174, #d15746);
+  background: radial-gradient(#df9e12, #d4b710);
   border-radius: 3px;
 }
 
