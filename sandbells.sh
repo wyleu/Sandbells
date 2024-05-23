@@ -6,7 +6,7 @@ echo "#                                                                         
 echo "############################################################################"
 
 git status
-cd /home/wyleu/Sandbells
+cd /home/wyleu/Code/Sandbells
 echo $pwd
 source Bellvirtenv/bin/activate
 echo "started virtual env"
