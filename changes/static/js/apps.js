@@ -16,18 +16,27 @@ const bells = new Howl(
   }
 );
 
+var bellnumbers = ["bell1", "bell2","bell3", "bell4","bell5", "bell6", "bell7", "bell8"];
+
 
 
 const drumkit = document.querySelector('.drumkit');
 // const change = document.querySelector('.frontpage_table_display');
 
 
- function playDrum(event){
+ function playBellEvent(event){
    if (event.target.classList.contains('pad')){
      event.preventDefault();     /* prevent double click  */
      let soundToPlay = event.target.dataset.sound;
+     console.log('Event Playing '+ soundToPlay);
      bells.play(soundToPlay);
    }
+ }
+
+ function playBellStr(bell_numberstring){
+    soundToPlay = bellnumbers[Number(bell_numberstring) - 1];
+    console.log('Playing '+ soundToPlay);
+    bells.play(soundToPlay);
  }
 
 function handleEvent(event) {
@@ -58,8 +67,8 @@ function playString(event){
 //   setTimeout(setViewportHeight, 100);
 // });
 
-drumkit.addEventListener('click', playDrum);
-drumkit.addEventListener('touchstart', playDrum);   /* ipad  */
+drumkit.addEventListener('click', playBellEvent);
+drumkit.addEventListener('touchstart', playBellEvent);   /* ipad  */
 
 //  change.addEventListener('mousedown', handleEvent);
 //  change.addEventListener('click', handleEvent);
@@ -110,9 +119,25 @@ drumkit.addEventListener('touchstart', playDrum);   /* ipad  */
 // d3.selectAll('.frontpage_table_display')
 //     .on("click", (event)=> console.log(this));
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+
 d3.selectAll(".ring_button")
    .on("click", function(d, i ,e) {
-       console.log("BANG!!!!!:-", this.getAttribute("dataring"));
+      var bellstring = this.getAttribute("dataring");
+      console.log("BELLS:-", bellstring);
+
+      Array.from(bellstring).forEach((elem, indx,array) => {
+        console.log('Playing:-' + elem);
+        ;
+        setTimeout(() => { 
+          playBellStr(elem); 
+        }, 500 * indx);
+
+      });
+
    }
 );
 

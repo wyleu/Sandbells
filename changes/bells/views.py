@@ -46,13 +46,17 @@ def home(request, number = 8 ):
     # hostname -I  for ip address
 ##
     p = subprocess.Popen(["hostname", "-I"], stdout=subprocess.PIPE)
-    out, err = p.communicate()
-    print([x.decode("utf-8").replace("'",'') for x in out.split()][0])
+    hostname_out, err = p.communicate()
+    ipaddr = [x.decode("utf-8").replace("'",'') for x in hostname_out.split()][0]
 
+    p = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
+    gitlog_out, err = p.communicate()
+    githash = [x.decode("utf-8").replace("'",'') for x in gitlog_out.split()][0][0:6]
 
     context = {
         'hostname': hostname,
-        'IPAddr': [x.decode("utf-8").replace("'",'') for x in out.split()][0],
+        'IPAddr': ipaddr,
+        'githash': githash,
         'number' : number,
         'numbers' : numbers,
         'to_patterns': to_patterns
