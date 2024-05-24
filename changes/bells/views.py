@@ -47,7 +47,10 @@ def home(request, number = 8 ):
 ##
     p = subprocess.Popen(["hostname", "-I"], stdout=subprocess.PIPE)
     hostname_out, err = p.communicate()
-    ipaddr = [x.decode("utf-8").replace("'",'') for x in hostname_out.split()][0]
+    try:
+        ipaddr = [x.decode("utf-8").replace("'",'') for x in hostname_out.split()][0]
+    except IndexError:
+        ipaddr = "No Net"
 
     p = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
     gitlog_out, err = p.communicate()
