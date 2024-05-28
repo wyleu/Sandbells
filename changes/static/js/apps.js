@@ -130,18 +130,25 @@ function sleep(ms) {
 
 d3.selectAll(".ring_button")
    .on("click", function(d, i ,e) {
+      d3.selectAll(".ring_button").attr("disabled", true);
       var bellstring = this.getAttribute("dataring");
+      var lastLetter = bellstring.charAt(bellstring.length - 1)
+      console.log("Last Bell", lastLetter);
       console.log("BELLS:-", bellstring);
 
-      Array.from(bellstring).forEach((elem, indx,array) => {
+      Array.from(bellstring).forEach((elem, indx, array) => {
         console.log('Playing:-' + elem);
         ;
         setTimeout(() => { 
           playBellStr(elem); 
+          console.log('Finished',elem, indx);
+          if (elem == lastLetter){
+            console.log("Playing Last Bell");
+            d3.selectAll(".ring_button").attr("disabled", null);
+          }
         }, 500 * indx);
-
+        
       });
-
    }
 );
 
