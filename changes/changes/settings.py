@@ -58,7 +58,7 @@ MIDDLEWARE = [
         # We want our CSP middleware before almost all other middleware since its security
     # related
     "csp.contrib.rate_limiting.RateLimitedCSPMiddleware",
-    "django_permissions_policy.PermissionsPolicyMiddleware",
+ #   "django_permissions_policy.PermissionsPolicyMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -181,21 +181,21 @@ CSP_UPGRADE_INSECURE_REQUESTS = not DEBUG
 # This helps keep down the number of CSP reports sent from client web browsers
 CSP_REPORT_PERCENTAGE = 0.6
 
-PERMISSIONS_POLICY = {
-    "accelerometer": [],
-    #"ambient-light-sensor": "*",
-    "autoplay": [],
-    "camera": [],
-    "display-capture": [],
-    #"document-domain": "*",
-    "encrypted-media": [],
-    "fullscreen": "*",
-    "geolocation": [],
-    "gyroscope": [],
-    #"interest-cohort": "*",
-    "magnetometer": [],
-    "microphone": [],
-    "midi": ["self", "http://sandbells.local"],
-    "payment": [],
-    "usb": [],
-}
+# PERMISSIONS_POLICY = {
+#     "accelerometer": [],
+#     #"ambient-light-sensor": "*",
+#     "autoplay": [],
+#     "camera": [],
+#     "display-capture": [],
+#     #"document-domain": "*",
+#     "encrypted-media": [],
+#     "fullscreen": "*",
+#     "geolocation": [],
+#     "gyroscope": [],
+#     #"interest-cohort": "*",
+#     "magnetometer": [],
+#     "microphone": [],
+#     "midi": ["self", "http://sandbells.local"],
+#     "payment": [],
+#     "usb": [],
+# }
