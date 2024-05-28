@@ -1,7 +1,9 @@
 
+console.log('Top of /static/js/apps.js');
+
 const bells = new Howl(
   {
-    "src": ["/static/ogg/Rounds_on_8_10_Bpm.ogg"],
+    "src": ["/static/ogg/Rounds_on_8_10_Bpm.webm","/static/ogg/Rounds_on_8_10_Bpm.ogg"],
     "sprite" : {
       // offset, duration
         bell1: [693, 1507],
@@ -16,9 +18,11 @@ const bells = new Howl(
   }
 );
 
+console.log('Top of /static/js/apps.js after bells');
+
 var bellnumbers = ["bell1", "bell2","bell3", "bell4","bell5", "bell6", "bell7", "bell8"];
 
-
+console.log('Top of /static/js/apps.js after bellnumbers');
 
 const drumkit = document.querySelector('.drumkit');
 // const change = document.querySelector('.frontpage_table_display');
