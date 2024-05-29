@@ -32,7 +32,7 @@ class NotFound(Error):
 
 def sanity(current, required):
     if len(current) != len(required):
-        raise(DifferingLength('Differig Lengths'))
+        raise(DifferingLength('Differing Lengths'))
 
     for item in current:
         if current.count(item) > 1:
@@ -121,7 +121,13 @@ def db_process(current, required, debug = False):
             sanity_count = sanity_count + 1
 
             if( current != required):
-                current_pos = working.index(required[pos])
+                try:
+                    current_pos = working.index(required[pos])
+                except ValueError:
+                    print("OUch missing a bell!",pos, required, required[pos], working )
+                    # The Arches, which is a ring of 7 without a 2 is caught here. . . IT's endlessly looking for bell 2, give it the bell beyond the last. . . 
+                    working = required
+                    current_pos = working.index(required[pos])
             else:  # Process pattern to itself...
                 current_pos = current_pos + 1
                 if current_pos == len(current):
