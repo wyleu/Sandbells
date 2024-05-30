@@ -128,6 +128,9 @@ def db_process(current, required, debug = False):
                     # The Arches, which is a ring of 7 without a 2 is caught here. . . IT's endlessly looking for bell 2, give it the bell beyond the last. . . 
                     working = required
                     current_pos = working.index(required[pos])
+
+                except Exception as e:
+                    print('Unknown error', e)
             else:  # Process pattern to itself...
                 current_pos = current_pos + 1
                 if current_pos == len(current):
