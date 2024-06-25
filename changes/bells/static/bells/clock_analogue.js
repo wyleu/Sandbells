@@ -94,10 +94,6 @@
 		if (playtick ==true){
 			playTick();
 		}
-		
-		//playTick();
-                //console.log(clockPosition);
-                // updateMovement();
 	}, 1000);
 
 	function updateHoursMinutesSeconds(){
@@ -206,8 +202,9 @@
 		document.body.appendChild(tick);
 	}	
 	function playTick(){
-	tick.play();
+		tick.play();
 	}
+	
 	function makeTock(){
 		tock = document.createElement("AUDIO");
 		if (tock.canPlayType("audio/ogg")) {
