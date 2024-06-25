@@ -402,9 +402,15 @@ def timedatestatus(request):
     response_data['message'] = 'Some error message'
     p = subprocess.Popen(["timedatectl",], stdout=subprocess.PIPE)
     timedate_out, err = p.communicate()
-    timedate = [x.decode("utf-8").replace("'",'') for x in timedate_out.split()]
-    print(timedate)
-    
+    td = [x.decode("utf-8").replace("'",'') for x in timedate_out.split()]
+    print(td)
+    timedate = [' '.join([td[0],td[1]]), ' '.join([td[2],td[3],td[4],td[5],])]                   # Local Time
+    timedate = [' '.join([td[6],td[7]]), ' '.join([td[8],td[9],td[10],td[11],])] + timedate      # Universal Time
+    timedate = [' '.join([td[12],td[13]]), ' '.join([td[14],td[15],td[16],])] + timedate         # RTC Time
+    timedate = [' '.join([td[17],td[18]]), ' '.join([td[19],td[20],td[21],])] + timedate         # TimeZone
+    timedate = [' '.join([td[22],td[23],td[24]]), ' '.join([td[25],])] + timedate                # Syncronised
+    timedate = [' '.join([td[26],td[27]]), ' '.join([td[28],])] + timedate                       # Service
+    timedate = [' '.join([td[29],td[30],td[31],td[32],]), ' '.join([td[33],])] + timedate
     return JsonResponse({'timedate':timedate})
 
 def timedatetest(request):
