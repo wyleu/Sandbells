@@ -160,13 +160,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # https://django-csp.readthedocs.io/en/latest/configuration.html
 CSP_DEFAULT_SRC = ["'none'"]
 
-CSP_SCRIPT_SRC = ["'self'",
+CSP_SCRIPT_SRC = ["'unsafe-inline'","'self'",
     "http://sandbells.local"
 ]
-CSP_INCLUDE_NONCE_IN = ["script-src"]
+CSP_INCLUDE_NONCE_IN = ['self','localhost', "script-src",]
 
-CSP_CONNECT_SRC  = ["'self'", 'http://sandbells.local',]
-CSP_STYLE_SRC = ["'self'", 'http://sandbells.local',]
+CSP_CONNECT_SRC  = ["'self'",'localhost', 'http://sandbells.local',]
+CSP_STYLE_SRC = ["'unsafe-inline'","'self'", "'http://sandbells.local'",]
 CSP_IMG_SRC=["'self'"]
 CSP_FRAME_SRC = ["'self'","http://sandbells.local",]
 CSP_MEDIA_SRC = ["'self'","http://sandbells.local",]

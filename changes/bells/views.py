@@ -4,6 +4,7 @@ import io
 import datetime
 import socket
 import subprocess
+import json
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
@@ -17,6 +18,7 @@ from django.http import JsonResponse
 from django.http import FileResponse
 from django.shortcuts import render
 from django.template import loader
+
 
 from bells.models import Bell, Tower, Pattern
 from bells.functions import (
@@ -393,4 +395,18 @@ def demuck_result_list(result):
         res_string.append(res_list)
     return res_string
 
+def timedatestatus(request):
+
+    response_data = {}
+    response_data['result'] = 'error'
+    response_data['message'] = 'Some error message'
+    p = subprocess.Popen(["timedatectl",], stdout=subprocess.PIPE)
+    timedate_out, err = p.communicate()
+    timedate = [x.decode("utf-8").replace("'",'') for x in timedate_out.split()]
+    print(timedate)
+    
+    return JsonResponse({'timedate':timedate})
+
+def timedatetest(request):
+    return render(request, 'bells/timedatetest.html')
 
