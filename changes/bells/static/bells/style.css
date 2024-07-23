@@ -381,6 +381,20 @@ text {
   font-size: large;
 }
 
+.highlight {
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: xx-large;
+  font-weight: bold;
+  color: rgb(34, 32, 177);
+  width:14%;
+  white-space: nowrap;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-style: solid;  /* opening up the table */
+  border-color: transparent;
+}
+
 
 .clockSvg circle.frame{
 	fill: whitesmoke; 
