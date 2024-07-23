@@ -49,8 +49,8 @@
                                 {% endfor %}
                             </button>
                         </td>
-                        {% if "Lead" in line.first%}
-                            <td class="swap swap_small shadow">{{line.first}}</td>
+                        {% if "LD" in line.first%}
+                            <td class="swap shadow">{{line.first}}</td>
                         {%else%}
                             <td class="swap shadow">{{line.first}}</td>
                         {%endif%}
@@ -68,8 +68,8 @@
                             {% endif %}
                         </td>
                     {% else %}
-                        {% if "Back" in line.third%}
-                            <td class="swap swap_small shadow">{{line.third}}</td>
+                        {% if "BK" in line.third%}
+                            <td class="swap shadow">{{line.third}}</td>
                         {%else%}
                             <td class="swap shadow">{{line.third}}</td>
                         {%endif%}
