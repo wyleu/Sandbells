@@ -16,7 +16,7 @@ from .models import Pattern, Bell,  Change, ChangeItem
 
 class PatternAdmin(admin.ModelAdmin):
     actions = [export_midi]
-    list_display = ['name','number','pattern','pub_date','order']
+    list_display = ['name','number','pattern','pub_date','order','count','enable']
     readonly_fields=('number',)
     list_filter = ('number',)
     search_fields = ['name','pattern']

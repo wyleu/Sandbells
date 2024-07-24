@@ -18,6 +18,8 @@ class Pattern(models.Model):
     order = models.SmallIntegerField(help_text="Ordering of patterns rounds should explicitly be 0",
                                       default=100)
     number = models.SmallIntegerField(editable=False, help_text ="Bells in Pattern (calculated)", default=0)
+    count = models.SmallIntegerField(help_text="Number of changes in pattern", null=True,)
+    enable = models.BooleanField(help_text="Enable this Pattern", default = True)
 
     class Meta:
         ordering = ["order"]
@@ -50,6 +52,11 @@ class Pattern(models.Model):
 
         with open(self.filename, "wb") as output_file:
             MyMIDI.writeFile(output_file)
+
+    def populate_count(self, count):
+        if self.count is None:
+            self.count = count
+            self.save()
 
            
     def __str__(self):

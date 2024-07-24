@@ -45,7 +45,11 @@
                     class="changenamebutton"
                     >
                     <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
+                    
                   </button>
+                </td>
+                <td>
+                  <span class="change_count">{{item.count}}</span>
                 </td>         
             </tr>
         {% endfor %}

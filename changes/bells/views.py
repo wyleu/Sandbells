@@ -35,13 +35,14 @@ def home(request, number = 8 ):
         # Render menu 
     numbers = set(
         Pattern.objects.filter(
+        enable=True
         ).order_by('number')
         .values_list('number', flat=True))
 
     numbers= sorted(numbers)
 
     to_patterns = Pattern.objects.filter(
-        #number=number
+        enable=True
         ).order_by('number', 'order','name') 
     
     hostname = socket.gethostname().replace('"','')
@@ -64,7 +65,8 @@ def home(request, number = 8 ):
         'githash': githash,
         'number' : number,
         'numbers' : numbers,
-        'to_patterns': to_patterns
+        'to_patterns': to_patterns,
+        'count': len(to_patterns),
         }
     
     return render(request, 'bells/home.html', context)
@@ -73,16 +75,20 @@ def menu(request, number = 8):
     # Render menu 
     numbers = set(
         Pattern.objects.filter(
+            enable=True
         ).order_by('number')
         .values_list('number', flat=True))
 
     to_patterns = Pattern.objects.filter(
-        #number=number
+        enable=True
         ).order_by('number','order','name') 
+    
+                   
 
     context = {
         'number' : number,
         'numbers' : numbers,
+        'count': len(to_patterns),
         'to_patterns': to_patterns
         }
     
@@ -97,18 +103,21 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
     lines_per_page = 20
 
     from_patterns = Pattern.objects.filter(
-        number=number
+        number=number,
+        enable = True
     ).order_by('order')  
     to_patterns = Pattern.objects.filter(
-        number=number
+        number=number,
+        enable=True
     ).order_by('order','name') 
 
-    numbers = set(Pattern.objects.filter().order_by('number').values_list('number', flat=True))
+    numbers = set(Pattern.objects.filter(enable=True).order_by('number').values_list('number', flat=True))
 
     try:
         from_pattern = Pattern.objects.get(
             name__iexact = from_name,
-            number = number
+            number = number,
+            enable=True
         )
     except  Pattern.DoesNotExist:
         raise NotFound("No From Pattern Found")
@@ -116,7 +125,9 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
     try:
         to_pattern = Pattern.objects.get(
             name__iexact = to_name,
-            number = number
+            number = number,
+            enable=True
+
         )
     except  Pattern.DoesNotExist:
         context = {
@@ -133,6 +144,8 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
         
     code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
     revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
+
+    to_pattern.populate_count(len(result[0])-1)
 
     result = demuck_result_list(result)
     revresult = demuck_result_list(revresult) 
