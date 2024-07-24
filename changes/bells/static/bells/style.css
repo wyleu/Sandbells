@@ -159,7 +159,14 @@ svg {
 }
 
 .change_count{
-  text-align: right;
+  text-align: middle;
+  font-size: large;
+  padding:0;
+  border-width: none;
+  background: none;
+  width:max-content;
+  color: green;
+  width: 100%;
 }
 
 
