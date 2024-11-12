@@ -11,7 +11,9 @@ import smbus2
 import RPi.GPIO as GPIO
 from time import sleep
 import i2cEncoderLibV2
+import mido
 
+from gps3.agps3threaded import AGPS3mechanism
 
 def EncoderChange():
     encoder.writeLEDG(100)
@@ -49,6 +51,8 @@ bus = smbus2.SMBus(1)
 INT_pin = 17
 GPIO.setup(INT_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+using_gps = True
+
 encoder = i2cEncoderLibV2.i2cEncoderLibV2(bus, 0x45)
 
 encconfig = (i2cEncoderLibV2.INT_DATA | i2cEncoderLibV2.WRAP_ENABLE | i2cEncoderLibV2.DIRE_RIGHT | i2cEncoderLibV2.IPUP_ENABLE | i2cEncoderLibV2.RMOD_X1 | i2cEncoderLibV2.RGB_ENCODER)
@@ -82,6 +86,10 @@ encoder.writeRGBCode(0x000064)
 sleep(0.3)
 encoder.writeRGBCode(0x00)
 
+agps_thread = AGPS3mechanism()  # Instantiate AGPS3 Mechanisms
+agps_thread.stream_data()  # From localhost (), or other hosts, by example, (host='gps.ddns.net')
+agps_thread.run_thread()  # Throttle time to sleep after an empty lookup, default 0.2 second, default daemon=True
+
 
 class Display:
     DEFAULT_BUSNUM = 1
@@ -109,10 +117,13 @@ class Display:
     def prepare(self):
         self.draw.rectangle((0, 0, self.width, self.height), outline = 0, fill = 0)
         
-    def drawtext(self, text):
-        font = ImageFont.truetype("Arial.ttf", 30)
-        self.draw.text((2, 2), text, font=font, fill=255)
-        
+    def drawtext(self,line, text):
+        font = ImageFont.truetype("Arial.ttf", 20)
+        if line == 1:
+            self.draw.text((2, -4), text, font=font, fill=255)
+        else:
+            self.draw.text((2, 10), text, font=font, fill=255)
+    
 
     def show(self):
         self.draw = ImageDraw.Draw(self.image)
@@ -122,7 +133,11 @@ class Display:
 # GPIO.add_event_detect(INT_pin, GPIO.FALLING, callback=Encoder_INT, bouncetime=10)
 
 on = False
+strike_count = int(time.strftime('%H'))
 last_time =  int(time.time())
+
+status_str = 'Sandbells'
+
 encoder_colour = 0x000000
 top_sec = False
 top_min = False
@@ -130,86 +145,130 @@ top_hour = False
 
 disp = Display()
 
+channel = 12
+velocity = 100
+note = 36
+
+
+def midi_on(channel = channel, velocity = velocity, note = note):
+    msg_on = mido.Message(
+    'note_on',
+    channel = channel,
+    velocity = velocity,
+    note = note
+    )
+    outport.send(msg_on)
+    
+def midi_off(channel = channel, velocity = velocity, note = note):
+    msg_off = mido.Message(
+    'note_off',
+    channel = channel,
+    velocity = velocity,
+    note = note
+    )
+    outport.send(msg_off)
+    
+
 while True:
     with mido.open_output('QmidiNet:port 0 128:0') as outport:
         if GPIO.input(INT_pin) == False: #
             Encoder_INT() #
             
         current_time = int(time.time())
+        current_time = agps_thread.data_stream.time
+        
+        current_time_hour = current_time[11:13]
+        current_time_minute = current_time[14:16]
+        current_time_second = current_time[17:19]
+        
         
         if current_time != last_time:
-                if on:
-                    encoder_colour = 0x100000
-                    
-                    msg_on = mido.Message(
-                        'note_on',
-                        channel = channel,
-                        velocity = velocity,
-                        note = note
-                        )
-                        
-                    outport.send(msg_on)
+            if on:
+                if using_gps:
+                    encoder_colour = 0x000010
+                else:
+                    encoder_colour = 0x010000
+                midi_on()
+            else:
+                if using_gps:
+                    encoder_colour = 0x101000
                 else:
                     encoder_colour = 0x001000
-                    
-                    msg_off = mido.Message(
-                        'note_off',
-                        channel = channel,
-                        velocity = velocity,
-                        note = note
-                        )
-                    outport.send(msg_off)
-                    
-                on = not on
-                last_time = current_time
-                # print(hex(encoder_colour))
-                disp.prepare()
-                time_str = datetime.datetime.fromtimestamp(last_time).strftime('%H:%M:%S')
-                disp.drawtext(time_str)
-                print(time_str)
-
-        if time.strftime('%M') == '00':
-            if not top_min:
-                encoder_colour = encoder_colour | 0x484848 # encoder.writeRGBCode(0x006400)
-                print('0 minute')
-                top_min = True
+                midi_off()
                 
-        elif time.strftime('%M') == '15':
-            if not top_min:
-                encoder_colour = encoder_colour | 0x484800 
-                print('15 minute')
-                top_min = True
-                
-        elif time.strftime('%M') == '30':
-            if not top_min:
-                encoder_colour = encoder_colour | 0x480048 
-                print('30 minute')
-                top_min = True
-                
-        elif time.strftime('%M') == '45':
-            if not top_min:
-                encoder_colour = encoder_colour | 0x004848 
-                print('45 minute')
-                top_min = True
-        else:
-            if time.strftime('%S') == '00':
-                if not top_sec:
-                    # encoder reset
-                    encoder_colour =  0x000048 # encoder.writeRGBCode(0x000064)
-                    top_sec = True
-                    print('00 second')
+            on = not on
+            last_time = current_time
+            # print(hex(encoder_colour))
+            disp.prepare()
+            if using_gps:
+                time_str = current_time[11:19]
+                status_str = 'gps:'
             else:
-                top_sec = False
-            top_min = False
-            
-            
-        if time.strftime('%H') == '00':
-            encoder_colour = encoder_colour | 0x480000 # encoder.writeRGBCode(0x640000)
-            
-        encoder.writeRGBCode(encoder_colour)
-        disp.show()
-        
+                time_str = datetime.datetime.fromtimestamp(last_time).strftime('%H:%M:%S')
+            disp.drawtext(1,time_str)
+            disp.drawtext(2,status_str)
+            # print(time_str)
 
-        
+            if current_time[14:16] == '00':   #time.strftime('%M') == '00':
+                if not top_min:
+                    strike_count = int(current_time_hour)  # int(time.strftime('%H'))
+                    if strike_count > 12:
+                        strike_count = strike_count - 12
+                    
+                    encoder_colour = encoder_colour | 0x484848 # encoder.writeRGBCode(0x006400)
+                    print('0 minute ', current_time)
+                    print( 'not top_min Strike Count:-', strike_count)
+                    top_min = True
+                else:
+                    strike_count = strike_count - 1 
+                    print( 'Else Strike Count:-', strike_count)
+                
+                if strike_count > 0:
+                    grab = time.time()
+                    if (grab - int(grab)) > 0.5: 
+                        encoder_colour = 0x000000
+                        midi_on(note=24)
+                    else:
+                        encoder_colour = 0xFFFFFF
+                        midi_off(note = 24)
+
+                    
+            elif current_time_minute == '15':
+                if not top_min:
+                    encoder_colour = encoder_colour | 0x484800 
+                    print('15 minute ', current_time)
+                    top_min = True
+                    
+            elif current_time_minute == '30':
+                if not top_min:
+                    encoder_colour = encoder_colour | 0x480048 
+                    print('30 minute ', current_time)
+                    top_min = True
+                    
+            elif current_time_minute == '45':
+                if not top_min:
+                    encoder_colour = encoder_colour | 0x004848 
+                    print('45 minute ', current_time)
+                    top_min = True
+            else:
+                if current_time_second == '00':
+                    if not top_sec:
+                        # encoder reset
+                        encoder_colour =  0x004800 # encoder.writeRGBCode(0x000064)
+                        top_sec = True
+                        print('00 second ', current_time)
+                else:
+                    top_sec = False
+                    
+                top_min = False
+                
+                
+            if current_time_hour == '00':
+                encoder_colour = encoder_colour | 0x480000 # encoder.writeRGBCode(0x640000)
+                print('00 hour ', current_time)
+            encoder.writeRGBCode(encoder_colour)
+            disp.show()
+        # print(agps_thread.data_stream.time)
+
     
 
