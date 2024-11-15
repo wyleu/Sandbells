@@ -101,6 +101,7 @@
 		updateSeconds();
 		updateMinutes();
 		updateHours();
+		updateDigital();
 	}
 
 	function degreesToRadians(degrees)
@@ -122,6 +123,7 @@
          	.text(function(d) { return d; });
 	}
 
+
 	function updateHours(){
 		var degree = currentTime.hour * 30 + 30 / 60 * currentTime.minute;
 		d3.select(".hour").transition().attr("transform", "rotate("+degree+" 175 175)");
@@ -135,6 +137,15 @@
 	function updateSeconds(){
 		var degree = currentTime.second * 6;
 		d3.select(".second").transition().attr("transform", "rotate("+degree+" 175 175)");
+	}
+
+	function updateDigital(){
+		console.log('updateDigital');
+		d3.select('#digital_time')
+		.text(
+			currentTime.hour.toString().padStart(2, '0')+ 
+			":" + currentTime.minute.toString().padStart(2, '0')+
+			":" + currentTime.second.toString().padStart(2, '0'));
 	}
 
 	function drawMarks(){

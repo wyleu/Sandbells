@@ -1,4 +1,5 @@
-{% load static %}
+{% comment %} {% load static %}
+<h1>Probably not inolved</h1>
 <svg height="250px" width="250px" viewBox="-25 -25 400 400" class="clockSvg shadow">
     <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
     <g class="units">
@@ -8,7 +9,9 @@
     </g>
     <g class="numbers"></g>
     <g class="marks"></g>
+    <g class="digital"></g>
     <circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
+    
 </svg>
 
-<script type="text/javascript" src="{% static "bells/clock_analogue.js" %}"></script>
+<script type="text/javascript" src="{% static "bells/clock_analogue.js" %}"></script> {% endcomment %}
