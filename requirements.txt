@@ -1,6 +1,7 @@
 asgiref   ==     3.8.1
 attrs     ==     22.2.0
 Django    ==     4.2.11
+django-csp==     3.8
 exceptiongroup ==1.1.0
 iniconfig ==     2.0.0
 packaging  ==    24.0
@@ -18,3 +19,8 @@ gunicorn ==      22.0.0
 MIDIUtil ==      1.2.1
 # psycopg2==       2.9.9
 typing-extensions==4.11.0
+py_midicsv  ==4.0.0
+djangorestframework==3.15.1
+markdown    ==3.6
+django-filter == 24.2
+django-permissions-policy ==4.19.0

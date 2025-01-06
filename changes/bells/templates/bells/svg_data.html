@@ -1,0 +1,49 @@
+{% load static %}
+
+<svg
+id="clock"
+height="890px"
+width="250px" 
+viewBox="0 450 350 350" 
+class="clockSvg shadow">
+
+<g id = "posinfo" class="info">
+  <text id="table_width" x="0" y="750" fill="red" stroke="black" font-size="20">table W</text>
+  <text id="table_width_value" x="130" y="750" fill="red" stroke="black" font-size="20">10000</text>
+  <text id="table_height" x="0" y="800" fill="red" stroke="black" font-size="20">table H</text>
+  <text id="table_height_value" x="130" y="800" fill="red" stroke="black" font-size="20">10000</text>
+  <text id="window_width" x="0" y="850" fill="red" stroke="black" font-size="20">iframe W</text>
+  <text id="window_width_value" x="130" y="850" fill="red" stroke="black" font-size="20">10000</text>
+  <text id="window_height" x="0" y="900" fill="red" stroke="black" font-size="20">iframe H</text>
+  <text id="window_height_value" x="130" y="900" fill="red" stroke="black" font-size="20">10000</text>
+  <text id="width" x="0" y="950" fill="red" stroke="black" font-size="20">Width:>X</text>
+  <text id="width_value" x="130" y="950" fill="red" stroke="black" font-size="20">1000</text>
+  <text id="height" x="0" y="1000" fill="red" stroke="black" font-size="20">Height:^Y</text>
+  <text id="height_value" x="130" y="1000" fill="red" stroke="black" font-size="20">1000</text>
+  <text id="ipaddr" x="0" y="1050" fill="red" stroke="black" font-size="20">IP Addr:</text>
+  <text id="ipaddr_value" x="130" y="1050" fill="red" stroke="black" font-size="20">"{{IPAddr}}"</text>
+  <text id="ipaddr" x="0" y="1100" fill="red" stroke="black" font-size="20">Host:</text>
+  <text id="ipaddr_value" x="130" y="1100" fill="red" stroke="black" font-size="20">"{{hostname}}"</text>
+  <text id="lastkey" x="0" y="1150" fill="red" stroke="black" font-size="20">LastKey:</text>
+  <text id="lastkey_value" x="130" y="1150" fill="red" stroke="black" font-size="20"></text>
+  <text id="githash" x="0" y="1200" fill="red" stroke="black" font-size="20">Git:</text>
+  <text id="githash_value" x="130" y="1200" fill="red" stroke="black" font-size="20">{{githash}}</text>
+  <text id="sandbells" x="220" y="1260" fill="red" stroke="black" font-size="20">Sandbells</text>
+</g>
+
+  <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
+<g class="units">
+    <line class="hour" x1="175" y1="175" x2="175" y2="75" stroke="#2c6d3a" stroke-width="6px"></line>
+    <line class="minute" x1="175" y1="175" x2="175" y2="56" stroke="#9a4f05" stroke-width="4px"></line>
+    <line class="second" x1="175" y1="175" x2="175" y2="43" stroke="#391d5b" stroke-width="3px"></line>
+</g>
+<g class="numbers"></g>
+<g class="marks"></g>
+<g class="digital">
+  <text id="digital_time" x="20" y= "400" fill ="red" stroke="black" font-size="80">12:23:45</text>
+</g>
+<circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
+</svg>
+
+<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "bells/clock_analogue.js" %}"></script>
+<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>

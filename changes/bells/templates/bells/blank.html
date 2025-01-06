@@ -2,21 +2,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
-  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="{% static "bells/jquery.min.js" %}"></script>
+  <script src="{% static "bells/d3.v3.min.js" %}"></script>
   <script src="{% static "bells/path.js" %}"></script>
   <script src="{% static "bells/bells.js" %}"></script>
+  <script src="{% static "bells/pagesize.js" %}"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
   <link rel="stylesheet" href="{% static "bells/style.css" %}">
   <link rel="icon" type="image/x-icon" href="/static/bells/favicon.ico">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Tangerine">
 
 {% block title%}
-<title>Title from D3</title>
+<title>Title from Blank</title>
 {% endblock title%}
 </head>
 <body>
     {% block fullscreen %}{% endblock fullscreen %}
+    {% block menu %}{% endblock menu %}
+    {% block display %}{% endblock display %}   
 </body>
 </html>

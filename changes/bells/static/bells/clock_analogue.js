@@ -2,6 +2,17 @@
 
 	var currentTime = { hour : 0, minute : 0, second : 0 };
 
+	var keyPressed = {};
+
+	var clockPosition = { x : 0, y : 0, scale : 1.000000};
+
+	var tick;
+	var tock;
+
+	var playtick = false;
+
+	console.log("Hello Sandbells");
+
 	createHourLabels();
 
 	drawMarks();
@@ -10,8 +21,79 @@
 
 	updateHoursMinutesSeconds();
 
+	makeTick();
+	makeTock();
+
+	d3.select("body")
+		.on("keydown", function(){
+			keyCode = d3.event.keyCode;
+			console.log("A key PRESSED:-"+d3.event.key+"-"+d3.event.keyCode+"-Ctrl-"+d3.event.ctrlKey+"-Shift-"+d3.event.shiftKey);
+			d3.select('#lastkey_value')
+				.text(d3.event.keyCode);
+
+			keyPressed[keyCode] = true;      //Mute toggle clock noise.
+
+			if (keyCode == 77){    // m key
+				playtick = !playtick;
+				}
+						if (keyCode == 188){
+				if ("16" in keyPressed && "17" in keyPressed){
+							//console.log("188 & 16 SHIFT & 17 CONTROL recieved");
+							updatedecYpos();
+				}		      
+						
+				else if ("16" in keyPressed){
+							//console.log("188 & 16 SHIFT recieved");
+							updatedecXpos();
+				}
+				else if ("17" in keyPressed){
+					//console.log("188 & 17 CONTROL recieved");
+							updatedecYpos();
+				}
+				else {
+					//console.log("188 recieved");
+							updatedecScale();
+				}
+					}
+			if (keyCode == 190){
+				if ("16" in keyPressed && "17" in keyPressed){
+							//console.log("190 & 16 SHIFT & 17 CONTROL recieved");
+							updateincYpos();
+				}		      
+						
+				else if ("16" in keyPressed){
+							//console.log("190 & 16 SHIFT recieved");
+							updateincXpos();
+				}
+				else if ("17" in keyPressed){
+					//console.log("190 & 17 CONTROL recieved");
+							updateincYpos();
+				}
+				else {
+					//console.log("190 recieved");
+							updateincScale();
+				}
+				}
+				// console.dir(keyPressed);
+			})
+		.on('keyup', function(){
+			keyup = d3.event.keyCode;
+			delete keyPressed[keyup];
+		//console.dir(keyPressed);
+			//console.log("A key released:-"+d3.event.key+"-"+d3.event.keyCode+"-Ctrl-"+d3.event.ctrlKey+"-Shift-"+d3.event.shiftKey);
+		})
+		.on('resize', function(){
+			const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+			const height = window.innerHeight|| document.documentElement.clientHeight|| document.body.clientHeight;
+			console.log(width, height);
+		});
+
+
 	setInterval(function(){
 		updateHoursMinutesSeconds();
+		if (playtick ==true){
+			playTick();
+		}
 	}, 1000);
 
 	function updateHoursMinutesSeconds(){
@@ -19,6 +101,7 @@
 		updateSeconds();
 		updateMinutes();
 		updateHours();
+		updateDigital();
 	}
 
 	function degreesToRadians(degrees)
@@ -40,6 +123,7 @@
          	.text(function(d) { return d; });
 	}
 
+
 	function updateHours(){
 		var degree = currentTime.hour * 30 + 30 / 60 * currentTime.minute;
 		d3.select(".hour").transition().attr("transform", "rotate("+degree+" 175 175)");
@@ -53,6 +137,15 @@
 	function updateSeconds(){
 		var degree = currentTime.second * 6;
 		d3.select(".second").transition().attr("transform", "rotate("+degree+" 175 175)");
+	}
+
+	function updateDigital(){
+		console.log('updateDigital');
+		d3.select('#digital_time')
+		.text(
+			currentTime.hour.toString().padStart(2, '0')+ 
+			":" + currentTime.minute.toString().padStart(2, '0')+
+			":" + currentTime.second.toString().padStart(2, '0'));
 	}
 
 	function drawMarks(){
@@ -76,5 +169,84 @@
 		currentTime.minute = new Date().getMinutes();
 		currentTime.second = new Date().getSeconds();
 	}
+	function updateincScale(){
+		clockPosition.scale = clockPosition.scale * 1.01;
+		object = d3.select(".clockSvg")
+	   .attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });
+
+ 	}
+	function updateincXpos(){
+			clockPosition.x = clockPosition.x + 1.0;
+			object = d3.select(".clockSvg")
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
+	}
+	function updateincYpos(){
+			clockPosition.y = clockPosition.y + 1.0;
+			object = d3.select(".clockSvg")
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
+
+	}
+
+	function updatedecScale(){
+			clockPosition.scale = clockPosition.scale * .99;
+			object = d3.select(".clockSvg")
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
+
+	}
+	function updatedecXpos(){
+			clockPosition.x = clockPosition.x - 1.0; 
+			object = d3.select(".clockSvg")
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
+
+	}
+	function updatedecYpos(){
+			clockPosition.y = clockPosition.y - 1.0;
+			object = d3.select(".clockSvg")
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });
+	}
+	function makeTick(){
+		tick = document.createElement("AUDIO");
+		if (tick.canPlayType("audio/ogg")) {
+			tick.setAttribute("src","/static/bells/tick.ogg");
+		}
+ 		//tick.setAttribute("controls", "controls");
+		document.body.appendChild(tick);
+	}	
+	function playTick(){
+		tick.play();
+	}
+	
+	function makeTock(){
+		tock = document.createElement("AUDIO");
+		if (tock.canPlayType("audio/ogg")) {
+	tock.setAttribute("src","/static/bells/tock.ogg");
+	}
+	//tock.setAttribute("controls", "controls");
+	document.body.appendChild(tock);
+
+	}
+
+
+	function updateMovement(){
+			var degree = currentTime.second * 6;
+			object = d3.select(".clockSvg")
+		.attr("transform", function(d) { return "translate("+degree+"  160)"  });
+	}
+
+	function makeParamenters(){
+		var data = [{"x": 1000.0, "y": 1000.1}, {"x": 2000.0, "y": 2500}, {"x": 3000, "y": 500}];
+	
+		var circle = d3.select(".clockSvg")
+		.data(data);
+	
+		circle.exit().remove();
+	
+		circle.enter().append("circle")
+			.attr("r", 250)
+			.attr("cx", function(d) { return d.x; })
+			.attr("cy", function(d) { return d.y; });
+	};
+	
+	makeParamenters();
 
 })();

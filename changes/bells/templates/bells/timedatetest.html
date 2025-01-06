@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Data</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Time Data</h1>
+    <table id="timeTable">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data will be inserted here -->
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchTimeData() {
+            try {
+                const response = await fetch('/timedatestatus/'); // Update this URL to your actual view URL
+                const data = await response.json();
+                updateTable(data.timedate);
+            } catch (error) {
+                console.error('Error fetching time data:', error);
+            }
+        }
+
+        function updateTable(timedate) {
+            const tbody = document.querySelector('#timeTable tbody');
+            tbody.innerHTML = ''; // Clear existing rows
+
+            for (let i = 0; i < timedate.length; i += 2) {
+                const row = document.createElement('tr');
+                const typeCell = document.createElement('td');
+                const valueCell = document.createElement('td');
+
+                typeCell.textContent = timedate[i];
+                valueCell.textContent = timedate[i + 1];
+
+                row.appendChild(typeCell);
+                row.appendChild(valueCell);
+                tbody.appendChild(row);
+            }
+        }
+
+        setInterval(fetchTimeData, 1000); // Fetch data every 5 seconds
+        fetchTimeData(); // Initial fetch
+    </script>
+</body>
+</html>
