@@ -1,0 +1,59 @@
+{% load static %}
+<table class="frontpage_table_select">
+    <tr>
+      <td>
+          {% for num in numbers%}
+            {% if num == number %}
+              <button 
+                id = "{{ num }}_number" 
+                class="changenumberbutton"
+                number = "{{num}}"
+                disabled="disabled">
+                <span 
+                number = "{{num}}"
+                class="frontpage_td_select_first_char shadow">{{num}}</span>
+              </button>
+            {% else %}
+              <button
+                id = "{{ num }}_number"
+                class="changenumberbutton"
+                number = "{{num}}"
+                  >
+                  <span 
+                  number = "{{num}}"
+                  class="frontpage_td_select_other_char shadow">{{num}}</span>
+              </button>
+            {% endif %}
+          {% endfor %}
+        
+      </td>
+    </tr>
+<!--     <tr>
+      <td>&nbsp;</td>
+    </tr> -->
+    {% for num in numbers%}
+      {% if num == number %}
+        {% for item in to_patterns %}
+            <tr class="change_displayed" 
+                number ="{{ item.number }}"
+                {% if item.number != num %} hidden {% endif %}>
+                <td class="change_td_displayed"> 
+                  <button 
+                    id="/display/{{item.number}}/{{item.name}}/"
+                    number="{{item.number}}"
+                    numbers="{{numbers}}"
+                    class="changenamebutton"
+                    >
+                    <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
+                    
+                  </button>
+                </td>
+                <td>
+                  <span class="change_count">{{item.count}}</span>
+                </td>         
+            </tr>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+  </table>
+  <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "/bells/pagesize.js" %}"></script>

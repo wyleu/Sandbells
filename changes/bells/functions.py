@@ -1,3 +1,5 @@
+from midiutil.MidiFile import MIDIFile
+
 class Error(Exception):
    # Constructor method
    def __init__(self, value):
@@ -32,7 +34,7 @@ class NotFound(Error):
 
 def sanity(current, required):
     if len(current) != len(required):
-        raise(DifferingLength('Differig Lengths'))
+        raise(DifferingLength('Differing Lengths'))
 
     for item in current:
         if current.count(item) > 1:
@@ -121,7 +123,16 @@ def db_process(current, required, debug = False):
             sanity_count = sanity_count + 1
 
             if( current != required):
-                current_pos = working.index(required[pos])
+                try:
+                    current_pos = working.index(required[pos])
+                except ValueError:
+                    print("OUch missing a bell!",pos, required, required[pos], working )
+                    # The Arches, which is a ring of 7 without a 2 is caught here. . . IT's endlessly looking for bell 2, give it the bell beyond the last. . . 
+                    working = required
+                    current_pos = working.index(required[pos])
+
+                except Exception as e:
+                    print('Unknown error', e)
             else:  # Process pattern to itself...
                 current_pos = current_pos + 1
                 if current_pos == len(current):
@@ -168,3 +179,44 @@ def db_process(current, required, debug = False):
     
     return calls, result, swappair
 
+def midi_file(current: str, required: str = None):
+    # Make a MIDI file from a change string
+
+    # create your MIDI object
+    midi_map = {
+        '1' : 53,   # F3
+        '2' : 52,   # E
+        '3' : 50,   # D
+        '4' : 48,   # C
+        '5' : 46,   # Bb
+        '6' : 45,   # A
+        '7' : 43,   # G
+        '8' : 41    # F2
+    }
+
+
+    mf = MIDIFile(1)     # only 1 track
+    track = 0   # the only track
+    time = 0    # start at the beginning
+    channel = 10   # Bells go on MIDI 11
+    volume = 100
+
+    track_name = current
+    if required:
+        track_name = track_name + "-" + required
+
+    mf.addTrackName(track, time, track_name)
+    mf.addTempo(track, time, 120)
+
+# add some notes
+    if not required:
+        for item, count  in enumerate(current, 1):
+            pitch = midi_map[item]
+            time = count             # on beat
+            duration = 1         # 1 beat long
+            mf.addNote(track, channel, pitch, time, duration, volume)
+
+
+        # write it to disk
+        with open("%s.mid" % (track_name,), 'wb') as outf:
+            mf.writeFile(outf)

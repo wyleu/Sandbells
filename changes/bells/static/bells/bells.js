@@ -8,7 +8,8 @@ function openFullscreen() {
   } else if (elem.msRequestFullscreen) { /* IE11 */
     elem.msRequestFullscreen();
   }
-}
-$(document).on("keypress", function (e) {
+};
+
+/* $(document).on("keypress", function (e) {
   alert(e.which);
-});
+}); */

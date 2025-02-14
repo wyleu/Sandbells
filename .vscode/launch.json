@@ -5,12 +5,45 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Test: Django",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "test"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/changes/manage.py"
+        },
+        {
             "name": "Python Debugger: Django",
             "type": "debugpy",
             "request": "launch",
             "args": [
                 "runserver",
                 "0.0.0.0:8000"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/changes/manage.py"
+        },
+        {
+            "name": " Make Migration: Django",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "makemigrations"
+            ],
+            "django": true,
+            "autoStartBrowser": false,
+            "program": "${workspaceFolder}/changes/manage.py"
+        },
+        {
+            "name": " Migrate: Django",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                "migrate"
             ],
             "django": true,
             "autoStartBrowser": false,

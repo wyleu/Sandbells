@@ -15,14 +15,11 @@ class Pattern(models.Model):
     pub_date = models.DateTimeField(auto_now=True)
     history = models.TextField(blank=True)
     pattern = models.CharField(max_length=100, blank=True, unique=True)
-    # four = models.CharField(max_length=4, help_text="A Six bell representation",blank=True)
-    # five = models.CharField(max_length=5, help_text="A Six bell representation",blank=True)
-    # six = models.CharField(max_length=6, help_text="A Six bell representation",blank=True)
-    # seven = models.CharField(max_length=7, help_text="A Seven bell representation",blank=True)
-    # eight = models.CharField(max_length=8, help_text="A Eight bell representation",blank=True)
     order = models.SmallIntegerField(help_text="Ordering of patterns rounds should explicitly be 0",
                                       default=100)
     number = models.SmallIntegerField(editable=False, help_text ="Bells in Pattern (calculated)", default=0)
+    count = models.SmallIntegerField(help_text="Number of changes in pattern", null=True,)
+    enable = models.BooleanField(help_text="Enable this Pattern", default = True)
 
     class Meta:
         ordering = ["order"]
@@ -55,6 +52,11 @@ class Pattern(models.Model):
 
         with open(self.filename, "wb") as output_file:
             MyMIDI.writeFile(output_file)
+
+    def populate_count(self, count):
+        if self.count is None:
+            self.count = count
+            self.save()
 
            
     def __str__(self):
@@ -158,3 +160,13 @@ class Bell(models.Model):
 
     def __str__(self):
         return ' '.join([self.bell, str(self.tower)])
+    
+
+class Function(models.Model):
+    name = models.CharField(max_length=60, help_text="function Name", unique=True)
+    order = models.PositiveSmallIntegerField(unique=True)
+    active = models.BooleanField(default=True)
+    function = models.CharField(max_length=255)
+
+    def __str__(self):
+        return ' '.join(self.name, str(self.order)) 

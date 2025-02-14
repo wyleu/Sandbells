@@ -2,6 +2,10 @@ from django.shortcuts import render
 
 import io
 import datetime
+import socket
+import subprocess
+import json
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
@@ -15,6 +19,7 @@ from django.http import FileResponse
 from django.shortcuts import render
 from django.template import loader
 
+
 from bells.models import Bell, Tower, Pattern
 from bells.functions import (
     db_process,
@@ -22,23 +27,97 @@ from bells.functions import (
     NonIntegerBellCount,
     NotFound)
 
-def index(request,  number = 8, to_name='', from_name="Rounds"):
+def home(request, number = 8 ):
+    # Render the iframe container
+    context = {}
+
+
+        # Render menu 
+    numbers = set(
+        Pattern.objects.filter(
+        enable=True
+        ).order_by('number')
+        .values_list('number', flat=True))
+
+    numbers= sorted(numbers)
+
+    to_patterns = Pattern.objects.filter(
+        enable=True
+        ).order_by('number', 'order','name') 
+    
+    hostname = socket.gethostname().replace('"','')
+    # hostname -I  for ip address
+##
+    p = subprocess.Popen(["hostname", "-I"], stdout=subprocess.PIPE)
+    hostname_out, err = p.communicate()
+    try:
+        ipaddr = [x.decode("utf-8").replace("'",'') for x in hostname_out.split()][0]
+    except IndexError:
+        ipaddr = "No Net"
+
+    p = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
+    gitlog_out, err = p.communicate()
+    githash = [x.decode("utf-8").replace("'",'') for x in gitlog_out.split()][0][0:6]
+
+    context = {
+        'hostname': hostname,
+        'IPAddr': ipaddr,
+        'githash': githash,
+        'number' : number,
+        'numbers' : numbers,
+        'to_patterns': to_patterns,
+        'count': len(to_patterns),
+        }
+    
+    return render(request, 'bells/home.html', context)
+
+def menu(request, number = 8):
+    # Render menu 
+    numbers = set(
+        Pattern.objects.filter(
+            enable=True
+        ).order_by('number')
+        .values_list('number', flat=True))
+
+    to_patterns = Pattern.objects.filter(
+        enable=True
+        ).order_by('number','order','name') 
+    
+                   
+
+    context = {
+        'number' : number,
+        'numbers' : numbers,
+        'count': len(to_patterns),
+        'to_patterns': to_patterns
+        }
+    
+    response=  render(request, 'bells/menu.html', context)
+    # The following allows content in iframe windows.
+    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    return response
+
+
+def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe contents
 
     lines_per_page = 20
 
     from_patterns = Pattern.objects.filter(
-        number=number
+        number=number,
+        enable = True
     ).order_by('order')  
     to_patterns = Pattern.objects.filter(
-        number=number
+        number=number,
+        enable=True
     ).order_by('order','name') 
 
-    numbers = set(Pattern.objects.filter().order_by('number').values_list('number', flat=True))
+    numbers = set(Pattern.objects.filter(enable=True).order_by('number').values_list('number', flat=True))
 
     try:
         from_pattern = Pattern.objects.get(
             name__iexact = from_name,
-            number = number
+            number = number,
+            enable=True
         )
     except  Pattern.DoesNotExist:
         raise NotFound("No From Pattern Found")
@@ -46,7 +125,9 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
     try:
         to_pattern = Pattern.objects.get(
             name__iexact = to_name,
-            number = number
+            number = number,
+            enable=True
+
         )
     except  Pattern.DoesNotExist:
         context = {
@@ -54,15 +135,21 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
                'to_patterns':to_patterns,
                'from_pattern':from_pattern,
                'number': int(number),
-               'numbers': sorted(numbers)}
+               'numbers': sorted(numbers)
+        }
     
-        return render(request, 'bells/fullscreen.html', context)
+        response = render(request, 'bells/display.html', context)
+        # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+        return response
         
     code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
     revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
 
+    to_pattern.populate_count(len(result[0])-1)
+
     result = demuck_result_list(result)
     revresult = demuck_result_list(revresult) 
+    
 
     if len(result) < lines_per_page:
         forward_and_back = True
@@ -102,7 +189,10 @@ def index(request,  number = 8, to_name='', from_name="Rounds"):
                'forward_and_back': forward_and_back,
                }
     
-    return render(request, 'bells/fullscreen.html', context)
+    response = render(request, 'bells/display.html', context)
+    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
+    return response
+
 
 def tower_detail_json(request, tower_id=1):
     try:
@@ -280,6 +370,7 @@ def some_draw(request, bells=8):
     buffer.seek(0)
     return FileResponse(buffer, as_attachment=True, filename='draw.pdf')
 
+# General functions
 
 def demuck_result(result):
     res_string = []
@@ -317,4 +408,24 @@ def demuck_result_list(result):
         res_string.append(res_list)
     return res_string
 
+def timedatestatus(request):
+
+    response_data = {}
+    response_data['result'] = 'error'
+    response_data['message'] = 'Some error message'
+    p = subprocess.Popen(["timedatectl",], stdout=subprocess.PIPE)
+    timedate_out, err = p.communicate()
+    td = [x.decode("utf-8").replace("'",'') for x in timedate_out.split()]
+    print(td)
+    timedate = [' '.join([td[0],td[1]]), ' '.join([td[2],td[3],td[4],td[5],])]                   # Local Time
+    timedate = [' '.join([td[6],td[7]]), ' '.join([td[8],td[9],td[10],td[11],])] + timedate      # Universal Time
+    timedate = [' '.join([td[12],td[13]]), ' '.join([td[14],td[15],td[16],])] + timedate         # RTC Time
+    timedate = [' '.join([td[17],td[18]]), ' '.join([td[19],td[20],td[21],])] + timedate         # TimeZone
+    timedate = [' '.join([td[22],td[23],td[24]]), ' '.join([td[25],])] + timedate                # Syncronised
+    timedate = [' '.join([td[26],td[27]]), ' '.join([td[28],])] + timedate                       # Service
+    timedate = [' '.join([td[29],td[30],td[31],td[32],]), ' '.join([td[33],])] + timedate
+    return JsonResponse({'timedate':timedate})
+
+def timedatetest(request):
+    return render(request, 'bells/timedatetest.html')
 

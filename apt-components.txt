@@ -1,0 +1,4 @@
+# https://maker-tutorials.com/en/auto-start-midori-browser-in-fullscreen-kiosk-modus-raspberry-pi-linux/
+
+sudo apt-get update && sudo apt-get install -y midori matchbox
+sudo apt-get install unclutter
