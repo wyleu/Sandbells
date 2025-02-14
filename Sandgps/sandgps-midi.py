@@ -11,7 +11,7 @@ import smbus2
 import RPi.GPIO as GPIO
 from time import sleep
 import i2cEncoderLibV2
-import mido
+import mido   # pip install python-rtmidi
 
 from gps3.agps3threaded import AGPS3mechanism
 
