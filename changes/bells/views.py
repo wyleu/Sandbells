@@ -97,7 +97,6 @@ def menu(request, number = 8):
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
-
 def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe contents
 
     lines_per_page = 20
@@ -192,7 +191,6 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
     response = render(request, 'bells/display.html', context)
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
-
 
 def tower_detail_json(request, tower_id=1):
     try:

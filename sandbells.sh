@@ -18,6 +18,7 @@ echo "collect static"
 python manage.py  collectstatic
 echo "permissions again..."
 chmod 777 /var/www/html/static/bells/*.*
-systemctl restart nginx.service
-systemctl restart midori-fullscreen.service
-systemctl restart gunicorn.service
+# systemctl restart nginx.service
+# systemctl restart midori-fullscreen.service
+# systemctl restart gunicorn.service
+python manage.py runserver 0.0.0.0:8000
