@@ -164,9 +164,9 @@ CSP_DEFAULT_SRC = ["'none'"]
 CSP_SCRIPT_SRC = ["'unsafe-inline'","'self'",
     "http://sandbells.local", "http://sandbells2.local"
 ]
-CSP_INCLUDE_NONCE_IN = ['self','localhost', "script-src",]
+CSP_INCLUDE_NONCE_IN = ["'self'",'localhost', "script-src",]
 
-CSP_CONNECT_SRC  = ['self','localhost', 'http://sandbells.local', "http://sandbells2.local",]
+CSP_CONNECT_SRC  = ["'self'",'localhost', 'http://sandbells.local', "http://sandbells2.local",]
 CSP_STYLE_SRC = ["'unsafe-inline'","'self'", "http://sandbells.local",]
 CSP_IMG_SRC=["'self'"]
 CSP_FRAME_SRC = ["'self'","http://sandbells.local", "http://sandbells2.local",]
