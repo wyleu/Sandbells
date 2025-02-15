@@ -36,7 +36,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'rasppidesk.local',
     'zynthian-amp2.local',
-    'sandbells.local'
+    'sandbells.local',
+    'sandbells2.local'
     ]
 
 
@@ -161,16 +162,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CSP_DEFAULT_SRC = ["'none'"]
 
 CSP_SCRIPT_SRC = ["'unsafe-inline'","'self'",
-    "http://sandbells.local"
+    "http://sandbells.local", "http://sandbells2.local"
 ]
 CSP_INCLUDE_NONCE_IN = ['self','localhost', "script-src",]
 
-CSP_CONNECT_SRC  = ["'self'",'localhost', 'http://sandbells.local',]
-CSP_STYLE_SRC = ["'unsafe-inline'","'self'", "'http://sandbells.local'",]
+CSP_CONNECT_SRC  = ['self','localhost', 'http://sandbells.local', "http://sandbells2.local",]
+CSP_STYLE_SRC = ["'unsafe-inline'","'self'", "http://sandbells.local",]
 CSP_IMG_SRC=["'self'"]
-CSP_FRAME_SRC = ["'self'","http://sandbells.local",]
-CSP_MEDIA_SRC = ["'self'","http://sandbells.local",]
-CSP_FRAME_ANCESTORS = ["'self'","http://sandbells.local",]
+CSP_FRAME_SRC = ["'self'","http://sandbells.local", "http://sandbells2.local",]
+CSP_MEDIA_SRC = ["'self'","http://sandbells.local", "http://sandbells2.local",]
+CSP_FRAME_ANCESTORS = ["'self'","http://sandbells7.local", "http://sandbells2.local",]
 
 
 # When DEBUG is on we don't require HTTPS on our resources because in a local environment
@@ -195,7 +196,7 @@ CSP_REPORT_PERCENTAGE = 0.6
 #     #"interest-cohort": "*",
 #     "magnetometer": [],
 #     "microphone": [],
-#     "midi": ["self", "http://sandbells.local"],
+#     "midi": ["self", "http://sandbells.local", "http://sandbells2.local"],
 #     "payment": [],
 #     "usb": [],
 # }
