@@ -7,6 +7,26 @@ width="250px"
 viewBox="0 450 350 350" 
 class="clockSvg shadow">
 
+<script>
+   function updateDateTime(){
+      var currentDate = new Date();
+      var timeOptions = {hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short'};
+      var dateOptions = {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'};
+      var formattedTime = currentDate.toLocaleString('en-US', timeOptions);
+      var formattedDate = currentDate.toLocaleString('en-US', dateOptions);
+      // Display time first and date on a new line
+      document.getElementById('digital_time').innerHTML = `${formattedTime}<br>${formattedDate}`;
+
+    }
+
+    // Update the date and time every second
+    setInterval(updateDateTime, 1000);
+
+    // Initial call to display date and time
+    updateDateTime();
+</script>
+
+
 <g id = "posinfo" class="info">
   <text id="table_width" x="0" y="750" fill="red" stroke="black" font-size="20">table W</text>
   <text id="table_width_value" x="130" y="750" fill="red" stroke="black" font-size="20">10000</text>
@@ -40,7 +60,7 @@ class="clockSvg shadow">
 <g class="numbers"></g>
 <g class="marks"></g>
 <g class="digital">
-  <text id="digital_time" x="00" y= "450" fill ="red" stroke="black" font-size="90">12:23:45</text>
+  <text id="digital_time" x="00" y= "450" fill ="red" stroke="black" font-size="80">12:23:45</text>
 </g>
 <circle cx="175" cy="175" r="10" stroke="black" fill="green"></circle>
 </svg>
