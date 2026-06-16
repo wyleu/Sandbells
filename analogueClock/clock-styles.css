@@ -1,0 +1,28 @@
+body {
+	text-align: center;
+}
+
+svg {
+	width:750px;
+	height: 750px;
+	border-style: solid;
+	border-width: 1px;
+    box-sizing: border-box;
+}
+
+.clockSvg circle.frame{
+	fill: orange;
+}
+
+.buttonSvg circle.frame{
+	fill: orange;
+}
+
+.units line {
+	stroke-linecap: round;
+}
+
+.marks text {
+	font-size: 6px;
+    font-weight: bold;
+}

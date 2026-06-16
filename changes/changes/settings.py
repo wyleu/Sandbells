@@ -36,7 +36,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'rasppidesk.local',
     'zynthian-amp2.local',
-    'sandbells.local'
+    'sandbells.local',
+    'sandbells2.local'
     ]
 
 
