@@ -1,0 +1,20 @@
+[Unit]
+Description=Gunicorn daemon
+Requires=gunicorn.socket
+After=network.target
+
+[Service]
+Type=notify
+# The Specific user that our service will run as
+User=wyleu
+Group=wyleu
+RuntimeDirectory=gunicorn
+WorkingDirectory=/home/wyleu/Code/Sandbells/changes
+ExecStart=/home/wyleu/Code/Sandbells/Bellvirtenv/bin/gunicorn --access-logfile - --workers 3 --bind unix:/run/gunicorn.socket changes.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
