@@ -1,26 +1,5 @@
 {% load static %}
 
-<script>
-   function updateDateTime(){
-      var currentDate = new Date();
-      var timeOptions = {hour: 'numeric', minute: 'numeric', second: 'numeric', timeZoneName: 'short'};
-      var dateOptions = {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'};
-      var formattedTime = currentDate.toLocaleString('en-US', timeOptions);
-      var formattedDate = currentDate.toLocaleString('en-US', dateOptions);
-      // Display time first and date on a new line
-      document.getElementById('digital_time').text = `${formattedTime}`;
-
-    }
-
-    // Update the date and time every second
-    setInterval(updateDateTime, 1000);
-
-    // Initial call to display date and time
-    updateDateTime();
-</script>
-
-
-
 <svg
 id="clock"
 height="890px"
