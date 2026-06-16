@@ -1,0 +1,9 @@
+{
+	"folders": [
+		{
+			"uri": "vscode-remote://ssh-remote+sandsense.local/home/sandsense/Code/Sandsense"
+		}
+	],
+	"remoteAuthority": "ssh-remote+sandsense.local",
+	"settings": {}
+}
