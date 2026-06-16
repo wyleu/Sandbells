@@ -40,8 +40,8 @@
 				if ("16" in keyPressed && "17" in keyPressed){
 							//console.log("188 & 16 SHIFT & 17 CONTROL recieved");
 							updatedecYpos();
-				}		      
-						
+				}
+
 				else if ("16" in keyPressed){
 							//console.log("188 & 16 SHIFT recieved");
 							updatedecXpos();
@@ -59,8 +59,7 @@
 				if ("16" in keyPressed && "17" in keyPressed){
 							//console.log("190 & 16 SHIFT & 17 CONTROL recieved");
 							updateincYpos();
-				}		      
-						
+				}
 				else if ("16" in keyPressed){
 							//console.log("190 & 16 SHIFT recieved");
 							updateincXpos();
@@ -178,26 +177,23 @@
 	function updateincXpos(){
 			clockPosition.x = clockPosition.x + 1.0;
 			object = d3.select(".clockSvg")
-		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });
 	}
 	function updateincYpos(){
 			clockPosition.y = clockPosition.y + 1.0;
 			object = d3.select(".clockSvg")
-		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
-
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });
 	}
 
 	function updatedecScale(){
 			clockPosition.scale = clockPosition.scale * .99;
 			object = d3.select(".clockSvg")
-		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
-
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });
 	}
 	function updatedecXpos(){
-			clockPosition.x = clockPosition.x - 1.0; 
+			clockPosition.x = clockPosition.x - 1.0;
 			object = d3.select(".clockSvg")
-		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });         
-
+		.attr("transform", function(d) { return "translate("+clockPosition.x+" "+clockPosition.y+") scale("+clockPosition.scale+" "+ clockPosition.scale+")"  });
 	}
 	function updatedecYpos(){
 			clockPosition.y = clockPosition.y - 1.0;
@@ -211,11 +207,12 @@
 		}
  		//tick.setAttribute("controls", "controls");
 		document.body.appendChild(tick);
-	}	
+	}
+
 	function playTick(){
 		tick.play();
 	}
-	
+
 	function makeTock(){
 		tock = document.createElement("AUDIO");
 		if (tock.canPlayType("audio/ogg")) {
@@ -235,18 +232,18 @@
 
 	function makeParamenters(){
 		var data = [{"x": 1000.0, "y": 1000.1}, {"x": 2000.0, "y": 2500}, {"x": 3000, "y": 500}];
-	
+
 		var circle = d3.select(".clockSvg")
 		.data(data);
-	
+
 		circle.exit().remove();
-	
+
 		circle.enter().append("circle")
 			.attr("r", 250)
 			.attr("cx", function(d) { return d.x; })
 			.attr("cy", function(d) { return d.y; });
 	};
-	
+
 	makeParamenters();
 
 })();

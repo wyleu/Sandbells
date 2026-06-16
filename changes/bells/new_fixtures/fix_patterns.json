@@ -1,0 +1,786 @@
+[
+{
+  "model": "bells.pattern",
+  "pk": 1,
+  "fields": {
+    "name": "The Arches",
+    "pub_date": "2024-07-24T09:22:53.855Z",
+    "history": "7 bells 5713468   (no 2nd)",
+    "pattern": "5713468",
+    "order": 10,
+    "number": 7,
+    "count": 19,
+    "enable": false
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 2,
+  "fields": {
+    "name": "Back Rounds",
+    "pub_date": "2024-07-24T09:09:37.859Z",
+    "history": "Back Rounds\r\n5 Bells 43215\r\n6 Bells 543216\r\n7 Bells  6543217\r\n8 Bells 76543218\r\n\r\nCount Down with Tenor at the back",
+    "pattern": "76543218",
+    "order": 10,
+    "number": 8,
+    "count": 22,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 3,
+  "fields": {
+    "name": "Bowbells",
+    "pub_date": "2024-07-24T09:09:37.312Z",
+    "history": "13245768",
+    "pattern": "13245768",
+    "order": 10,
+    "number": 8,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 4,
+  "fields": {
+    "name": "Burdette",
+    "pub_date": "2024-07-24T09:10:30.197Z",
+    "history": "Burdette\r\n6 Bells 213546\r\n8 Bells 31245768",
+    "pattern": "31245768",
+    "order": 10,
+    "number": 8,
+    "count": 4,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 5,
+  "fields": {
+    "name": "Exp-ing Titums",
+    "pub_date": "2026-06-16T13:21:09.830Z",
+    "history": "Exploding Tittums\r\n6 Bells 342516\r\n8 Bells 45362718",
+    "pattern": "45362718",
+    "order": 12,
+    "number": 8,
+    "count": 13,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 6,
+  "fields": {
+    "name": "Hagdyke",
+    "pub_date": "2024-07-24T09:10:21.093Z",
+    "history": "Hagdyke\r\n6 Bells 341256\r\n8 Bells 12563478",
+    "pattern": "12563478",
+    "order": 10,
+    "number": 8,
+    "count": 5,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 8,
+  "fields": {
+    "name": "Jacks",
+    "pub_date": "2024-07-24T09:09:35.459Z",
+    "history": "Jacks\r\n6 Bells 145236\r\n8 Bells 16745238",
+    "pattern": "16745238",
+    "order": 10,
+    "number": 8,
+    "count": 13,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 9,
+  "fields": {
+    "name": "Jokers",
+    "pub_date": "2024-07-24T09:11:52.630Z",
+    "history": "Jokers\r\n5 Bells 14324\r\n6 Bells 154326\r\n8 Bells 17654328",
+    "pattern": "17654328",
+    "order": 10,
+    "number": 8,
+    "count": 16,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 10,
+  "fields": {
+    "name": "Kennet",
+    "pub_date": "2024-07-24T09:13:28.526Z",
+    "history": "6 Bells 153426",
+    "pattern": "153426",
+    "order": 10,
+    "number": 6,
+    "count": 5,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 11,
+  "fields": {
+    "name": "Kings",
+    "pub_date": "2024-07-24T09:09:33.827Z",
+    "history": "Kings\r\n5 Bells 31245\r\n6 Bells 531246\r\n8 Bells 75312468\r\nOdds from back, evens from front.",
+    "pattern": "75312468",
+    "order": 10,
+    "number": 8,
+    "count": 13,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 13,
+  "fields": {
+    "name": "Priory",
+    "pub_date": "2024-07-24T09:08:51.163Z",
+    "history": "Priory\r\n6 Bells 132546\r\n8 Bells  13254768",
+    "pattern": "13254768",
+    "order": 10,
+    "number": 8,
+    "count": 4,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 14,
+  "fields": {
+    "name": "Princes",
+    "pub_date": "2024-07-24T09:09:31.027Z",
+    "history": "Princes\r\n6 Bells 532146\r\n8 Bells 75321468",
+    "pattern": "75321468",
+    "order": 10,
+    "number": 8,
+    "count": 14,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 15,
+  "fields": {
+    "name": "Princesses",
+    "pub_date": "2024-07-24T09:08:51.168Z",
+    "history": "8 Bells 13527468",
+    "pattern": "13527468",
+    "order": 10,
+    "number": 8,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 16,
+  "fields": {
+    "name": "Queens",
+    "pub_date": "2024-07-24T09:08:51.172Z",
+    "history": "Queens\r\n5 Bells 24135  \r\n6 Bells 135246\r\n7 Bells  2461357\r\n8 Bells 13572468\r\nOdds from front, evens from front",
+    "pattern": "13572468",
+    "order": 10,
+    "number": 8,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 17,
+  "fields": {
+    "name": "Roller Coaster",
+    "pub_date": "2024-07-24T09:08:51.165Z",
+    "history": "Roller Coaster\r\n7 Bells 3216547\r\n8 Bells 14327658",
+    "pattern": "14327658",
+    "order": 10,
+    "number": 8,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 19,
+  "fields": {
+    "name": "Rounds",
+    "pub_date": "2024-07-24T09:09:40.152Z",
+    "history": "4 Bells 1234\r\n5 Bells 12345\r\n6 Bells 123456\r\n7 Bells 1234567\r\n8 Bells 12345678\r\nCount Up",
+    "pattern": "12345678",
+    "order": 0,
+    "number": 8,
+    "count": 57,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 20,
+  "fields": {
+    "name": "St Michael's",
+    "pub_date": "2024-07-24T09:08:51.167Z",
+    "history": "8 Bells 17652438",
+    "pattern": "17652438",
+    "order": 10,
+    "number": 8,
+    "count": 14,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 21,
+  "fields": {
+    "name": "See Saw",
+    "pub_date": "2024-07-24T09:13:29.023Z",
+    "history": "6 Bells 321456\r\n8 Bells 43215678",
+    "pattern": "321456",
+    "order": 10,
+    "number": 6,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 22,
+  "fields": {
+    "name": "Titums",
+    "pub_date": "2024-07-24T09:13:44.477Z",
+    "history": "5 Bells 31425\r\n6 Bells 142536\r\n8 Bells 15263748\r\nSplit Bells in two, take 1st bell of each, then 2nd, then 3rd.",
+    "pattern": "31425",
+    "order": 6,
+    "number": 5,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 23,
+  "fields": {
+    "name": "Weasels",
+    "pub_date": "2024-07-24T09:13:45.044Z",
+    "history": "5 Bells  14235",
+    "pattern": "14235",
+    "order": 9,
+    "number": 5,
+    "count": 2,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 24,
+  "fields": {
+    "name": "Whittington's",
+    "pub_date": "2024-07-24T09:13:28.012Z",
+    "history": "6 Bells 125346\r\n8 Bells 12753468 \r\nBells 1&2, then odds from back, evens from front.",
+    "pattern": "125346",
+    "order": 6,
+    "number": 6,
+    "count": 2,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 26,
+  "fields": {
+    "name": "Rounds",
+    "pub_date": "2024-07-24T09:13:43.854Z",
+    "history": "Rounds on 5 Bells",
+    "pattern": "12345",
+    "order": 0,
+    "number": 5,
+    "count": 20,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 27,
+  "fields": {
+    "name": "Rounds",
+    "pub_date": "2024-07-24T09:13:26.605Z",
+    "history": "Rounds on si",
+    "pattern": "123456",
+    "order": 0,
+    "number": 6,
+    "count": 30,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 28,
+  "fields": {
+    "name": "Rounds",
+    "pub_date": "2024-07-24T09:13:51.075Z",
+    "history": "Rounds on 7 bells",
+    "pattern": "1234567",
+    "order": 0,
+    "number": 7,
+    "count": 42,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 29,
+  "fields": {
+    "name": "Whittington's",
+    "pub_date": "2024-07-24T09:09:39.094Z",
+    "history": "Whittingtons on 8",
+    "pattern": "12753468",
+    "order": 8,
+    "number": 8,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 30,
+  "fields": {
+    "name": "Titums",
+    "pub_date": "2024-07-24T09:13:27.388Z",
+    "history": "Titums\r\n5 Bells 31425\r\n6 Bells 142536\r\n8 Bells 15263748\r\nSplit Bells in two, take 1st bell of each, then 2nd, then 3rd.",
+    "pattern": "142536",
+    "order": 6,
+    "number": 6,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 38,
+  "fields": {
+    "name": "Sew Saw",
+    "pub_date": "2024-07-24T09:09:38.488Z",
+    "history": "6 Bells 321456\r\n8 Bells 43215678",
+    "pattern": "43215678",
+    "order": 9,
+    "number": 8,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 42,
+  "fields": {
+    "name": "Kings",
+    "pub_date": "2024-07-24T09:13:46.749Z",
+    "history": "Kings\r\n5 Bells 31245\r\n6 Bells 531246\r\n8 Bells 75312468\r\nOdds from back, evens from front.",
+    "pattern": "31245",
+    "order": 100,
+    "number": 5,
+    "count": 2,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 43,
+  "fields": {
+    "name": "Kings",
+    "pub_date": "2024-07-24T09:13:32.893Z",
+    "history": "Kings\r\n5 Bells 31245\r\n6 Bells 531246\r\n8 Bells 75312468\r\nOdds from back, evens from front.",
+    "pattern": "531246",
+    "order": 100,
+    "number": 6,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 44,
+  "fields": {
+    "name": "Queens",
+    "pub_date": "2024-07-24T09:13:52.893Z",
+    "history": "Queens\r\n5 Bells 24135  \r\n6 Bells 135246\r\n7 Bells  2461357\r\n8 Bells 13572468\r\nOdds from front, evens from front",
+    "pattern": "2461357",
+    "order": 100,
+    "number": 7,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 45,
+  "fields": {
+    "name": "Queens",
+    "pub_date": "2024-07-24T09:13:34.641Z",
+    "history": "Queens\r\n5 Bells 24135  \r\n6 Bells 135246\r\n7 Bells  2461357\r\n8 Bells 13572468\r\nOdds from front, evens from front",
+    "pattern": "135246",
+    "order": 100,
+    "number": 6,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 46,
+  "fields": {
+    "name": "Queens",
+    "pub_date": "2024-07-24T09:13:47.407Z",
+    "history": "Queens\r\n5 Bells 24135  \r\n6 Bells 135246\r\n7 Bells  2461357\r\n8 Bells 13572468\r\nOdds from front, evens from front",
+    "pattern": "24135",
+    "order": 100,
+    "number": 5,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 80,
+  "fields": {
+    "name": "Roller Coaster",
+    "pub_date": "2024-07-24T09:13:53.419Z",
+    "history": "Roller Coaster\r\n7 Bells 3216547\r\n8 Bells 14327658",
+    "pattern": "3216547",
+    "order": 100,
+    "number": 7,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 81,
+  "fields": {
+    "name": "Burdette",
+    "pub_date": "2024-07-24T09:13:03.089Z",
+    "history": "Burdette\r\n6 Bells 213546\r\n8 Bells 31245768",
+    "pattern": "213546",
+    "order": 100,
+    "number": 6,
+    "count": 2,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 82,
+  "fields": {
+    "name": "Exploding Titums",
+    "pub_date": "2024-07-24T09:13:30.700Z",
+    "history": "Exploding Titums\r\n6 Bells 342516\r\n8 Bells 45362718",
+    "pattern": "342516",
+    "order": 100,
+    "number": 6,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 83,
+  "fields": {
+    "name": "Hagdyke",
+    "pub_date": "2024-07-24T09:13:31.295Z",
+    "history": "Hagdyke\r\n6 Bells 341256\r\n8 Bells 12563478",
+    "pattern": "341256",
+    "order": 100,
+    "number": 6,
+    "count": 4,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 84,
+  "fields": {
+    "name": "Jacks",
+    "pub_date": "2024-07-24T09:13:31.824Z",
+    "history": "Jacks\r\n6 Bells 145236\r\n8 Bells 16745238",
+    "pattern": "145236",
+    "order": 100,
+    "number": 6,
+    "count": 4,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 85,
+  "fields": {
+    "name": "Priory",
+    "pub_date": "2024-07-24T09:13:34.092Z",
+    "history": "Priory\r\n6 Bells 132546\r\n8 Bells  13254768",
+    "pattern": "132546",
+    "order": 100,
+    "number": 6,
+    "count": 2,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 86,
+  "fields": {
+    "name": "Jokers",
+    "pub_date": "2024-07-24T09:13:05.755Z",
+    "history": "Jokers\r\n5 Bells 14324\r\n6 Bells 154326\r\n8 Bells 17654328",
+    "pattern": "154326",
+    "order": 100,
+    "number": 6,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 87,
+  "fields": {
+    "name": "Jokers",
+    "pub_date": "2024-07-24T09:13:46.154Z",
+    "history": "Jokers\r\n5 Bells 14325\r\n6 Bells 154326\r\n8 Bells 17654328",
+    "pattern": "14325",
+    "order": 100,
+    "number": 5,
+    "count": 3,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 88,
+  "fields": {
+    "name": "Back Rounds",
+    "pub_date": "2024-07-24T09:13:52.351Z",
+    "history": "Back Rounds\r\n5 Bells 43215\r\n6 Bells 543216\r\n7 Bells  6543217\r\n8 Bells 76543218\r\n\r\nCount Down with Tenor at the back",
+    "pattern": "6543217",
+    "order": 100,
+    "number": 7,
+    "count": 15,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 89,
+  "fields": {
+    "name": "Back Rounds",
+    "pub_date": "2024-07-24T09:13:29.614Z",
+    "history": "Back Rounds\r\n5 Bells 43215\r\n6 Bells 543216\r\n7 Bells  6543217\r\n8 Bells 76543218\r\n\r\nCount Down with Tenor at the back",
+    "pattern": "543216",
+    "order": 100,
+    "number": 6,
+    "count": 10,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 90,
+  "fields": {
+    "name": "Back Rounds",
+    "pub_date": "2024-07-24T09:13:45.565Z",
+    "history": "Back Rounds\r\n5 Bells 43215\r\n6 Bells 543216\r\n7 Bells  6543217\r\n8 Bells 76543218\r\n\r\nCount Down with Tenor at the back",
+    "pattern": "43215",
+    "order": 100,
+    "number": 5,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 91,
+  "fields": {
+    "name": "Princes",
+    "pub_date": "2024-07-24T09:13:33.640Z",
+    "history": "Princes\r\n6 Bells 532146\r\n8 Bells 75321468",
+    "pattern": "532146",
+    "order": 100,
+    "number": 6,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 109,
+  "fields": {
+    "name": "Titums",
+    "pub_date": "2024-07-24T09:09:39.646Z",
+    "history": "Titums\r\n5 Bells 31425\r\n6 Bells 142536\r\n8 Bells 15263748\r\nSplit Bells in two, take 1st bell of each, then 2nd, then 3rd.",
+    "pattern": "15263748",
+    "order": 6,
+    "number": 8,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 130,
+  "fields": {
+    "name": "Total Rev",
+    "pub_date": "2024-07-24T09:08:51.159Z",
+    "history": "",
+    "pattern": "87654321",
+    "order": 100,
+    "number": 8,
+    "count": 29,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 131,
+  "fields": {
+    "name": "Total Rev",
+    "pub_date": "2024-07-24T09:13:54.078Z",
+    "history": "",
+    "pattern": "7654321",
+    "order": 100,
+    "number": 7,
+    "count": 21,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 132,
+  "fields": {
+    "name": "Total Rev",
+    "pub_date": "2024-07-24T09:13:35.247Z",
+    "history": "",
+    "pattern": "654321",
+    "order": 100,
+    "number": 6,
+    "count": 15,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 133,
+  "fields": {
+    "name": "Rounds",
+    "pub_date": "2024-07-24T09:13:40.850Z",
+    "history": "Rounds on 4",
+    "pattern": "1234",
+    "order": 100,
+    "number": 4,
+    "count": 12,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 134,
+  "fields": {
+    "name": "Total Rev",
+    "pub_date": "2024-07-24T09:13:42.191Z",
+    "history": "Total Reverse on 4",
+    "pattern": "4321",
+    "order": 100,
+    "number": 4,
+    "count": 6,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 135,
+  "fields": {
+    "name": "Titums",
+    "pub_date": "2024-07-24T09:13:41.521Z",
+    "history": "Titums on 4",
+    "pattern": "1324",
+    "order": 100,
+    "number": 4,
+    "count": 1,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 136,
+  "fields": {
+    "name": "Chime1",
+    "pub_date": "2024-07-24T09:13:37.120Z",
+    "history": "",
+    "pattern": "2347",
+    "order": 100,
+    "number": 4,
+    "count": 7,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 137,
+  "fields": {
+    "name": "Chime2",
+    "pub_date": "2024-07-24T09:13:37.985Z",
+    "history": "First pattern of half hour & Hour",
+    "pattern": "4237",
+    "order": 100,
+    "number": 4,
+    "count": 9,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 138,
+  "fields": {
+    "name": "Chime3",
+    "pub_date": "2024-07-24T09:48:24.355Z",
+    "history": "2nd Pattern of 1/2 hour and hour",
+    "pattern": "4324",
+    "order": 100,
+    "number": 4,
+    "count": 1,
+    "enable": false
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 139,
+  "fields": {
+    "name": "Chime4",
+    "pub_date": "2024-07-24T09:13:39.599Z",
+    "history": "1st of three quarter and third of hour",
+    "pattern": "2437",
+    "order": 100,
+    "number": 4,
+    "count": 8,
+    "enable": true
+  }
+},
+{
+  "model": "bells.pattern",
+  "pk": 140,
+  "fields": {
+    "name": "Chime5",
+    "pub_date": "2024-07-24T09:13:40.240Z",
+    "history": "Second of quarter two and last of hour",
+    "pattern": "7324",
+    "order": 100,
+    "number": 4,
+    "count": 6,
+    "enable": true
+  }
+}
+]
