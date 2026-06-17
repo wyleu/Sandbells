@@ -185,7 +185,8 @@ STATIC_URL = 'static/'
 STATIC_ROOT ="/var/www/html/static/"
 
 STATICFILES_DIRS = [
-    "/home/wyleu/Code/Sandbells/changes/static",
+     BASE_DIR / "bells/static",
+    # "/home/wyleu/Code/Sandbells/changes/static",
 ]
 
 # Default primary key field type

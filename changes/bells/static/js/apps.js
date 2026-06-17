@@ -29,9 +29,9 @@ function setViewportHeight() {
 // Run on load
 document.addEventListener('DOMContentLoaded', function() {
     setViewportHeight();
-    
+
     const drumkit = document.querySelector('.drumkit');
-    
+
     if (drumkit) {
         drumkit.addEventListener('click', playDrum);
         drumkit.addEventListener('touchstart', playDrum);
