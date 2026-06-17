@@ -15,6 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DEBUG = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -23,7 +24,40 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-010iq-lcn9(8y@qh(05*no(_-ntnk-w&j*h^@uj1a1g6-0e81f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
+# ===================== CSP (Content Security Policy) =====================
+CSP_DEFAULT_SRC = ["'self'"]
+
+CSP_SCRIPT_SRC = [
+    "'self'",
+    "'unsafe-inline'",      # Required for jQuery, Howler, old D3 etc.
+    "'unsafe-eval'",        # Often needed for older JS libraries (d3.v3, etc.)
+    "http://sandbells.local",
+    "https://sandbells.local",
+]
+
+CSP_STYLE_SRC = [
+    "'self'",
+    "'unsafe-inline'",
+    "http://sandbells.local",
+    "https://sandbells.local",
+]
+
+CSP_IMG_SRC = ["'self'"]
+CSP_MEDIA_SRC = ["'self'", "http://sandbells.local", "https://sandbells.local"]
+CSP_CONNECT_SRC = ["'self'", "http://sandbells.local", "https://sandbells.local"]
+CSP_FRAME_SRC = ["'self'"]
+CSP_FRAME_ANCESTORS = ["'self'"]
+
+CSP_UPGRADE_INSECURE_REQUESTS = not DEBUG
+
+# Optional: Reduce report spam
+# CSP_REPORT_PERCENTAGE = 0.6
+
+
+if DEBUG:
+    CSP_DEFAULT_SRC = ["'self'"]
+    CSP_SCRIPT_SRC.append("'unsafe-eval'")   # often needed for older d3.js / howler
 
 ALLOWED_HOSTS = [
     'testserver',
@@ -158,19 +192,22 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # https://django-csp.readthedocs.io/en/latest/configuration.html
-CSP_DEFAULT_SRC = ["'none'"]
+#CSP_DEFAULT_SRC = ["'self'"]
 
-CSP_SCRIPT_SRC = ["'unsafe-inline'","'self'",
-    "http://sandbells.local"
-]
-CSP_INCLUDE_NONCE_IN = ['self','localhost', "script-src",]
+#CSP_SCRIPT_SRC = [
+#    "'unsafe-inline'",
+#    "'self'",
+#    "http://sandbells.local"
+#    "https://sandbells.local",
+#]
+#CSP_INCLUDE_NONCE_IN = ['self','localhost', "script-src",]
 
-CSP_CONNECT_SRC  = ["'self'",'localhost', 'http://sandbells.local',]
-CSP_STYLE_SRC = ["'unsafe-inline'","'self'", "'http://sandbells.local'",]
-CSP_IMG_SRC=["'self'"]
-CSP_FRAME_SRC = ["'self'","http://sandbells.local",]
-CSP_MEDIA_SRC = ["'self'","http://sandbells.local",]
-CSP_FRAME_ANCESTORS = ["'self'","http://sandbells.local",]
+#CSP_CONNECT_SRC  = ["'self'",'localhost', 'http://sandbells.local',]
+#CSP_STYLE_SRC = ["'unsafe-inline'","'self'", "http://sandbells.local","https://sandbells.local",]
+#CSP_IMG_SRC=["'self'"]
+#CSP_FRAME_SRC = ["'self'","http://sandbells.local",]
+#CSP_MEDIA_SRC = ["'self'","http://sandbells.local",]
+#CSP_FRAME_ANCESTORS = ["'self'","http://sandbells.local",]
 
 
 # When DEBUG is on we don't require HTTPS on our resources because in a local environment
