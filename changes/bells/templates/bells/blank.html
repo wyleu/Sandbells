@@ -2,23 +2,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="{% static "bells/jquery.min.js" %}"></script>
-  <script src="{% static "bells/d3.v3.min.js" %}"></script>
-  <script src="{% static "bells/path.js" %}"></script>
-  <script src="{% static "bells/bells.js" %}"></script>
-  <script src="{% static "bells/pagesize.js" %}"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
-  <link rel="stylesheet" href="{% static "bells/style.css" %}">
-  <link rel="icon" type="image/x-icon" href="/static/bells/favicon.ico">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sandbells{% endblock title %}</title>
 
-{% block title%}
-<title>Title from Blank</title>
-{% endblock title%}
+  <script src="{% static 'js/jquery.min.js' %}"></script>
+  <script src="{% static 'js/d3.v3.min.js' %}"></script>
+  <script src="{% static 'js/howler.min.js' %}"></script>
+  <script src="{% static 'js/clock_analogue.js' %}"></script>
+  <script src="{% static 'js/apps.js' %}"></script>
+
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  <style>
+    body { margin:0; padding:0; background:white; color:black; font-family:sans-serif; }
+    .frontpage_container { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; }
+    .drumkit { display:flex; justify-content:center; gap:10px; margin:15px 0; }
+    #midi-panel, .track-panel, [class*="midi"], [class*="Track"] {display: none !important; }
+
+  </style>
 </head>
 <body>
     {% block fullscreen %}{% endblock fullscreen %}
     {% block menu %}{% endblock menu %}
-    {% block display %}{% endblock display %}   
+    {% block display %}{% endblock display %}
+
+    <!-- Reliable fallback digital clock -->
+    <script>
+        function updateDigitalClock() {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2,'0') + ":" +
+                           now.getMinutes().toString().padStart(2,'0') + ":" +
+                           now.getSeconds().toString().padStart(2,'0');
+            const el = document.getElementById('digital_time');
+            if (el) el.textContent = timeStr;
+        }
+        setInterval(updateDigitalClock, 1000);
+        updateDigitalClock();
+    </script>
+<!-- Force Analogue Clock on every page -->
+
+    <!-- Reliable digital fallback -->
+    <script>
+        function updateDigitalClock() {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2,'0') + ":" +
+                           now.getMinutes().toString().padStart(2,'0') + ":" +
+                           now.getSeconds().toString().padStart(2,'0');
+            const el = document.getElementById('digital_time');
+            if (el) el.textContent = timeStr;
+        }
+        setInterval(updateDigitalClock, 1000);
+        updateDigitalClock();
+    </script>
 </body>
 </html>

@@ -8,20 +8,38 @@
 
     function processNumberPress(num) {
         d3.selectAll(".changenumberbutton")
-            .filter(function() { return this.getAttribute("num") == num; })
+            .filter(function() {
+                return this.getAttribute("num") == num;
+            })
             .attr('disabled', "disabled");
 
         d3.selectAll(".changenumberbutton")
-            .filter(function() { return this.getAttribute("num") != num; })
+            .filter(function() {
+                return this.getAttribute("num") != num;
+            })
             .attr('disabled', null);
 
         d3.selectAll('.change_displayed')
-            .filter(function() { return this.getAttribute("number") == num; })
+            .filter(function() {
+                return this.getAttribute("number") == num;
+            })
             .attr("hidden", null);
 
         d3.selectAll('.change_displayed')
-            .filter(function() { return this.getAttribute("number") != num; })
+            .filter(function() {
+                return this.getAttribute("number") != num;
+            })
             .attr("hidden", 'hidden');
+
+        // Update active class on front page
+        d3.selectAll(".frontpage_td_select_first_char")
+            .attr("class", "frontpage_td_select_other_char shadow");
+
+        d3.selectAll(".frontpage_td_select_other_char")
+            .filter(function() {
+                return this.getAttribute("number") == num;
+            })
+            .attr("class", "frontpage_td_select_first_char shadow");
     }
 
     function establishChangePress() {
@@ -52,13 +70,22 @@
             ishow.attr('height', height - 20)
                  .attr('width', width - 575);
         }
+
+        try {
+            d3.select('#window_height_value').text(ishow.attr("height"));
+            d3.select('#window_width_value').text(ishow.attr("width"));
+        } catch (err) {
+            console.log("BANG! " + err.message);
+        }
     }
 
+    // Run everything after DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
         establishChangePress();
         processWindowSize();
     });
 
+    // Handle resize
     window.onresize = processWindowSize;
 
 })();
