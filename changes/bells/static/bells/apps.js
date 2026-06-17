@@ -1,7 +1,7 @@
 const drums = new Howl({
     "src": [
-        "./drums/drums.webm",
-        "./drums/drums.mp3"
+        "/static//drums/drums.webm",
+        "/static/drums/drums.mp3"
     ],
     "sprite": {
         "clap": [0, 734.2630385487529],

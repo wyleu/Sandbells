@@ -15,7 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = True
+DEBUG = False
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -49,8 +49,10 @@ CSP_CONNECT_SRC = ["'self'", "http://sandbells.local", "https://sandbells.local"
 CSP_FRAME_SRC = ["'self'"]
 CSP_FRAME_ANCESTORS = ["'self'"]
 
-CSP_UPGRADE_INSECURE_REQUESTS = not DEBUG
 
+# Only upgrade to HTTPS in real production
+CSP_UPGRADE_INSECURE_REQUESTS = False   # set to False for local dev
+# CSP_UPGRADE_INSECURE_REQUESTS = not DEBUG   # uncomment only when you have HTTPS
 # Optional: Reduce report spam
 # CSP_REPORT_PERCENTAGE = 0.6
 
@@ -210,10 +212,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #CSP_FRAME_ANCESTORS = ["'self'","http://sandbells.local",]
 
 
+# === CSP Upgrade Settings ===
+#if DEBUG:
+#    CSP_UPGRADE_INSECURE_REQUESTS = False
+#else:
+#    CSP_UPGRADE_INSECURE_REQUESTS = True   # only in real production with HTTPS
+
 # When DEBUG is on we don't require HTTPS on our resources because in a local environment
 # we generally don't have access to HTTPS. However, when DEBUG is off, such as in our
 # production environment, we want all our resources to load over HTTPS
-CSP_UPGRADE_INSECURE_REQUESTS = not DEBUG
+# CSP_UPGRADE_INSECURE_REQUESTS = not DEBUG
 # For roughly 60% of the requests to our django server we should include the report URI.
 # This helps keep down the number of CSP reports sent from client web browsers
 CSP_REPORT_PERCENTAGE = 0.6
