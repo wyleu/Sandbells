@@ -2,6 +2,7 @@
 cd /home/wyleu/Code/Sandbells
 source Bellvirtenv/bin/activate
 cd changes
+pwd
 python manage.py --noinput collectstatic
 
 sudo systemctl restart nginx.service
