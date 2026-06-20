@@ -13,7 +13,7 @@
       </div>
       {% endfor%}
   </div>
-<!--
+
   <div class="drumkit">
     <span style="background-color: #aa3333;"><div class="pad" data-sound="bell1"><img src="{% static "/icons/bell_pict.png" %}" alt="Bell 1"></div></span>
     <span style="background-color: #aa8833;"><div class="pad" data-sound="bell2"><img src="{% static "/icons/bell_pict.png" %}" alt="Bell 2"></div></span>
@@ -25,13 +25,13 @@
     <span style="background-color: #aa3333;"><div class="pad" data-sound="bell8"><img src="{% static "/icons/bell_pict.png" %}" alt="Bell 8"></div></span>
   </div>
 
--->
+
 </div>
 {% endblock fullscreen%}
 
 {% block scripts %}
-<script src="{% static 'bells/js/howler.min.js' %}"></script>
-<script src="{% static 'bells/js/apps.js' %}"></script>
-<script src="{% static 'bells/js/clock_analogue.js' %}"></script>
-<script src="{% static 'bells/js/pagesize.js' %}"></script>
+<script src="{% static 'js/howler.min.js' %}"></script>
+<script src="{% static 'js/apps.js' %}"></script>
+<script src="{% static 'js/clock_analogue.js' %}"></script>
+<script src="{% static 'js/pagesize.js' %}"></script>
 {% endblock scripts %}
