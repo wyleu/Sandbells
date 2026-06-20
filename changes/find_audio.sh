@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "=== Audio Search in Sandbells /changes Directory ==="
+echo "===  Audio Search in Sandbells /changes Directory ==="
 echo "Current directory: $(pwd)"
 echo "Date: $(date)"
 echo "--------------------------------------------------"
