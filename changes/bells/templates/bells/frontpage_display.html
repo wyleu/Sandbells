@@ -54,13 +54,12 @@
                         {%else%}
                             <td class="swap shadow">{{line.first}}</td>
                         {%endif%}
-                    <td class="swap shadow">{{line.second}}</td>
+
+                        <td class="swap shadow">{{line.second}}</td>
+
+
                     {% if forloop.last and line.third == '' %}
                         <td>
-                            <div 
-                               class = "window_size"
-                               >XxY
-                            </div>
                             {% if forloop.counter == 1 %}
                                 <div class="branding shadow">{{forloop.counter}}--Playing...</div>
                             {% else %}
@@ -68,8 +67,8 @@
                             {% endif %}
                         </td>
                     {% else %}
-                        {% if "BK" in line.third%}
-                            <td class="swap shadow">{{line.third}}</td>
+                        {% if "Back" in line.third%}
+                            <td class="highlight">{{line.third}}</td>
                         {%else%}
                             <td class="swap shadow">{{line.third}}</td>
                         {%endif%}
