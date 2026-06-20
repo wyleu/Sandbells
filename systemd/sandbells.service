@@ -1,5 +1,5 @@
 [Unit]
-Description=Midori Fullscree kiosk mode browser
+Description=Sandbells http server
 After=multi-user.target
 
 [Service]
@@ -8,8 +8,8 @@ Type=simple
 #Group=wyleu
 Environment=PATH=/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin
 Environment=HOME=/home/wyleu
-WorkingDirectory=/home/wyleu/Code/Sandbells
-ExecStart=/usr/bin/xinit ./startMidori.sh
+WorkingDirectory=/home/wyleu/Sandbells
+ExecStart= ./guiMidori.sh
 
 #-- :0 vt3
 TimeoutStopSec=8
