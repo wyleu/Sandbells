@@ -34,6 +34,23 @@
 		.text("|");
     }
 
+    function updateDate()  {
+
+	var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+	var days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+	var d = new Date();
+	var day = days[d.getDay()];
+	var date = d.getDate();
+	var month = months[d.getMonth()];
+	var year = d.getFullYear();
+
+	const dateStr = day + " " + date + " " + month + " " + year; 
+
+	const el = document.getElementById('digital_date');
+	if (el) el.textContent = dateStr;
+
+    }
 
     function updateClock() {
         const now = new Date();
@@ -44,10 +61,24 @@
         d3.select(".hour").attr("transform", `rotate(${h*30 + m*0.5} 175 175)`);
         d3.select(".minute").attr("transform", `rotate(${m*6} 175 175)`);
         d3.select(".second").attr("transform", `rotate(${s*6} 175 175)`);
+
+
         createHourLabels();
         drawMarks();
+	updateDate();
 
     }
+    function updateDigitalClock() {
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2,'0') + ":" +
+                        now.getMinutes().toString().padStart(2,'0') + ":" +
+                        now.getSeconds().toString().padStart(2,'0');
+
+        const el = document.getElementById('digital_time');
+        if (el) el.textContent = timeStr;
+        }
+        // setInterval(updateDigitalClock, 1000);
+        // updateDigitalClock();
 
     // Run aggressively
     function startClock() {
