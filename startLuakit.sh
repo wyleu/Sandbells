@@ -8,5 +8,5 @@ cd /home/wyleu/Code/Sandbells
 
 pwd
 # midori -e fullscreen -a http://sandbells.local/home/
-midori -a http://sandbells.local/home/
-#luakit -u http://sandbells.local
+# midori -a http://sandbells.local/home/
+luakit -u http://sandbells.local
