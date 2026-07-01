@@ -27,19 +27,5 @@
     {% block menu %}{% endblock menu %}
     {% block display %}{% endblock display %}
 
-    <!-- Reliable fallback digital clock -->
-    <script>
-        function updateDigitalClock() {
-            const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2,'0') + ":" +
-                           now.getMinutes().toString().padStart(2,'0') + ":" +
-                           now.getSeconds().toString().padStart(2,'0');
-            const el = document.getElementById('digital_time');
-            if (el) el.textContent = timeStr;
-        }
-        setInterval(updateDigitalClock, 1000);
-        updateDigitalClock();
-    </script>
-
 </body>
 </html>
