@@ -5,13 +5,13 @@ django-csp==     3.8
 exceptiongroup ==1.1.0
 iniconfig ==     2.0.0
 packaging  ==    24.0
-Pillow  ==       9.4.0
-pip    ==        20.3.4
+# Pillow  ==       9.4.0       #30/06/2026
+# pip    ==        20.3.4      #30/06/2026
 # pkg-resources == 0.0.0
 pluggy   ==      1.0.0
 pytest  ==       7.2.1
 pytest-django == 4.5.2
-reportlab ==     3.6.12
+# reportlab ==     3.6.12      #30/06/2026
 setuptools  ==   44.1.1
 sqlparse   ==    0.5.0
 tomli    ==      2.0.1

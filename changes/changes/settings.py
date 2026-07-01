@@ -15,7 +15,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-DEBUG = False
+DEBUG = True
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -73,7 +73,8 @@ ALLOWED_HOSTS = [
     'rasppidesk.local',
     'zynthian-amp2.local',
     'sandbells.local',
-    'sandbells2.local'
+    'sandbells2.local',
+    'argonpi.local'
     ]
 
 
