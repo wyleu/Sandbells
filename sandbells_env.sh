@@ -1,6 +1,7 @@
 #!/bin/sh
 echo 'Sandbells Virtenv and Directory Move'
-cd /home/wyleu/Code/Sandbells
+echo $USER
+cd /home/$USER/Code/Sandbells
 source Bellvirtenv/bin/activate
 cd changes
 # python manage.py collectstatic --noinput 

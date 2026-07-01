@@ -8,6 +8,7 @@ echo "##########################################################################
 git status
 cd /home/wyleu/Code/Sandbells
 echo $pwd
+echo 'For User '$USER
 source Bellvirtenv/bin/activate
 echo "started virtual env"
 pip install -r requirements.txt
