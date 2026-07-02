@@ -64,16 +64,12 @@ if DEBUG:
 ALLOWED_HOSTS = [
     'testserver',
     'localhost',
-    'rasppiseed.local',
-    '192.168.0.40',
-    '192.168.0.93',
-    '192.168.0.120',
-    '192.168.43.3',
     '127.0.0.1',
+    'raspberrypi.local',
     'rasppidesk.local',
-    'zynthian-amp2.local',
     'sandbells.local',
-    'sandbells2.local'
+    'sandbells2.local',
+    'argonpi.local'
     ]
 
 
