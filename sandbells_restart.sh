@@ -1,5 +1,12 @@
 #!/bin/sh
-echo  "Relocating to /home/"$USER"/Code/Sandbells
+
+echo "############################################################################"
+echo "#                                                                          #"
+echo "#                  Relocating to /home/"$USER"/Code/Sandbell               #"
+echo "#                                                                          #"
+echo "############################################################################"
+
+git status
 cd /home/$USER/Code/Sandbells
 source Bellvirtenv/bin/activate
 cd changes

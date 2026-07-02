@@ -1,12 +1,12 @@
 #!/bin/sh
 echo "############################################################################"
 echo "#                                                                          #"
-echo "#                          updating Sandbells                              #"
+echo "#                          Rebuilding Sandbells                            #"
 echo "#                                                                          #"
 echo "############################################################################"
 
 git status
-cd /home/wyleu/Code/Sandbells
+cd /home/$USER/Code/Sandbells
 echo $pwd
 echo 'For User '$USER
 source Bellvirtenv/bin/activate
