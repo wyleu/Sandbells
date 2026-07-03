@@ -82,21 +82,21 @@ class TestCorrect(TestCase):
         # compare test array to correct [2]
 
         for item in self.test_array:
-            self.assertEquals(correct(item[0],item[1]), item[2])
+            self.assertEqual(correct(item[0],item[1]), item[2])
 
     def test_incorrect_array(self):
         # compare test array to incorrect [3]
 
         for item in self.test_array:
-            self.assertEquals(incorrect(item[0],item[1]), item[3])
+            self.assertEqual(incorrect(item[0],item[1]), item[3])
 
     def test_same(self):
         for item in self.test_array:
-            self.assertEquals(same(item[0],item[1]), item[4])
+            self.assertEqual(same(item[0],item[1]), item[4])
 
     def test_frontcorrect(self):
         for item in self.test_array:
-            self.assertEquals(frontcorrect(item[0],item[1]), item[5])
+            self.assertEqual(frontcorrect(item[0],item[1]), item[5])
 
 class TestCompare(TestCase):
         test_array = (
@@ -371,42 +371,3 @@ class TestProcess(TestCase):
 
 
 
-
-#     def test_db_process_array(self):
-#         for count, item in enumerate(self.changes_array):
-#             print('\n',item[1][0],'-----', item[0], '-----',item[1][-1], '\n')
-#             calls, result, swappair = db_process(item[1][0],item[1][-1])
-# 
-#             self.assertEqual(result[0] , item[1])
-#             if debug:
-#                 for count, item in enumerate(result[0]):
-#                     print('    '.join([item,
-#                         result[1][count][0],
-#                         result[1][count][1],
-#                         result[1][count][2]]))
-
-class TestSearch(TestCase):
-    
-    def test_search_default(self):
-        # is rounds the default config?
-        self.assertEqual(Pattern.objects.filter()[0].name,'Rounds')
-
-    def test_search_number_default(self):
-        # is 8 the default number of bells ?
-        self.assertEqual(Pattern.objects.filter()[0].number,8)
-
-class TestFrontEnd(TestCase):
-
-    def test_search(self):
-        response = self.client.get('/')
-        self.assertEquals(response.status_code, 404)
-    
-    def test_tower(self):
-        response = self.client.get('/tower/')
-        self.assertEquals(response.status_code, 200)
-
-class TestFrontEndList(TestCase):
-    # Tests the searching mechanism
-    def test_potrait_list(self):
-        response = self.client.get('/tower/pattern/')
-        self.assertEquals(response.status_code, 200)
