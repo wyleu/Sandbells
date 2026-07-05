@@ -3,10 +3,6 @@
     const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
     const height = window.innerHeight|| document.documentElement.clientHeight|| document.body.clientHeight;
 
-<<<<<<< HEAD
-    /*  console.log(width, height);    */
-
-=======
     console.log(width, height);
 
 function processChangePress(bellstring){
@@ -133,5 +129,5 @@ function processWindowSize() {
 establishChangePress();
 processWindowSize();
 window.onresize = processWindowSize
->>>>>>> another-tidy-branch
+
 })();
