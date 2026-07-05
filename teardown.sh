@@ -7,7 +7,7 @@
 
 echo "=================================================="
 echo "     Sandbells Teardown"
-echo "     This will remove services, files, and user"
+echo "     This will remove services and files"
 echo "=================================================="
 
 read -p "Are you sure you want to teardown? (y/N): " confirm
@@ -36,9 +36,9 @@ sudo rm -f /etc/nginx/sites-available/sandbells
 echo "Removing project files..."
 sudo rm -rf $PROJECT_DIR
 
-echo "Removing user..."
-sudo userdel -r $USER 2>/dev/null || true
-sudo rm -f /etc/sudoers.d/$USER
+# echo "Removing user..."
+# sudo userdel -r $USER 2>/dev/null || true
+# sudo rm -f /etc/sudoers.d/$USER
 
 echo "Reloading systemd..."
 sudo systemctl daemon-reload
