@@ -1,13 +1,16 @@
 #!/bin/bash
 # ===============================================================
 # Sandbells Teardown Script
-# File: teardown.sh
-# Purpose: Clean up Sandbells installation for testing/reinstall
 # ===============================================================
+set -e
+
+VERBOSE=false
+if [[ "$1" == "-v" || "$1" == "--verbose" ]]; then
+    VERBOSE=true
+fi
 
 echo "=================================================="
-echo "     Sandbells Teardown"
-echo "     This will remove services and files"
+echo " Sandbells Teardown"
 echo "=================================================="
 
 read -p "Are you sure you want to teardown? (y/N): " confirm
@@ -19,31 +22,29 @@ fi
 PROJECT_DIR="/opt/sandbells"
 USER="sandbells"
 
-echo "Stopping services..."
+log() { echo "[TEARDOWN] $*"; }
+vlog() { if $VERBOSE; then echo "[DETAIL] $*"; fi; }
+
+log "Stopping services..."
 sudo systemctl stop sandbells.service 2>/dev/null || true
 sudo systemctl stop nginx 2>/dev/null || true
+sudo pkill -f gunicorn 2>/dev/null || true
+sudo pkill -f luakit 2>/dev/null || true
 
-echo "Disabling services..."
+log "Disabling and removing services..."
 sudo systemctl disable sandbells.service 2>/dev/null || true
-
-echo "Removing systemd services..."
 sudo rm -f /etc/systemd/system/sandbells.service
-
-echo "Removing Nginx config..."
 sudo rm -f /etc/nginx/sites-enabled/sandbells
 sudo rm -f /etc/nginx/sites-available/sandbells
 
-echo "Removing project files..."
+log "Removing project files..."
 sudo rm -rf $PROJECT_DIR
+vlog "Project directory removed: $PROJECT_DIR"
 
-# echo "Removing user..."
-# sudo userdel -r $USER 2>/dev/null || true
-# sudo rm -f /etc/sudoers.d/$USER
-
-echo "Reloading systemd..."
+log "Reloading systemd..."
 sudo systemctl daemon-reload
 
 echo "=================================================="
-echo "Teardown completed."
-echo "You can now run install_debug.sh again."
+echo "Teardown completed successfully."
+echo "Run with -v for more details next time."
 echo "=================================================="
