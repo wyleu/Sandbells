@@ -4,12 +4,17 @@ echo "=================================================="
 echo " Sandbells Kiosk Installer"
 echo "=================================================="
 
-echo "User: $(whoami)"
-echo "Directory: $(pwd)"
+echo "User       : $(whoami)"
+echo "Directory  : $(pwd)"
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "Git branch : $(git branch --show-current)"
+    echo "Git status : $(git status --porcelain | wc -l) uncommitted changes"
+else
+    echo "Git        : Not a git repository"
+fi
 echo "=================================================="
 
 set -e
-
 ORIGINAL_DIR="$(pwd)"
 
 TARGET_USER="sandbells"
@@ -31,11 +36,10 @@ sudo chown -R $TARGET_USER:$TARGET_USER $PROJECT_DIR
 
 cd $PROJECT_DIR
 
-# Venv
+# Venv + Packages + DB + Static
 sudo rm -rf $VENV_DIR
 sudo -u $TARGET_USER python3 -m venv $VENV_DIR
 
-# Packages + Database + Static
 sudo -u $TARGET_USER bash -c "
     source $VENV_DIR/bin/activate
     pip install -r requirements.txt
@@ -59,6 +63,4 @@ sudo chmod -R 755 /var/www/html/static
 
 cd "$ORIGINAL_DIR"
 
-echo "=================================================="
 echo "Installation completed successfully."
-echo "=================================================="

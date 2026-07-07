@@ -1,16 +1,17 @@
 #!/bin/bash
-# ===============================================================
-# Sandbells Teardown Script
-# ===============================================================
-set -e
-
-VERBOSE=false
-if [[ "$1" == "-v" || "$1" == "--verbose" ]]; then
-    VERBOSE=true
-fi
-
+# Sandbells Teardown
 echo "=================================================="
 echo " Sandbells Teardown"
+echo "=================================================="
+
+echo "User       : $(whoami)"
+echo "Directory  : $(pwd)"
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "Git branch : $(git branch --show-current)"
+    echo "Git status : $(git status --porcelain | wc -l) uncommitted changes"
+else
+    echo "Git        : Not a git repository"
+fi
 echo "=================================================="
 
 read -p "Are you sure you want to teardown? (y/N): " confirm
@@ -19,32 +20,11 @@ if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
-PROJECT_DIR="/opt/sandbells"
-USER="sandbells"
-
-log() { echo "[TEARDOWN] $*"; }
-vlog() { if $VERBOSE; then echo "[DETAIL] $*"; fi; }
-
-log "Stopping services..."
-sudo systemctl stop sandbells.service 2>/dev/null || true
-sudo systemctl stop nginx 2>/dev/null || true
-sudo pkill -f gunicorn 2>/dev/null || true
-sudo pkill -f luakit 2>/dev/null || true
-
-log "Disabling and removing services..."
-sudo systemctl disable sandbells.service 2>/dev/null || true
+sudo rm -rf /opt/sandbells
 sudo rm -f /etc/systemd/system/sandbells.service
 sudo rm -f /etc/nginx/sites-enabled/sandbells
 sudo rm -f /etc/nginx/sites-available/sandbells
 
-log "Removing project files..."
-sudo rm -rf $PROJECT_DIR
-vlog "Project directory removed: $PROJECT_DIR"
+sudo systemctl daemon-reload 2>/dev/null || true
 
-log "Reloading systemd..."
-sudo systemctl daemon-reload
-
-echo "=================================================="
-echo "Teardown completed successfully."
-echo "Run with -v for more details next time."
-echo "=================================================="
+echo "Teardown completed."

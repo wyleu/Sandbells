@@ -1,13 +1,17 @@
 #!/bin/bash
-# Sandbells Development Server with status info
+# Sandbells Development Server
 echo "=================================================="
 echo " Sandbells Development Server"
 echo "=================================================="
 
-echo "User: $(whoami)"
-echo "Directory: $(pwd)"
-echo "Git branch: $(git branch --show-current 2>/dev/null || echo 'No git repo')"
-echo "Git status: $(git status --porcelain 2>/dev/null | wc -l) changes"
+echo "User       : $(whoami)"
+echo "Directory  : $(pwd)"
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "Git branch : $(git branch --show-current)"
+    echo "Git status : $(git status --porcelain | wc -l) uncommitted changes"
+else
+    echo "Git        : Not a git repository"
+fi
 echo "=================================================="
 
 cd ~/Code/Sandbells
@@ -30,5 +34,5 @@ else:
     print("Superuser exists")
 ' || true
 
-echo "Starting development server..."
+echo "Starting development server on http://0.0.0.0:8000"
 python changes/manage.py runserver 0.0.0.0:8000
