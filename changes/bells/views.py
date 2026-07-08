@@ -44,10 +44,10 @@ def home(request, number = 8 ):
     to_patterns = Pattern.objects.filter(
         enable=True
         ).order_by('number', 'order','name') 
-    
+
     hostname = socket.gethostname().replace('"','')
     # hostname -I  for ip address
-##
+
     p = subprocess.Popen(["hostname", "-I"], stdout=subprocess.PIPE)
     hostname_out, err = p.communicate()
     try:
@@ -56,13 +56,16 @@ def home(request, number = 8 ):
         ipaddr = "No Net"
 
 
-# Git hash
+    # Git hash
     try:
-        p = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
+        p = subprocess.Popen(["git", "rev-parse", "--short", "HEAD"], stdout=subprocess.PIPE)
         gitlog_out, err = p.communicate()
         githash = gitlog_out.decode("utf-8").strip()[:6]
+        if not githash:
+            githash = "unknown"
     except:
         githash = "unknown"
+
 
     context = {
         'hostname': hostname,
@@ -73,7 +76,6 @@ def home(request, number = 8 ):
         'to_patterns': to_patterns,
         'count': len(to_patterns),
         }
-    
     return render(request, 'bells/home.html', context)
 
 def menu(request, number = 8):
