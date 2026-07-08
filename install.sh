@@ -57,6 +57,7 @@ sudo -u $TARGET_USER bash -c "
     cd $CHANGES_DIR
     python manage.py migrate
     python manage.py collectstatic --noinput --clear || true
+    python manage.py loaddata /opt/sandbells/fixtures/initial_data.json || true
     python manage.py loaddata fixtures/initial_data.json || true
 "
 echo "Virtualenv and dependencies installed"
