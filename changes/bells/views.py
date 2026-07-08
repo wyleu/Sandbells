@@ -55,9 +55,14 @@ def home(request, number = 8 ):
     except IndexError:
         ipaddr = "No Net"
 
-    p = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
-    gitlog_out, err = p.communicate()
-    githash = [x.decode("utf-8").replace("'",'') for x in gitlog_out.split()][0][0:6]
+
+# Git hash
+    try:
+        p = subprocess.Popen(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
+        gitlog_out, err = p.communicate()
+        githash = gitlog_out.decode("utf-8").strip()[:6]
+    except:
+        githash = "unknown"
 
     context = {
         'hostname': hostname,
