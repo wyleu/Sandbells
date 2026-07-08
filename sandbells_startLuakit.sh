@@ -1,18 +1,38 @@
-#!/bin/sh
+#!/bin/bash
+# Sandbells - Luakit Kiosk Starter
+# Description: Starts Luakit in full kiosk mode pointing to local Sandbells app
+# Version: 1.0
+# Usage: ./sandbells_startLuakit.sh [-v]
+
+VERBOSE=false
+if [ "$1" = "-v" ] || [ "$1" = "--verbose" ]; then
+    VERBOSE=true
+fi
 
 echo "############################################################################"
-echo "#                                                                          #"
-echo "#                          Running  luakit                                 #"
-echo "#                                                                          #"
+echo "# Sandbells Luakit Kiosk"
 echo "############################################################################"
 
-xset -dpms       # disable DPMS (Energy Star) feautres.
-xset s off       # disable screen saver
-xset s noblank    # don't blank the video device
+if [ "$VERBOSE" = true ]; then
+    echo "System Info:"
+    echo "  Hostname : $(hostname)"
+    echo "  Pi Model : $(cat /proc/device-tree/model 2>/dev/null || echo 'Unknown')"
+    echo "  OS       : $(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)"
+    echo "  Arch     : $(uname -m)"
+    echo "  User     : $(whoami)"
+    echo "  Display  : $DISPLAY"
+fi
+
+# Disable power saving
+xset -dpms
+xset s off
+xset s noblank
+
+# Window manager
 matchbox-window-manager &
+
+# Start Luakit full screen
 cd /home/$USER/Code/Sandbells
-git status
-pwd
-# midori -e fullscreen -a http://$HOSTNAME.local/home/
-# midori -a http://$HOSTNAME.local/home/
-luakit -u http://$HOSTNAME.local
+luakit -u "http://$(hostname).local" --profile kiosk
+
+echo "Luakit started."
