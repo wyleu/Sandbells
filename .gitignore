@@ -6,3 +6,4 @@ Bellvirtenv/
 *.ip_addr
 db.sqlite3
 *.sqlite3
+git-daemon-export-ok

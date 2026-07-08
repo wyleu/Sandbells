@@ -1,63 +1,66 @@
 #!/bin/bash
-# Sandbells Kiosk Installer - One command setup
-# Run as: bash install.sh
-
-set -e  # Exit on any error
-
+# Sandbells Kiosk Installer
 echo "=================================================="
-echo "     Sandbells Kiosk Installer"
+echo " Sandbells Kiosk Installer"
 echo "=================================================="
 
+echo "User       : $(whoami)"
+echo "Directory  : $(pwd)"
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+    echo "Git branch : $(git branch --show-current)"
+    echo "Git status : $(git status --porcelain | wc -l) uncommitted changes"
+else
+    echo "Git        : Not a git repository"
+fi
+echo "=================================================="
+
+set -e
+ORIGINAL_DIR="$(pwd)"
+
+TARGET_USER="sandbells"
 PROJECT_DIR="/opt/sandbells"
-USER="sandbells"
 VENV_DIR="$PROJECT_DIR/Bellvirtenv"
 
-# Update system
-echo "[1/6] Updating system packages..."
-sudo apt update && sudo apt upgrade -y
-
-# Install dependencies
-echo "[2/6] Installing dependencies..."
-sudo apt install -y nginx gunicorn python3-pip python3-venv \
-                    luakit xserver-xorg xinit unclutter \
-                    matchbox-window-manager
-
-# Create dedicated user
-if ! id "$USER" &>/dev/null; then
-    echo "[3/6] Creating dedicated user '$USER'..."
-    sudo useradd -m -s /bin/bash $USER
-    echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$USER
+# User
+if ! id "$TARGET_USER" &>/dev/null; then
+    sudo useradd -m -s /bin/bash "$TARGET_USER"
+    echo "$TARGET_USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$TARGET_USER
 fi
 
-# Setup project directory
-echo "[4/6] Setting up project directory..."
 sudo mkdir -p $PROJECT_DIR
-sudo chown $USER:$USER $PROJECT_DIR
+sudo chown $TARGET_USER:$TARGET_USER $PROJECT_DIR
 
-# Copy or clone project (if not already there)
-if [ ! -d "$PROJECT_DIR/changes" ]; then
-    echo "Copying project files..."
-    sudo cp -r . $PROJECT_DIR/
-    sudo chown -R $USER:$USER $PROJECT_DIR
-fi
+# Copy
+sudo rsync -a --exclude='.git' --exclude='Bellvirtenv' --exclude='__pycache__' "$ORIGINAL_DIR/" "$PROJECT_DIR/"
+sudo chown -R $TARGET_USER:$TARGET_USER $PROJECT_DIR
 
 cd $PROJECT_DIR
 
-# Virtual environment
-echo "[5/6] Setting up Python virtual environment..."
-sudo -u $USER python3 -m venv $VENV_DIR
-sudo -u $USER $VENV_DIR/bin/pip install -r requirements.txt
+# Venv + Packages + DB + Static
+sudo rm -rf $VENV_DIR
+sudo -u $TARGET_USER python3 -m venv $VENV_DIR
 
-# Django setup
-echo "Running Django collectstatic and migrations..."
-sudo -u $USER $VENV_DIR/bin/python changes/manage.py collectstatic --noinput --clear || true
-sudo -u $USER $VENV_DIR/bin/python changes/manage.py migrate || true
+sudo -u $TARGET_USER bash -c "
+    source $VENV_DIR/bin/activate
+    pip install -r requirements.txt
+    python changes/manage.py migrate
+    python changes/manage.py loaddata fixtures/initial_data.json || true
+"
 
-# TODO: Add nginx, gunicorn, luakit setup here in next iteration
+# Static files
+sudo rm -rf /var/www/html/static
+sudo mkdir -p /var/www/html/static
+sudo chown -R $TARGET_USER:www-data /var/www/html/static
+sudo chmod -R 775 /var/www/html/static
 
-echo "=================================================="
-echo "Installation completed successfully!"
-echo "Next steps:"
-echo "1. Review and edit config files in $PROJECT_DIR/config/"
-echo "2. Run: sudo reboot"
-echo "=================================================="
+sudo -u $TARGET_USER bash -c "
+    source $VENV_DIR/bin/activate
+    python changes/manage.py collectstatic --noinput --clear || true
+"
+
+sudo chown -R www-data:www-data /var/www/html/static
+sudo chmod -R 755 /var/www/html/static
+
+cd "$ORIGINAL_DIR"
+
+echo "Installation completed successfully."
