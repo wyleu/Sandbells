@@ -1,5 +1,13 @@
 #!/bin/sh
+
+
 echo "=== Sandbells Luakit Kiosk Starting ==="
+
+echo "############################################################################"
+echo "#                                                                          #"
+echo "#                          Running  luakit                                 #"
+echo "#                                                                          #"
+echo "############################################################################"
 
 # Kill any existing instances
 pkill -9 luakit
@@ -20,4 +28,7 @@ matchbox-window-manager -use_titlebar no -use_cursor no &
 sleep 2
 
 cd /home/$USER/Code/Sandbells
-luakit -u http://sandbells.local:8000
+git status
+pwd
+
+luakit -u http://$HOSTNAME.local:8000
