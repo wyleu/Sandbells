@@ -19,11 +19,14 @@ export XAUTHORITY=/home/$USER/.Xauthority
 xset -dpms
 xset s off
 xset s noblank
-xsetroot -cursor_name left_ptr
+# xsetroot -cursor_name left_ptr
 
-unclutter -idle 0.5 -root &
+# Hide cursor when it's not moving
+# unclutter -idle 0.5 -root &
 
-matchbox-window-manager -use_titlebar no -use_cursor no &
+matchbox-window-manager -use_titlebar no &
+
+# matchbox-window-manager &
 
 sleep 2
 
