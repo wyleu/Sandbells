@@ -1,0 +1,3 @@
+THe file rc.lua has been modified and should be copied into the home/.config/luakit directory of the use running the browser
+
+THis is root in the first versions but a specifc user should really be sandbells 
