@@ -28,7 +28,8 @@ matchbox-window-manager -use_titlebar no -use_cursor no &
 sleep 2
 
 cd /home/$USER/Code/Sandbells
-git status
-pwd
+# git status
+# pwd
+# echo $HOSTNAME
 
-luakit -u http://$HOSTNAME.local:8000
+luakit -u http://sandbells.local:8000
