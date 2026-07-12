@@ -55,6 +55,30 @@ sudo -u $USER $VENV_DIR/bin/python changes/manage.py migrate || true
 
 # TODO: Add nginx, gunicorn, luakit setup here in next iteration
 
+# Sandbells Monitor Service
+echo "[6/6] Setting up system monitor..."
+sudo tee /etc/systemd/system/sandbells-monitor.service > /dev/null <<EOF
+[Unit]
+Description=Sandbells System Monitor
+After=multi-user.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/home/$USER/Code/Sandbells/monitor_sandbells.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/sandbells-monitor.log
+StandardError=append:/var/log/sandbells-monitor.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now sandbells-monitor.service
+echo "Monitor service installed and started."
+
 echo "=================================================="
 echo "Installation completed successfully!"
 echo "Next steps:"

@@ -15,11 +15,13 @@ pkill -9 matchbox-window-manager
 
 export DISPLAY=:0
 export XAUTHORITY=/home/$USER/.Xauthority
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export WEBKIT_FORCE_DMABUF_RENDERER=0
 
 xset -dpms
 xset s off
 xset s noblank
-# xsetroot -cursor_name left_ptr
+xsetroot -cursor_name left_ptr
 
 # Hide cursor when it's not moving
 # unclutter -idle 0.5 -root &
