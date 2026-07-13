@@ -32,4 +32,4 @@ ps aux | grep -E "gunicorn|luakit|WebKit" | grep -v grep
 echo ""
 
 echo "=== Git Status ==="
-cd /home/wyleu/Code/Sandbells 2>/dev/null && git status --short || echo "Not a git repo or not in directory"
+cd /home/$USER/Code/Sandbells 2>/dev/null && git status --short || echo "Not a git repo or not in directory"
