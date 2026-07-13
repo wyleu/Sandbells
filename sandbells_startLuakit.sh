@@ -15,6 +15,9 @@ pkill -9 matchbox-window-manager
 
 export DISPLAY=:0
 export XAUTHORITY=/home/$USER/.Xauthority
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+export WEBKIT_FORCE_DMABUF_RENDERER=0
+
 
 xset -dpms
 xset s off
@@ -31,4 +34,5 @@ cd /home/$USER/Code/Sandbells
 git status
 pwd
 
-luakit -u http://$HOSTNAME.local:8000
+
+luakit --single-process -u http://$HOSTNAME.local:8000
