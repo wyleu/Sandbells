@@ -1,16 +1,22 @@
-#!/bin/sh
 echo "=== Sandbells Luakit Kiosk Starting ==="
 echo "User: $USER"
 echo "Hostname: $(hostname)"
 echo "Date: $(date)"
 echo "Git status:"
+
+
+if [ "$(id -u)" -eq 0 ]; then
+  USER="wyleu"
+else
+  USER="$USER"
+fi
+
 cd /home/$USER/Code/Sandbells
+
+
 git status --porcelain | head -5 || echo "No git or clean"
 echo "CPU Temp: $(vcgencmd measure_temp 2>/dev/null || echo 'N/A')"
 # Dynamic user for X
-if [ "$(id -u)" -eq 0 ]; then
-  USER="wyleu"
-fi
 export DISPLAY=:0
 export XAUTHORITY=/home/$USER/.Xauthority
 # Memory flags
