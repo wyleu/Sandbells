@@ -1,31 +1,29 @@
 #!/bin/bash
-# Sandbells System Monitor
-# Monitors services and resources, logs to file
+# Sandbells Kiosk Monitor - Resource Guard
 
 LOGFILE="/var/log/sandbells-monitor.log"
-INTERVAL=30  # seconds
-
-echo "=== Sandbells Monitor Started at $(date) ===" >> $LOGFILE
+echo "$(date) - Monitor started" >> $LOGFILE
 
 while true; do
-  TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-  
-  echo "[$TIMESTAMP] === Resource Usage ===" >> $LOGFILE
-  echo "Memory:" >> $LOGFILE
-  free -h >> $LOGFILE
-  echo "CPU Load:" >> $LOGFILE
-  uptime >> $LOGFILE
-  
-  echo "Running Services:" >> $LOGFILE
-  systemctl list-units --type=service --state=running | grep -E 'gunicorn|nginx|luakit|kiosk' >> $LOGFILE || echo "No matching services" >> $LOGFILE
-  
-  echo "Top Processes:" >> $LOGFILE
-  ps aux --sort=-%mem | head -10 >> $LOGFILE
-  
-  echo "Luakit Processes:" >> $LOGFILE
-  ps aux | grep -E 'luakit' | grep -v grep >> $LOGFILE || echo "No luakit" >> $LOGFILE
-  
-  echo "----------------------------------------" >> $LOGFILE
-  
-  sleep $INTERVAL
+    # Check if Luakit is running
+    if ! pgrep -f "luakit" > /dev/null; then
+        echo "$(date) - Luakit not running. Restarting kiosk..." >> $LOGFILE
+        /home/wyleu/Code/Sandbells/sandbells_startLuakit.sh &
+    fi
+
+    # Check memory usage (kill if too high)
+    MEM_USAGE=$(ps -p $(pgrep -f luakit || echo 0) -o %mem= 2>/dev/null | tr -d ' ')
+    if (( $(echo "$MEM_USAGE > 70" | bc -l 2>/dev/null || echo 0) )); then
+        echo "$(date) - High memory usage ($MEM_USAGE%). Killing Luakit." >> $LOGFILE
+        pkill -9 luakit
+        sleep 2
+    fi
+
+    # Restart Gunicorn if workers are dead
+    if ! pgrep -f gunicorn > /dev/null; then
+        echo "$(date) - Gunicorn dead. Restarting..." >> $LOGFILE
+        cd /home/wyleu/Code/Sandbells && /opt/sandbells/Bellvirtenv/bin/gunicorn --workers 2 --bind 0.0.0.0:8000 changes.wsgi:application &
+    fi
+
+    sleep 10
 done

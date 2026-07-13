@@ -5,20 +5,20 @@ echo "Date: $(date)"
 echo "Git status:"
 
 
-if [ "$(id -u)" -eq 0 ]; then
-  USER="wyleu"
-else
-  USER="$USER"
-fi
+# if [ "$(id -u)" -eq 0 ]; then
+#  USER="wyleu"
+# else
+#  USER="$USER"
+# fi
 
-cd /home/$USER/Code/Sandbells
+cd /home/wyleu/Code/Sandbells
 
 
 git status --porcelain | head -5 || echo "No git or clean"
 echo "CPU Temp: $(vcgencmd measure_temp 2>/dev/null || echo 'N/A')"
 # Dynamic user for X
 export DISPLAY=:0
-export XAUTHORITY=/home/$USER/.Xauthority
+export XAUTHORITY=/home/wyleu/.Xauthority
 # Memory flags
 export WEBKIT_DISABLE_COMPOSITING_MODE=1
 export WEBKIT_FORCE_DMABUF_RENDERER=0
@@ -29,5 +29,6 @@ xsetroot -cursor_name left_ptr
 unclutter -idle 0.5 -root &
 matchbox-window-manager -use_titlebar no -use_cursor no &
 sleep 2
-cd /home/$USER/Code/Sandbells
-luakit --single-process -u http://sandbells.local:8000
+cd /home/wyleu/Code/Sandbells
+# luakit --single-process -u http://sandbells.local:8000
+luakit --single-process --disable-webgl --disable-accelerated-2d-canvas -u http://sandbells.local:8000
