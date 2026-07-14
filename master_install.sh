@@ -1,6 +1,13 @@
 #!/bin/bash
 # Sandbells Master Installer
 
+QUICK_MODE=false
+if [[ "$1" == "--quick" || "$1" == "-q" ]]; then
+    QUICK_MODE=true
+    echo "Young nephew quick mode activated!"
+fi
+
+
 START_TIME=$(date +%s)
 
 # Configuration (same as before)
@@ -40,12 +47,13 @@ echo ""
 
 STEPS_DIR="./install-steps"
 
+
 for step in $STEPS_DIR/[0-9][0-9]-*.sh; do
     if [ -x "$step" ]; then
         show_header
         echo "Running: $step"
         echo "----------------------------------------------------------------------"
-        "$step"
+        "$step" "$QUICK_MODE"   # Pass the mode
         echo "----------------------------------------------------------------------"
         echo ""
     fi

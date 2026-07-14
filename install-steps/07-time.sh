@@ -1,4 +1,19 @@
 #!/bin/bash
+QUICK_MODE=${1:-false}
+pause() {
+    if [ "$QUICK_MODE" = true ]; then
+        sleep 1.5
+        return
+    fi
+    echo ""
+    read -p "Press Enter to continue (or Q to stop) > " choice
+    if [[ "$choice" =~ ^[Qq]$ ]]; then
+        echo "Setup stopped safely."
+        exit 0
+    fi
+}
+
+
 # Time configuration step - smart check
 
 TIME_SERVER="sandgps3.local"
@@ -40,3 +55,4 @@ echo "Clock Stratum : $(chronyc tracking | grep Stratum | awk '{print $3}' || ec
 echo "Reference ID  : $(chronyc tracking | grep 'Reference ID' | awk '{print $4}' | tr -d '()' || echo 'Unknown')"
 
 echo "Time configuration step completed"
+pause
