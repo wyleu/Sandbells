@@ -1,0 +1,40 @@
+#!/bin/bash
+# startLuakit.sh - Sandbells Kiosk with matchbox + auto-venv + sandbells2 fixes
+
+echo "=== Running startLuakit.sh (matchbox kiosk mode) ==="
+
+# Auto-activate venv
+cd /home/sandbells/Code/Sandbells
+if [ -f "Bellvirtenv/bin/activate" ] && [ -z "$VIRTUAL_ENV" ]; then
+  echo "Activating Bellvirtenv..."
+  source Bellvirtenv/bin/activate
+fi
+
+# Cleanup
+pkill -9 luakit 2>/dev/null || true
+pkill -9 matchbox-window-manager 2>/dev/null || true
+
+# Display & power settings (with fallbacks)
+export DISPLAY=:0
+export XAUTHORITY=/home/sandbells/.Xauthority
+
+if ! xset -q >/dev/null 2>&1; then
+  echo "Warning: No X display available yet. Ensure X is running (startx / lightdm?)."
+else
+  xset -dpms
+  xset s off
+  xset s noblank
+  xsetroot -cursor_name left_ptr
+fi
+
+# Start lightweight WM
+matchbox-window-manager -use_titlebar no -use_cursor no &
+
+sleep 2
+
+# Launch Luakit
+luakit -u http://localhost:8000/ --kiosk --disable-javascript 2>&1 | tee -a luakit.log &
+
+echo "Luakit + matchbox launch attempted. Check logs: cat luakit.log"
+echo "Processes: ps aux | grep -E 'luakit|matchbox'"
+echo "If DISPLAY issues persist, run from a graphical session or start X first."
