@@ -7,7 +7,7 @@
 - [ ] Make kiosk run cleanly as user `wyleu` (not root)
 - [ ] Reduce luakit/WebKit memory usage (multiple processes)
 - [ ] Full kiosk mode (no tabs/edge clutter via Lua)
-
+- [ ] Get a better AI
 ## Nice to Have
 - [ ] Dynamic SVG system info (Pi model, arch, git branch, DEBUG, memory)
 - [ ] Log rotation for monitor + better logging
