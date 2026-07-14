@@ -54,6 +54,12 @@ echo ""
 echo "Time sources:"
 chronyc sources | head -8
 echo ""
-echo "Setup complete! Rebooting..."
-sleep 5
+echo "=================================================="
+echo "Setup completed successfully at $(date)"
+echo "The system will now restart in 10 seconds."
+echo "Please wait patiently..."
+echo "Everything is prepared for a smooth experience."
+echo "=================================================="
+sleep 10
+echo "Restarting now..."
 sudo reboot
