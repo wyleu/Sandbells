@@ -1,7 +1,27 @@
 #!/bin/bash
-echo "Setting UK English locale..."
-sudo dpkg-reconfigure -f noninteractive locales
-echo "en_US.UTF-8 UTF-8" | sudo tee -a /etc/locale.gen > /dev/null
-sudo locale-gen en_US.UTF-8
-sudo update-locale LANG=en_US.UTF-8
-echo "Locale updated to UK English"
+# Locale step with debug option
+
+DEBUG=${1:-false}
+
+if [ "$DEBUG" = true ]; then
+    echo "DEBUG MODE ENABLED"
+    set -x
+fi
+
+echo "[6/8] Setting UK English locale..."
+
+CURRENT_LOCALE=$(locale | grep LANG= | cut -d= -f2)
+
+if [[ "$CURRENT_LOCALE" == *"en_US.UTF-8"* || "$CURRENT_LOCALE" == *"en_GB.UTF-8"* ]]; then
+    echo "Locale is already correctly set to UK English ($CURRENT_LOCALE)"
+else
+    echo "Updating locale to en_US.UTF-8..."
+    sudo locale-gen en_US.UTF-8
+    sudo update-locale LANG=en_US.UTF-8
+    sudo dpkg-reconfigure -f noninteractive locales
+    echo "Locale updated to en_US.UTF-8"
+fi
+
+if [ "$DEBUG" = true ]; then
+    set +x
+fi
