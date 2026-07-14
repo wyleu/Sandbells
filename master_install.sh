@@ -1,16 +1,9 @@
 #!/bin/bash
 # Sandbells Master Installer
 
-QUICK_MODE=false
-if [[ "$1" == "--quick" || "$1" == "-q" ]]; then
-    QUICK_MODE=true
-    echo "Young nephew quick mode activated!"
-fi
-
-
 START_TIME=$(date +%s)
 
-# Configuration (same as before)
+# Configuration
 HOSTNAME="sandbells"
 WIFI_SSID="sandbells"
 TIME_SERVER="sandgps3.local"
@@ -41,19 +34,29 @@ show_header() {
     echo "======================================================================"
 }
 
-show_header
+QUICK_MODE=false
+if [[ "$1" == "--quick" || "$1" == "-q" ]]; then
+    QUICK_MODE=true
+    echo "Young nephew quick mode activated!"
+fi
+
+# show_header
 echo "Starting installation steps..."
 echo ""
 
 STEPS_DIR="./install-steps"
-
 
 for step in $STEPS_DIR/[0-9][0-9]-*.sh; do
     if [ -x "$step" ]; then
         show_header
         echo "Running: $step"
         echo "----------------------------------------------------------------------"
-        "$step" "$QUICK_MODE"   # Pass the mode
+        "$step" "$QUICK_MODE"
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo "Step cancelled or failed (exit code $EXIT_CODE)"
+            exit 1
+        fi
         echo "----------------------------------------------------------------------"
         echo ""
     fi

@@ -9,7 +9,7 @@ pause() {
     read -p "Press Enter to continue (or Q to stop) > " choice
     if [[ "$choice" =~ ^[Qq]$ ]]; then
         echo "Setup stopped safely."
-        exit 0
+        exit 1
     fi
 }
 
