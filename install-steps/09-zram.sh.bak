@@ -15,35 +15,45 @@ pause() {
 }
 
 echo "=================================================="
-echo "ZRAM Swap Configuration"
+echo "ZRAM Swap Configuration (Proper zram-tools method)"
 echo "=================================================="
 
-sudo apt install -y zram-tools 2>/dev/null || true
+# Install if not present
+sudo apt update
+sudo apt install -y zram-tools
 
+# Calculate reasonable size
 TOTAL_RAM=$(free -m | awk '/^Mem:/{print $2}')
 ZRAM_SIZE=$((TOTAL_RAM / 2))
-[ $ZRAM_SIZE -gt 384 ] && ZRAM_SIZE=384
+if [ $ZRAM_SIZE -gt 384 ]; then
+    ZRAM_SIZE=384
+fi
 
-echo "Setting ZRAM size to ${ZRAM_SIZE}M"
+echo "Total RAM: ${TOTAL_RAM}M → Setting ZRAM to ${ZRAM_SIZE}M"
 
-# Configure properly
+# Configure zram-tools the correct way
 sudo bash -c "cat > /etc/default/zramswap << EOF
 ALGO=lz4
 SIZE=${ZRAM_SIZE}M
 EOF"
 
-# Ensure clean start
-sudo swapoff -a 2>/dev/null || true
+# Restart the service
 sudo systemctl restart zramswap.service
+sudo systemctl enable zramswap.service
 
-sleep 2
+echo "Waiting for activation..."
+sleep 3
 
-echo "Status:"
-systemctl status zramswap.service --no-pager -l | tail -n 12
+echo "ZRAM Status:"
+systemctl status zramswap.service --no-pager -l
 
 echo ""
-echo "Swap:"
+echo "Swap devices:"
 swapon --show
 
-echo "ZRAM setup completed."
+echo ""
+echo "ZRAM device:"
+zramctl 2>/dev/null || echo "zramctl not available"
+
+echo "ZRAM configuration completed."
 pause
