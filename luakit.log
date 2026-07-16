@@ -196,3 +196,76 @@ Failed to create GBM buffer of size 1912x1018: Cannot allocate memory
 [   31.007926] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
 [   31.208161] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
 [   31.229933] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
+[    3.377678] I [core/luah]: Loading rc: /etc/xdg/luakit/rc.lua
+[    3.490192] W [lua/rc]: Found local version /home/sandbells/.config/luakit/settings.lua for core module 'settings', but it won't be used, unless you update 'package.path' accordingly.
+[    3.755679] I [lua/adblock]: found 0 filter lists
+[    4.008527] I [lua/styles]: found 0 user stylesheets
+[   19.870756] I [lua/webview]: Requested link: file:///home/sandbells/.config/luakit/settings.lua (text/x-lua)
+[   20.142307] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
+[   20.195934] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
+[   21.278146] I [lua/webview]: Requested link: https://duckduckgo.com/?q=--config (text/html)
+[   21.284907] I [lua/webview]: Requested link: https://duckduckgo.com/?q=--kiosk (text/html)
+[   21.288432] I [lua/webview]: Requested link: https://duckduckgo.com/?q=--single-process (text/html)
+[   21.324400] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
+[   21.355951] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
+[   21.390027] W [glib]: (unknown): webkit_settings_set_enable_hyperlink_auditing is deprecated and does nothing.
+[   33.825320] I [lua/webview]: Requested link: https://duckduckgo.com/post3.html (text/html)
+[   33.848263] I [lua/webview]: Requested link: https://duckduckgo.com/post3.html (text/html)
+[   34.007180] I [lua/webview]: Requested link: https://duckduckgo.com/post3.html (text/html)
+Draw call returned Invalid argument.  Expect corruption.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:22.065: Unable to get session D-Bus address: Failed to execute child process “dbus-launch” (No such file or directory)
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:24.290: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.083: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.221: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.272: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.288: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.315: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.332: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:25.363: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:26.708: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.424: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.467: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.487: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.499: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.514: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.563: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+WebKit wasn't able to find a WebVTT encoder. Subtitles handling will be degraded unless gst-plugins-bad is installed.
+
+** (WebKitWebProcess:1014): WARNING **: 11:57:27.575: WebKit wasn't able to find the GL video sink dependencies. Hardware-accelerated zero-copy video rendering can't be enabled without this plugin.
+[    7.943862] I [core/luah]: Loading rc: /etc/xdg/luakit/rc.lua
+[    8.043611] W [lua/rc]: Found local version /home/sandbells/.config/luakit/settings.lua for core module 'settings', but it won't be used, unless you update 'package.path' accordingly.
+[    8.490653] I [lua/adblock]: found 0 filter lists
+[    8.868648] I [lua/styles]: found 0 user stylesheets
+
+(luakit:896): Gtk-WARNING **: 12:02:34.831: cannot open display: :0

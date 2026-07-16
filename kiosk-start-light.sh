@@ -1,37 +1,36 @@
 #!/bin/bash
+# Sandbells Lightweight Kiosk Starter
+
 START_TIME=$(date +%s)
 PROJECT_DIR="$HOME/Code/Sandbells"
 
 source "$PROJECT_DIR/show_header.sh"
 show_header
 
-echo "Starting Optimized Lightweight Luakit Kiosk..."
+echo "Starting Ultra-Clean Single-Tab Luakit Kiosk..."
 
 export DISPLAY=:0
 export XAUTHORITY=/home/sandbells/.Xauthority
 
 cd "$PROJECT_DIR"
 
-# Clean slate
-pkill -9 luakit 2>/dev/null || true
+# Aggressive cleanup
+pkill -9 luakit WebKitWebProcess 2>/dev/null || true
+rm -rf ~/.cache/luakit/* ~/.local/share/luakit/* 2>/dev/null || true
 sleep 2
 
-# No blanking
+# Disable screen blanking
 xset s off -d :0 2>/dev/null || true
 xset -dpms -d :0 2>/dev/null || true
 xset s noblank -d :0 2>/dev/null || true
 
-# Simple WM
-matchbox-window-manager -use_titlebar no -use_cursor yes -d :0 &
-
-sleep 2.5
-
-echo "Launching Luakit with optimized settings..."
+echo "Launching Luakit (single tab, clean session)..."
 
 luakit \
   --kiosk \
   --single-process \
   --config ~/.config/luakit/settings.lua \
+  --no-restore \
   "http://sandbells.local" 2>&1 | tee -a luakit.log &
 
-echo "Kiosk started in optimized mode."
+echo "Kiosk started (session cleared)."
