@@ -1,0 +1,18 @@
+show_header() {
+    clear
+    ELAPSED=$(( $(date +%s) - START_TIME ))
+    echo "======================================================================"
+    echo "          Sandbells Church Bell Kiosk"
+    echo "======================================================================"
+    echo "Date              : $(date)"
+    echo "Elapsed Time      : ${ELAPSED} seconds"
+    echo "User              : $(whoami)"
+    echo "Hostname          : $(hostname)"
+    echo "Machine           : $(cat /proc/cpuinfo | grep Model | cut -d: -f2 | xargs || echo 'Unknown')"
+    echo "Architecture      : $(uname -m) ($(getconf LONG_BIT)-bit)"
+    echo "Display Server    : ${XDG_SESSION_TYPE:-Unknown}  [$(echo $DISPLAY)]"
+    echo "Git Branch        : $(git branch --show-current 2>/dev/null || echo 'Not in git repo')"
+    echo "Project Path      : $PROJECT_DIR"
+    echo "======================================================================"
+    echo ""
+}
