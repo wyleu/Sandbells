@@ -26,20 +26,21 @@ ZRAM_SIZE=$((TOTAL_RAM / 2))
 
 echo "Setting ZRAM size to ${ZRAM_SIZE}M"
 
-# Configure properly
+# Fix config (force no 'M')
 sudo bash -c "cat > /etc/default/zramswap << EOF
 ALGO=lz4
-SIZE=${ZRAM_SIZE}M
+SIZE=${ZRAM_SIZE}
 EOF"
 
-# Ensure clean start
+# Clean restart
 sudo swapoff -a 2>/dev/null || true
+sudo systemctl daemon-reload
 sudo systemctl restart zramswap.service
 
 sleep 2
 
 echo "Status:"
-systemctl status zramswap.service --no-pager -l | tail -n 12
+systemctl status zramswap.service --no-pager -l | tail -n 15
 
 echo ""
 echo "Swap:"
