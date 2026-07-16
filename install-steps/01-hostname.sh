@@ -15,24 +15,12 @@ pause() {
 }
 
 echo "=================================================="
-echo "Sandbells Multi-Unit Hostname Setup"
+echo "Sandbells Hostname Setup"
 echo "=================================================="
 
 BASE_NAME="sandbells"
 
-# Check if a hostname is already set to something sensible
-CURRENT=$(hostname)
-if [[ "$CURRENT" != "raspberrypi" && "$CURRENT" != "sandbells" ]]; then
-    echo "Current hostname is already: $CURRENT"
-    read -p "Keep current hostname? (Y/n): " keep
-    if [[ "$keep" =~ ^[Yy] ]]; then
-        pause
-        exit 0
-    fi
-fi
-
-echo "Scanning local network for existing Sandbells units..."
-
+# Find next available hostname
 num=1
 while true; do
     if [ $num -eq 1 ]; then
@@ -41,41 +29,24 @@ while true; do
         candidate="${BASE_NAME}${num}"
     fi
 
-    # Test both .local and without
     if ! ping -c 1 -W 2 "$candidate.local" >/dev/null 2>&1 && \
        ! ping -c 1 -W 2 "$candidate" >/dev/null 2>&1; then
-        echo "✅ Found available hostname: $candidate"
+        echo "Available hostname: $candidate"
         break
     fi
-
-    echo "   $candidate.local is already in use."
-    ((num++))
-    
-    if [ $num -gt 30 ]; then
-        echo "⚠ Many units detected - switching to manual entry."
+    num=$((num + 1))
+    if [ $num -gt 20 ]; then
+        candidate="$BASE_NAME"
         break
     fi
 done
 
-# User confirmation / override
-read -p "Use hostname '$candidate' ? [Y/n] or type custom name: " input
-if [[ -n "$input" && ! "$input" =~ ^[Yy]$ ]]; then
-    if [[ "$input" =~ ^[0-9]+$ ]]; then
-        candidate="${BASE_NAME}${input}"
-    else
-        candidate="$input"
-    fi
-fi
+# Set hostname
+echo "Setting hostname to: $candidate"
+echo "$candidate" | sudo tee /etc/hostname > /dev/null
+sudo sed -i "s/127.0.1.1.*/127.0.1.1\t$candidate/" /etc/hosts
 
-HOSTNAME="$candidate"
+sudo hostnamectl set-hostname "$candidate" 2>/dev/null || true
 
-echo "Setting hostname to: $HOSTNAME"
-
-# Apply the hostname
-sudo hostnamectl set-hostname "$HOSTNAME"
-sudo sed -i "s/127.0.1.1.*/127.0.1.1\t$HOSTNAME/" /etc/hosts
-
-echo "Hostname set successfully to $HOSTNAME.local"
-echo "=================================================="
-
+echo "Hostname set to $candidate"
 pause
