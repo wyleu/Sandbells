@@ -1,11 +1,9 @@
 #!/bin/bash
 # 08-autologin.sh
-# Sandbells Install Step
-# Command line arguments:
-#   $1 = QUICK_MODE (true/false)
+# Sandbells Auto-login and colored prompt setup
 
-#!/bin/bash
 QUICK_MODE=${1:-false}
+
 pause() {
     if [ "$QUICK_MODE" = true ]; then
         sleep 1.5
@@ -19,13 +17,37 @@ pause() {
     fi
 }
 
+echo "=================================================="
+echo "Auto-login and Colored Prompt Setup"
+echo "=================================================="
 
-echo "Setting up automatic login..."
-sudo tee /etc/lightdm/lightdm.conf > /dev/null <<EOF
-[Seat:*]
-autologin-user=sandbells
-autologin-user-timeout=0
-autologin-session=lightdm-xsession
+# Enable auto-login for user sandbells
+sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+sudo tee /etc/systemd/system/getty@tty1.service.d/override.conf > /dev/null <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty -o '-p -f -- \\u' --noclear --autologin sandbells %I $TERM
 EOF
-echo "Auto-login configured"
+
+echo "Auto-login enabled for user sandbells"
+
+# Add colored prompt based on hostname
+cat >> ~/.bashrc << 'EOF'
+
+# Sandbells Colored Prompt
+case $(hostname) in
+    sandbells)
+        PS1="\[\e[1;36m\][sandbells]\[\e[0m\] \u@\h:\w\$ " ;;
+    sandbells2)
+        PS1="\[\e[1;33m\][sandbells2]\[\e[0m\] \u@\h:\w\$ " ;;
+    sandbells3)
+        PS1="\[\e[1;32m\][sandbells3]\[\e[0m\] \u@\h:\w\$ " ;;
+    *)
+        PS1="\[\e[1;37m\][$(hostname)]\[\e[0m\] \u@\h:\w\$ " ;;
+esac
+EOF
+
+echo "Colored terminal prompt configured based on hostname"
+
+echo "Setup completed. Reboot recommended."
 pause
