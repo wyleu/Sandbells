@@ -22,7 +22,7 @@ show_header() {
     NC='\033[0m'
 
     echo -e "${CYAN}======================================================================${NC}"
-    echo -e "           ${BOLD}${CYAN}Sandbells Church Bell Kiosk Setup${NC}"
+    echo -e " ${BOLD}${GREEN}Sandbells Church Bell Kiosk Setup${NC}"
     echo -e "${CYAN}======================================================================${NC}"
 
     echo -e " ${CYAN}Date${NC}          : ${WHITE}$(date)${NC}"
@@ -34,16 +34,14 @@ show_header() {
     echo -e " ${CYAN}Git Branch${NC}    : ${WHITE}$GIT_BRANCH${NC}"
     echo -e " ${CYAN}Project Path${NC}  : ${WHITE}$PROJECT_DIR${NC}"
 
-    # Hardware info
     echo -e " ${CYAN}Machine${NC}       : ${WHITE}$(cat /proc/cpuinfo | grep -m1 Model | cut -d: -f2 | xargs || echo 'Unknown')${NC}"
     echo -e " ${CYAN}Architecture${NC}  : ${WHITE}$(uname -m) ($(getconf LONG_BIT)-bit)${NC}"
 
-    # Friendly Memory
+    # Memory
     MEM_TOTAL=$(free -h | awk '/^Mem:/ {print $2}')
     MEM_USED=$(free -h | awk '/^Mem:/ {print $3}')
     MEM_FREE=$(free -h | awk '/^Mem:/ {print $4}')
     MEM_PERCENT_USED=$(free | awk '/^Mem:/ {printf "%.0f", $3/$2 * 100}')
-
     echo -e " ${CYAN}Memory${NC}        : ${WHITE}${MEM_USED} used of ${MEM_TOTAL} total${NC}"
     echo -e "                   ${WHITE}(${MEM_FREE} still free — ${MEM_PERCENT_USED}% in use)${NC}"
 
@@ -51,10 +49,8 @@ show_header() {
     TEMP=$(vcgencmd measure_temp 2>/dev/null | cut -d= -f2 || echo "N/A")
     echo -e " ${CYAN}Temperature${NC}   : ${WHITE}$TEMP${NC}"
 
-    # Clock / Time Server
+    # Time Server
     STRATUM=$(chronyc tracking 2>/dev/null | grep -i stratum | awk '{print $3}' || echo "Unknown")
-    
-    # Better Time Server detection
     RAW_REFID=$(chronyc tracking 2>/dev/null | grep -i "Reference ID" | awk '{print $4}' | tr -d '()' || echo "")
     RAW_SOURCE=$(chronyc sources 2>/dev/null | grep '^\*' | awk '{print $2}' || echo "")
 
@@ -63,8 +59,6 @@ show_header() {
     elif [[ $RAW_REFID == sandgp* ]]; then
         TIMESERVER="${RAW_REFID}.local"
     elif [[ $RAW_REFID =~ ^[0-9A-Fa-f]{8}$ ]]; then
-        # Hex ref ID like C0A800DD → try to resolve via avahi
-        # Convert hex to IP first if needed
         IP_FROM_HEX=$(printf "%d.%d.%d.%d" 0x${RAW_REFID:0:2} 0x${RAW_REFID:2:2} 0x${RAW_REFID:4:2} 0x${RAW_REFID:6:2} 2>/dev/null)
         RESOLVED=$(avahi-resolve-address "$IP_FROM_HEX" 2>/dev/null | awk '{print $2}' || echo "")
         if [[ $RESOLVED == *.local ]]; then
@@ -84,7 +78,16 @@ show_header() {
         echo -e " ${CYAN}Clock Stratum${NC} : ${WHITE}$STRATUM${NC}"
     fi
 
-    # Friendly ZRAM
+    # Component Status - Fixed single line
+    SSH_STATUS=$( [ "$(systemctl is-active ssh 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
+    ONEWIRE_STATUS=$( lsmod | grep -q w1 && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
+    FAN_STATUS=$( [ "$(systemctl is-active sandbells-fan.service 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
+
+    echo -e " ${CYAN}SSH${NC}           : ${SSH_STATUS}"
+    echo -e " ${CYAN}OneWire${NC}       : ${ONEWIRE_STATUS}"
+    echo -e " ${CYAN}Fan Control${NC}   : ${FAN_STATUS}"
+
+    # ZRAM
     ZRAM_LINE=$(swapon --show | grep zram)
     if [ -n "$ZRAM_LINE" ]; then
         ZRAM_DEV=$(echo "$ZRAM_LINE" | awk '{print $1}')
