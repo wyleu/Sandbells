@@ -210,6 +210,34 @@ See `TODO.md` for the live checklist.
 
 ---
 
+## Recovery Ethernet (no DHCP / tower cable)
+
+When sandbells2 has no home LAN and uses the static fallback:
+
+| Host        | Interface     | Address            |
+|-------------|---------------|--------------------|
+| sandbells2  | eth0          | `192.168.99.2/24`  |
+| Admin laptop| USB Ethernet  | `192.168.99.1/24`  |
+
+**On the admin machine** (not automatic):
+
+```bash
+# Sandbells_connect (or equivalent)
+./sandbells-eth-link.sh          # sets dongle to 192.168.99.1, pings .2
+# or manually:
+sudo ip link set eth1 up
+sudo ip addr flush dev eth1
+sudo ip addr add 192.168.99.1/24 dev eth1
+ping -c 2 192.168.99.2
+ssh sandbells@192.168.99.2
+
+Use the USB Ethernet iface (eth1 etc.), not WiFi.
+Home WiFi (192.168.0.x) will not reach 192.168.99.2.
+Status panel: using_fallback: true, wired_method: static.
+API on-box: curl -sS http://127.0.0.1/api/system-status/ | python3 -m json.tool
+From laptop, prefer Host: sandbells2.local if nginx returns 444 for raw IP.
+
+
 ## Licence & Credits
 
 Church-bell change ringing is a centuries-old English tradition.  
