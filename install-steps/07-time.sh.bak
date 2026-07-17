@@ -1,5 +1,7 @@
 #!/bin/bash
 QUICK_MODE=${1:-false}
+DEBUG_MODE=${2:-false}
+
 pause() {
     if [ "$QUICK_MODE" = true ]; then
         sleep 1.5
@@ -13,26 +15,23 @@ pause() {
     fi
 }
 
-
-# Time configuration step - smart check
+echo "=================================================="
+echo "Time Configuration (Chrony)"
+echo "=================================================="
 
 TIME_SERVER="sandgps3.local"
-DEBUG=${1:-false}
 
-if [ "$DEBUG" = true ]; then
-    echo "DEBUG MODE"
+if [ "$DEBUG_MODE" = true ]; then
     set -x
 fi
 
 echo "Checking current time configuration..."
 
-# Check if our desired server is already the preferred one
 if grep -q "server $TIME_SERVER" /etc/chrony/chrony.conf 2>/dev/null; then
-    echo "Good news! The local GPS time server ($TIME_SERVER) is already configured."
+    echo "Local GPS time server ($TIME_SERVER) already configured."
 else
-    echo "Updating chrony config to prefer local GPS ($TIME_SERVER)..."
+    echo "Updating chrony to prefer local GPS ($TIME_SERVER)..."
     sudo systemctl stop chrony 2>/dev/null || true
-    
     sudo cp /etc/chrony/chrony.conf /etc/chrony/chrony.conf.bak 2>/dev/null || true
 
     cat | sudo tee /etc/chrony/chrony.conf > /dev/null <<EOF
@@ -41,18 +40,26 @@ server $TIME_SERVER iburst prefer
 makestep 1.0 3
 rtcsync
 EOF
-    echo "New config written."
+    echo "Chrony config updated."
 fi
 
-echo "Starting / restarting chrony..."
+echo "Restarting chrony..."
 sudo systemctl restart chrony
-sleep 6
 
-echo "Current time sources:"
-chronyc sources
+echo "Waiting for time sync..."
+if ! timeout 15 chronyc waitsync 2>/dev/null; then
+    echo "Warning: Time sync timeout. This is common on first boot without GPS server."
+    echo "Debug info:"
+    chronyc sources
+    chronyc tracking
+fi
+
 echo ""
-echo "Clock Stratum : $(chronyc tracking | grep Stratum | awk '{print $3}' || echo 'Unknown')"
-echo "Reference ID  : $(chronyc tracking | grep 'Reference ID' | awk '{print $4}' | tr -d '()' || echo 'Unknown')"
+echo "Current time sources:"
+timeout 8 chronyc sources || true
+
+echo "Clock Status:"
+chronyc tracking | grep -E "Stratum|Reference|System time|Leap"
 
 echo "Time configuration step completed"
 pause

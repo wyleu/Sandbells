@@ -1,4 +1,10 @@
 #!/bin/bash
+# 02-wifi.sh
+# Sandbells Install Step
+# Command line arguments:
+#   $1 = QUICK_MODE (true/false)
+
+#!/bin/bash
 QUICK_MODE=${1:-false}
 pause() {
     if [ "$QUICK_MODE" = true ]; then

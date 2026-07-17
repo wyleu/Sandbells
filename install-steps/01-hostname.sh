@@ -1,4 +1,10 @@
 #!/bin/bash
+# 01-hostname.sh
+# Sandbells Install Step
+# Command line arguments:
+#   $1 = QUICK_MODE (true/false)
+
+#!/bin/bash
 QUICK_MODE=${1:-false}
 
 pause() {

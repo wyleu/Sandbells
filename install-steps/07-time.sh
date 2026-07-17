@@ -1,5 +1,12 @@
 #!/bin/bash
+# 07-time.sh
+# Sandbells Chrony Time Configuration Step
+# Command line arguments:
+#   $1 = QUICK_MODE (true/false) - skip pauses
+#   $2 = DEBUG_MODE (true/false) - enable set -x
+
 QUICK_MODE=${1:-false}
+DEBUG_MODE=${2:-false}
 
 pause() {
     if [ "$QUICK_MODE" = true ]; then
@@ -20,6 +27,10 @@ echo "=================================================="
 
 TIME_SERVER="sandgps3.local"
 
+if [ "$DEBUG_MODE" = true ]; then
+    set -x
+fi
+
 echo "Checking current time configuration..."
 
 if grep -q "server $TIME_SERVER" /etc/chrony/chrony.conf 2>/dev/null; then
@@ -27,7 +38,6 @@ if grep -q "server $TIME_SERVER" /etc/chrony/chrony.conf 2>/dev/null; then
 else
     echo "Updating chrony to prefer local GPS ($TIME_SERVER)..."
     sudo systemctl stop chrony 2>/dev/null || true
-    
     sudo cp /etc/chrony/chrony.conf /etc/chrony/chrony.conf.bak 2>/dev/null || true
 
     cat | sudo tee /etc/chrony/chrony.conf > /dev/null <<EOF
@@ -41,14 +51,21 @@ fi
 
 echo "Restarting chrony..."
 sudo systemctl restart chrony
-sleep 4
 
-echo "Current time sources:"
-timeout 8 chronyc sources || echo "(chronyc timed out - normal on isolated network)"
+echo "Waiting for time sync..."
+if ! timeout 15 chronyc waitsync 2>/dev/null; then
+    echo "Warning: Time sync timeout. This is common on first boot without GPS server."
+    echo "Debug info:"
+    chronyc sources
+    chronyc tracking
+fi
 
 echo ""
-echo "Clock Stratum : $(chronyc tracking | grep Stratum | awk '{print $3}' || echo 'Unknown')"
-echo "Reference ID  : $(chronyc tracking | grep 'Reference ID' | awk '{print $4}' | tr -d '()' || echo 'Unknown')"
+echo "Current time sources:"
+timeout 8 chronyc sources || true
+
+echo "Clock Status:"
+chronyc tracking | grep -E "Stratum|Reference|System time|Leap"
 
 echo "Time configuration step completed"
 pause

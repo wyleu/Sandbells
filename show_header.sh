@@ -23,6 +23,7 @@ show_header() {
     echo "Display Server    : $DISPLAY_INFO"
     
     echo "Git Branch        : $(git branch --show-current 2>/dev/null || echo 'Not in git repo')"
+    echo "System Time : $(date '+%Y-%m-%d %H:%M:%S') (Stratum: $(chronyc tracking | grep Stratum | awk '{print $3}' || echo 'Unknown'))"
     echo "Project Path      : ${PROJECT_DIR:-Unknown}"
     echo "======================================================================"
     echo ""
