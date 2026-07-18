@@ -1,6 +1,6 @@
 #!/bin/bash
 # 08-autologin.sh
-# Sandbells Auto-login and colored prompt setup
+# Sandbells Auto-login and Colored Prompt Setup
 
 QUICK_MODE=${1:-false}
 
@@ -31,23 +31,22 @@ EOF
 
 echo "Auto-login enabled for user sandbells"
 
-# Add colored prompt based on hostname
+# Add clean colored prompt
 cat >> ~/.bashrc << 'EOF'
 
-# Sandbells Colored Prompt
+# Sandbells Clean Colored Prompt
 case $(hostname) in
     sandbells)
-        PS1="\[\e[1;36m\][sandbells]\[\e[0m\] \u@\h:\w\$ " ;;
+        PS1="\[\e[1;36m\]\u@\h\[\e[0m\]:\w\$ " ;;
     sandbells2)
-        PS1="\[\e[1;33m\][sandbells2]\[\e[0m\] \u@\h:\w\$ " ;;
+        PS1="\[\e[1;33m\]\u@\h\[\e[0m\]:\w\$ " ;;
     sandbells3)
-        PS1="\[\e[1;32m\][sandbells3]\[\e[0m\] \u@\h:\w\$ " ;;
+        PS1="\[\e[1;32m\]\u@\h\[\e[0m\]:\w\$ " ;;
     *)
-        PS1="\[\e[1;37m\][$(hostname)]\[\e[0m\] \u@\h:\w\$ " ;;
+        PS1="\[\e[1;37m\]\u@\h\[\e[0m\]:\w\$ " ;;
 esac
 EOF
 
 echo "Colored terminal prompt configured based on hostname"
-
-echo "Setup completed. Reboot recommended."
+echo "Setup completed. Reboot recommended to see changes."
 pause
