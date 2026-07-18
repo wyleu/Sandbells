@@ -1,7 +1,10 @@
 #!/bin/bash
 # 09-zram.sh
-# Sandbells ZRAM Compressed Swap Setup
+# Sandbells Install Step
+# Command line arguments:
+#   $1 = QUICK_MODE (true/false)
 
+#!/bin/bash
 QUICK_MODE=${1:-false}
 
 pause() {
@@ -21,35 +24,33 @@ echo "=================================================="
 echo "ZRAM Swap Configuration"
 echo "=================================================="
 
-# Install if needed
 sudo apt install -y zram-tools 2>/dev/null || true
 
-# Calculate reasonable size (half RAM, max 384M)
 TOTAL_RAM=$(free -m | awk '/^Mem:/{print $2}')
 ZRAM_SIZE=$((TOTAL_RAM / 2))
 [ $ZRAM_SIZE -gt 384 ] && ZRAM_SIZE=384
 
-echo "Total RAM: ${TOTAL_RAM}M → Setting ZRAM to ${ZRAM_SIZE}M"
+echo "Setting ZRAM size to ${ZRAM_SIZE}M"
 
-# Configure
+# Fix config (force no 'M')
 sudo bash -c "cat > /etc/default/zramswap << EOF
 ALGO=lz4
-SIZE=${ZRAM_SIZE}M
+SIZE=${ZRAM_SIZE}
 EOF"
 
-# Restart cleanly
+# Clean restart
 sudo swapoff -a 2>/dev/null || true
-sudo systemctl restart zramswap.service 2>/dev/null || true
+sudo systemctl daemon-reload
+sudo systemctl restart zramswap.service
 
 sleep 2
 
-# Check status
-if swapon --show | grep -q zram; then
-    ZRAM_SIZE=$(swapon --show | grep zram | awk '{print $3}')
-    echo "ZRAM: Active (${ZRAM_SIZE})"
-else
-    echo "Warning: ZRAM not active"
-fi
+echo "Status:"
+systemctl status zramswap.service --no-pager -l | tail -n 15
+
+echo ""
+echo "Swap:"
+swapon --show
 
 echo "ZRAM setup completed."
 pause
