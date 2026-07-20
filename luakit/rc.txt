@@ -1,3 +1,14 @@
 THe file rc.lua has been modified and should be copied into the home/.config/luakit directory of the use running the browser
 
 THis is root in the first versions but a specifc user should really be sandbells 
+
+This worked 20/7/2026 with on hdmi monitor full screen and mightdm 
+
+sudo systemctl start lightdm
+luakit -vUu "http://sandbells.local:8000" --display=:0
+
+
+and run as a shell script from:
+
+start-kiosk-solo.sh
+
