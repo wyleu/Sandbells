@@ -1,0 +1,31 @@
+#!/bin/bash
+# start-kiosk.sh
+# Start Luakit Kiosk from SSH
+
+echo "=== Starting Sandbells Luakit Kiosk from SSH ==="
+
+# Kill old instances
+pkill -9 luakit 2>/dev/null
+pkill -9 matchbox-window-manager 2>/dev/null
+
+# Force physical display
+export DISPLAY=:0
+
+# Start X if not running
+if ! pgrep -x Xorg > /dev/null; then
+    echo "Starting X server..."
+    sudo xinit /dev/null -- :0 &
+    sleep 4
+fi
+
+# Start window manager
+matchbox-window-manager -use_titlebar no -use_cursor no &
+
+sleep 2
+
+# Start Luakit
+echo "Launching Luakit..."
+luakit http://sandbells.local:8000 2>&1 | tee -a luakit.log &
+
+echo "Kiosk should be running on HDMI."
+echo "Use 'pkill luakit' to stop."

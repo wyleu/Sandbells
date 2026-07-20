@@ -1,45 +1,41 @@
-#!/bin/bash
-# Sandbells Luakit Kiosk Starter - SSH friendly
+#!/bin/sh
 
-START_TIME=$(date +%s)
-PROJECT_DIR="$HOME/Code/Sandbells"
 
-source "$PROJECT_DIR/show_header.sh"
-show_header
+echo "=== Sandbells Luakit Kiosk Starting ==="
 
-echo "Starting Luakit Kiosk..."
-echo ""
+echo "############################################################################"
+echo "#                                                                          #"
+echo "#                          Running  luakit                                 #"
+echo "#                                                                          #"
+echo "############################################################################"
 
-# Ensure we're targeting the right display
+# Kill any existing instances
+pkill -9 luakit
+pkill -9 matchbox-window-manager
+
 export DISPLAY=:0
+export XAUTHORITY=/home/$USER/.Xauthority
 
-cd "$PROJECT_DIR"
+xset -dpms
+xset s off
+xset s noblank
+# xsetroot -cursor_name left_ptr
 
-# Clean up old processes
-pkill -9 luakit matchbox-window-manager 2>/dev/null || true
-sleep 1.5
+# Hide cursor when it's not moving
+# unclutter -idle 0.5 -root &
 
-# Disable power saving
-xset s off 2>/dev/null || true
-xset -dpms 2>/dev/null || true
-xset s noblank 2>/dev/null || true
+#  USE lightdm
+# matchbox-window-manager -use_titlebar no &
+sudo systemctl restart lightdm
 
-# Start window manager with visible cursor
-matchbox-window-manager -use_titlebar no -use_cursor yes &
+# matchbox-window-manager &
 
 sleep 2
 
-echo "Attempting to connect to local site..."
+cd /home/$USER/Code/Sandbells
+# git status
+# pwd
+# echo $HOSTNAME
 
-for url in "http://sandbells.local" "http://localhost:8000" "http://127.0.0.1:8000"; do
-    if curl -s --connect-timeout 4 "$url" > /dev/null 2>&1; then
-        echo "✓ Found server at $url"
-        echo "Launching Luakit..."
-        luakit --enable-plugins --kiosk "$url" 2>&1 | tee -a luakit.log &
-        echo "Browser started successfully."
-        exit 0
-    fi
-done
-
-echo "⚠ No local server detected."
-luakit --kiosk "data:text/html,<h1 style='color:#aa0000;text-align:center;margin-top:20%'>Sandbells Offline</h1><p>The main system is not responding.</p>" &
+luakit -Uu http://sandbells.local:8000 --display=:0
+#luakit -vUu "http://sandbells.local:8000" --display=:0
