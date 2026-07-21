@@ -2,12 +2,12 @@
 
 ## Current Priorities (Kiosk Recovery)
 - [x] Restore working luakit kiosk on Pi
-- [x] Self-starting on boot (systemd)
-- [x] Gunicorn / runserver working
-- [ ] Make kiosk run cleanly as user `wyleu` (not root)
+- [ ] Self-starting on boot (systemd)
+- [ ] Gunicorn / runserver working
+- [ ] Make kiosk run cleanly as user `sandbells` (not root)
 - [ ] Reduce luakit/WebKit memory usage (multiple processes)
-- [ ] Full kiosk mode (no tabs/edge clutter via Lua)
-- [ ] Get a better AI
+- [*] Full kiosk mode (no tabs/edge clutter via Lua)
+- [ ] Turn off screen saver
 ## Nice to Have
 - [ ] Dynamic SVG system info (Pi model, arch, git branch, DEBUG, memory)
 - [ ] Log rotation for monitor + better logging
