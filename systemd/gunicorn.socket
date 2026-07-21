@@ -1,10 +1,11 @@
 [Unit]
-Description=gunicorn socket
+Description=gunicorn socket for Sandbells
 
 [Socket]
 ListenStream=/run/gunicorn.socket
-
-SocketUser=wyleu
+SocketUser=sandbells
+SocketGroup=sandbells
+SocketMode=0660
 
 [Install]
 WantedBy=sockets.target

@@ -1,19 +1,20 @@
 [Unit]
-Description=Gunicorn daemon for Sandbells
+Description=Gunicorn daemon for Sandbells Django
 Requires=gunicorn.socket
 After=network.target
 
 [Service]
 Type=notify
-User=wyleu
-Group=wyleu
+User=sandbells
+Group=sandbells
 
 RuntimeDirectory=gunicorn
-WorkingDirectory=/home/wyleu/Code/Sandbells/changes
+WorkingDirectory=/home/sandbells/Code/Sandbells/changes
 
-# Optimized for Raspberry Pi 3
-ExecStart=/home/wyleu/Code/Sandbells/Bellvirtenv/bin/gunicorn \
+# Virtualenv gunicorn – optimised for Raspberry Pi 3
+ExecStart=/home/sandbells/Code/Sandbells/Bellvirtenv/bin/gunicorn \
     --access-logfile - \
+    --error-logfile - \
     --workers 1 \
     --threads 4 \
     --worker-class gthread \
@@ -30,7 +31,7 @@ KillMode=mixed
 TimeoutStopSec=5
 PrivateTmp=true
 
-# Pi 3 friendly
+# Pi 3 friendly scheduling
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7

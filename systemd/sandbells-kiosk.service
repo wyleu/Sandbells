@@ -1,0 +1,41 @@
+[Unit]
+Description=Sandbells Luakit Kiosk (HDMI fullscreen)
+# Start after the graphical session and the web stack are ready
+After=graphical.target lightdm.service network-online.target gunicorn.service
+Wants=graphical.target network-online.target
+Requires=lightdm.service
+
+[Service]
+Type=simple
+User=sandbells
+Group=sandbells
+
+# Environment for X11 + user session
+Environment=DISPLAY=:0
+Environment=HOME=/home/sandbells
+Environment=XAUTHORITY=/home/sandbells/.Xauthority
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+WorkingDirectory=/home/sandbells/Code/Sandbells
+
+# The start script itself waits for X, disables blanking, then execs luakit
+ExecStart=/home/sandbells/Code/Sandbells/start-kiosk-solo.sh
+
+# If luakit dies, restart it quickly
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Nice to keep the Pi responsive for the little old ladies
+Nice=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sandbells-kiosk
+
+[Install]
+WantedBy=graphical.target
