@@ -149,13 +149,6 @@ sudo systemctl enable sandbells-kiosk.service
 sudo systemctl disable luakit-fullscreen.service 2>/dev/null || true
 sudo systemctl disable midori-fullscreen.service 2>/dev/null || true
 sudo systemctl disable sandbells.service 2>/dev/null || true
-# ------------------------------------------------------------------
-# Ensure we boot into the graphical target (not multi-user/text)
-# ------------------------------------------------------------------
-echo "Setting default boot target to graphical.target..."
-sudo systemctl set-default graphical.target
-sudo systemctl enable lightdm.service
-
 
 pause
 
