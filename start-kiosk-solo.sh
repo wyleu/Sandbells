@@ -94,12 +94,11 @@ if [ -z "$CHOSEN_URL" ]; then
 fi
 
 # ------------------------------------------------------------------
-# Launch Luakit (fullscreen is forced by ~/.config/luakit/rc.lua)
-# Keep the process in the foreground so systemd can supervise it.
+# Launch Luakit (fullscreen forced by ~/.config/luakit/rc.lua)
+# Do NOT pipe to tee under systemd – it breaks process tracking and
+# causes Restart=always to spawn many copies.
 # ------------------------------------------------------------------
 echo "Launching Luakit kiosk → $CHOSEN_URL" | tee -a "$LOG_FILE"
 
-# -U = unique instance, -u = uri
-# The rc.lua already contains:
-#   window.add_signal("init", function(w) w.win.fullscreen = true end)
-exec luakit -U -u "$CHOSEN_URL" 2>&1 | tee -a "$LOG_FILE"
+exec luakit -U -u "$CHOSEN_URL"
+
