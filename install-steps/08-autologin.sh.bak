@@ -48,5 +48,18 @@ esac
 EOF
 
 echo "Colored terminal prompt configured based on hostname"
+
+# Create convenient sandbells-status command
+sudo tee /usr/local/bin/sandbells-status > /dev/null <<'EOF'
+#!/bin/bash
+cd /home/sandbells/Code/Sandbells
+export START_TIME=$(date +%s)
+source show_header.sh
+show_header
+EOF
+
+sudo chmod +x /usr/local/bin/sandbells-status
+echo "sandbells-status command created for easy status viewing"
+
 echo "Setup completed. Reboot recommended to see changes."
 pause
