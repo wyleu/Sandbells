@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,6 +24,9 @@ DEBUG = True
 SECRET_KEY = 'django-insecure-010iq-lcn9(8y@qh(05*no(_-ntnk-w&j*h^@uj1a1g6-0e81f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
+
+LOG_DIR = Path("/var/log/django")
+LOG_DIR.mkdir(parents=True, exist_ok=True)   # safe even if already exists
 
 LOGGING = {
     'version': 1,

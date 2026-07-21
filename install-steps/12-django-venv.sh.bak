@@ -83,20 +83,15 @@ fi
 pause
 
 # ------------------------------------------------------------------
-# 4. Django migrations + canonical fixtures
+# 4. Django migrations
 # ------------------------------------------------------------------
 echo "[4/6] Running Django migrations..."
 cd "$CHANGES_DIR" || { echo "ERROR: changes/ directory missing"; exit 1; }
 
+# Prefer the project settings; fall back gracefully
 python manage.py migrate --noinput || {
     echo "WARNING: migrate failed (DB may not be ready yet). Continuing..."
 }
-
-echo "Loading canonical fixtures (towers + patterns)..."
-python manage.py loaddata bells/fixtures/towers.json 2>/dev/null || \
-    echo "WARNING: towers.json not loaded (already present or missing)"
-python manage.py loaddata bells/fixtures/patterns.json 2>/dev/null || \
-    echo "WARNING: patterns.json not loaded (already present or missing)"
 
 pause
 
