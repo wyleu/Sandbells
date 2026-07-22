@@ -429,3 +429,75 @@ def timedatestatus(request):
 def timedatetest(request):
     return render(request, 'bells/timedatetest.html')
 
+
+# ------------------------------------------------------------------
+# System status API for the SVG status overlay
+# ------------------------------------------------------------------
+import platform
+import subprocess
+import socket
+from django.http import JsonResponse
+from django.conf import settings
+
+def system_status(request):
+    """JSON endpoint for kiosk status display (svg_data)"""
+    hostname = socket.gethostname()
+
+    # IP
+    try:
+        ip = subprocess.check_output(["hostname", "-I"], text=True).split()[0]
+    except Exception:
+        ip = "No Net"
+
+    # Git
+    try:
+        git_branch = subprocess.check_output(
+            ["git", "branch", "--show-current"],
+            cwd=settings.BASE_DIR.parent,
+            text=True
+        ).strip()
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=settings.BASE_DIR.parent,
+            text=True
+        ).strip()
+    except Exception:
+        git_branch = "unknown"
+        git_hash = "unknown"
+
+    # Pi model
+    try:
+        with open("/sys/firmware/devicetree/base/model", "r") as f:
+            pi_model = f.read().replace("\x00", "").strip()
+    except Exception:
+        pi_model = platform.machine()
+
+    # Memory
+    try:
+        mem = subprocess.check_output(["free", "-h"], text=True)
+        mem_line = [l for l in mem.splitlines() if l.startswith("Mem:")][0].split()
+        memory = f"{mem_line[2]} / {mem_line[1]}"
+    except Exception:
+        memory = "unknown"
+
+    # Services
+    def svc(name):
+        try:
+            out = subprocess.check_output(["systemctl", "is-active", name], text=True).strip()
+            return out
+        except Exception:
+            return "unknown"
+
+    return JsonResponse({
+        "hostname": hostname,
+        "ip": ip,
+        "git_branch": git_branch,
+        "git_hash": git_hash,
+        "arch": platform.machine(),
+        "pi_model": pi_model,
+        "memory": memory,
+        "debug": settings.DEBUG,
+        "nginx": svc("nginx"),
+        "gunicorn": svc("gunicorn"),
+        "kiosk": svc("sandbells-kiosk"),
+    })

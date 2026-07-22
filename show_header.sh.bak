@@ -1,6 +1,5 @@
 #!/bin/bash
 # show_header.sh - Shared Sandbells Header with colors and system info
-# Extended with web stack status for kiosk status-display branch
 
 show_header() {
     clear
@@ -50,7 +49,7 @@ show_header() {
     TEMP=$(vcgencmd measure_temp 2>/dev/null | cut -d= -f2 || echo "N/A")
     echo -e " ${CYAN}Temperature${NC}   : ${WHITE}$TEMP${NC}"
 
-    # Time Server & Stratum
+    # Time Server
     STRATUM=$(chronyc tracking 2>/dev/null | grep -i stratum | awk '{print $3}' || echo "Unknown")
     RAW_REFID=$(chronyc tracking 2>/dev/null | grep -i "Reference ID" | awk '{print $4}' | tr -d '()' || echo "")
     RAW_SOURCE=$(chronyc sources 2>/dev/null | grep '^\*' | awk '{print $2}' || echo "")
@@ -79,40 +78,14 @@ show_header() {
         echo -e " ${CYAN}Clock Stratum${NC} : ${WHITE}$STRATUM${NC}"
     fi
 
-    # Component Status
+    # Component Status - Fixed single line
     SSH_STATUS=$( [ "$(systemctl is-active ssh 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
     ONEWIRE_STATUS=$( lsmod | grep -q w1 && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
     FAN_STATUS=$( [ "$(systemctl is-active sandbells-fan.service 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
-    NGINX_STATUS=$( [ "$(systemctl is-active nginx 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
-    GUNICORN_STATUS=$( [ "$(systemctl is-active gunicorn 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
-    KIOSK_STATUS=$( [ "$(systemctl is-active sandbells-kiosk 2>/dev/null)" = "active" ] && echo -e "${GREEN}Enabled${NC}" || echo -e "${RED}NOT Enabled${NC}" )
-
-    DEBUG_STATUS="Unknown"
-    if [ -f "$PROJECT_DIR/Bellvirtenv/bin/python" ] && [ -f "$PROJECT_DIR/changes/changes/settings.py" ]; then
-        DEBUG_VAL=$("$PROJECT_DIR/Bellvirtenv/bin/python" -c "
-import sys
-sys.path.insert(0, '$PROJECT_DIR/changes')
-import os
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'changes.settings')
-import django
-django.setup()
-from django.conf import settings
-print('True' if settings.DEBUG else 'False')
-" 2>/dev/null) || DEBUG_VAL=""
-        if [ "$DEBUG_VAL" = "True" ]; then
-            DEBUG_STATUS=$(echo -e "${YELLOW}True (dev)${NC}")
-        elif [ "$DEBUG_VAL" = "False" ]; then
-            DEBUG_STATUS=$(echo -e "${GREEN}False (prod)${NC}")
-        fi
-    fi
 
     echo -e " ${CYAN}SSH${NC}           : ${SSH_STATUS}"
     echo -e " ${CYAN}OneWire${NC}       : ${ONEWIRE_STATUS}"
     echo -e " ${CYAN}Fan Control${NC}   : ${FAN_STATUS}"
-    echo -e " ${CYAN}Nginx${NC}         : ${NGINX_STATUS}"
-    echo -e " ${CYAN}Gunicorn${NC}      : ${GUNICORN_STATUS}"
-    echo -e " ${CYAN}Kiosk${NC}         : ${KIOSK_STATUS}"
-    echo -e " ${CYAN}Django DEBUG${NC}  : ${DEBUG_STATUS}"
 
     # ZRAM
     ZRAM_LINE=$(swapon --show | grep zram)

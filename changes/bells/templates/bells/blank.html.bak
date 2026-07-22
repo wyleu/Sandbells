@@ -5,19 +5,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Sandbells{% endblock title %}</title>
-  
+
   <script src="{% static 'js/jquery.min.js' %}"></script>
   <script src="{% static 'js/d3.v3.min.js' %}"></script>
   <script src="{% static 'js/howler.min.js' %}"></script>
   <script src="{% static 'js/clock_analogue.js' %}"></script>
   <script src="{% static 'js/apps.js' %}"></script>
 
-  <!-- Split CSS -->
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
   <style>
@@ -25,11 +19,13 @@
     .frontpage_container { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; }
     .drumkit { display:flex; justify-content:center; gap:10px; margin:15px 0; }
     #midi-panel, .track-panel, [class*="midi"], [class*="Track"] {display: none !important; }
+
   </style>
 </head>
 <body>
     {% block fullscreen %}{% endblock fullscreen %}
     {% block menu %}{% endblock menu %}
     {% block display %}{% endblock display %}
+
 </body>
 </html>

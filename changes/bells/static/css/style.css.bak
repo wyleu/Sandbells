@@ -463,25 +463,3 @@ text {
   width: 100px;
   pointer-events: none;
 }
-
-/* Force horizontal layout for 8-bell patterns on kiosk monitors */
-.frontpage_container {
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: center;
-    gap: 20px;
-    overflow-x: auto;
-}
-
-/* Make tables a bit narrower to fit better */
-.frontpage_table_display {
-    min-width: 380px;   /* adjust if needed */
-    max-width: 420px;
-}
-
-/* On smaller viewports / monitors */
-@media (max-width: 1100px) {
-    .frontpage_container {
-        flex-direction: column !important;
-    }
-}

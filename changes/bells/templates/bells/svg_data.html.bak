@@ -1,8 +1,7 @@
 {% load static %}
-
 <svg id="clock" height="890px" width="250px" viewBox="0 450 350 350" class="clockSvg shadow">
   <g id="posinfo" class="info"></g>
-
+  
   <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
   <g class="units">
     <line class="hour" x1="175" y1="175" x2="175" y2="75" stroke="#2c6d3a" stroke-width="6px"></line>
@@ -22,6 +21,3 @@
 
 <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/clock_analogue.js" %}"></script>
 <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/pagesize.js" %}"></script>
-
-<!-- System status overlay -->
-<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static 'js/system_info.js' %}"></script>

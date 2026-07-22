@@ -1,37 +1,49 @@
-// static/js/system_info.js
-document.addEventListener('DOMContentLoaded', function() {
-  const systemInfo = [
-    { label: "Memory:", value: "Calculating..." },
-    { label: "DEBUG:", value: "{{ DEBUG|yesno:'True,False' }}" },
-    { label: "Git Branch:", value: "{{ git_branch|default:'unknown' }}" },
-    { label: "Arch:", value: "{{ arch|default:'unknown' }}" },
-    { label: "Pi Model:", value: "{{ pi_model|default:'unknown' }}" },
-    { label: "IP:", value: "{{ IPAddr|default:'unknown' }}" },
-    { label: "Hostname:", value: "{{ hostname|default:'unknown' }}" },
-  ];
+// static/js/system_info.js - tighter layout for narrow SVG
 
+document.addEventListener('DOMContentLoaded', function() {
   const infoGroup = document.getElementById("posinfo");
   if (!infoGroup) return;
 
-  systemInfo.forEach((item, index) => {
-    const y = 990 + (index * 30);
+  function addRow(label, value, index) {
+    const y = 990 + (index * 26);   // tighter vertical spacing
 
-    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    label.setAttribute("x", "50");
-    label.setAttribute("y", y);
-    label.setAttribute("fill", "red");
-    label.setAttribute("stroke", "black");
-    label.setAttribute("font-size", "20");
-    label.textContent = item.label;
-    infoGroup.appendChild(label);
+    const lab = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    lab.setAttribute("x", "40");
+    lab.setAttribute("y", y);
+    lab.setAttribute("fill", "red");
+    lab.setAttribute("stroke", "black");
+    lab.setAttribute("font-size", "17");
+    lab.textContent = label;
+    infoGroup.appendChild(lab);
 
-    const value = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    value.setAttribute("x", "170");
-    value.setAttribute("y", y);
-    value.setAttribute("fill", "red");
-    value.setAttribute("stroke", "black");
-    value.setAttribute("font-size", "19");
-    value.textContent = item.value;
-    infoGroup.appendChild(value);
-  });
+    const val = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    val.setAttribute("x", "155");
+    val.setAttribute("y", y);
+    val.setAttribute("fill", "red");
+    val.setAttribute("stroke", "black");
+    val.setAttribute("font-size", "16");
+    val.textContent = value;
+    infoGroup.appendChild(val);
+  }
+
+  fetch("/api/system-status/")
+    .then(r => r.json())
+    .then(d => {
+      const rows = [
+        ["Host:", d.hostname],
+        ["IP:", d.ip],
+        ["Git:", `${d.git_branch} (${d.git_hash})`],
+        ["Pi:", d.pi_model],
+        ["Arch:", d.arch],
+        ["Mem:", d.memory],
+        ["DEBUG:", d.debug ? "True" : "False"],
+        ["Nginx:", d.nginx],
+        ["Gunicorn:", d.gunicorn],
+        ["Kiosk:", d.kiosk],
+      ];
+      rows.forEach(([lab, val], i) => addRow(lab, val, i));
+    })
+    .catch(() => {
+      addRow("Status:", "unavailable", 0);
+    });
 });

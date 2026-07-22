@@ -1,0 +1,15 @@
+/* responsive.css - Kiosk-specific tweaks */
+@media (max-width: 1150px) {
+  .frontpage_container {
+    gap: 8px;
+  }
+  
+  .clockSvg {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+  
+  #posinfo text {
+    font-size: 15px !important;
+  }
+}

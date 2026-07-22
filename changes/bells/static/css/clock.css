@@ -1,0 +1,14 @@
+/* clock.css - Clock and SVG */
+.clockSvg {
+  border: 1px solid white;
+  box-sizing: border-box;
+}
+
+.units line {
+  stroke-linecap: round;
+}
+
+.marks text {
+  font-size: 6px;
+  font-weight: bold;
+}
