@@ -90,7 +90,7 @@ function processWindowSize() {
 
     fred = d3.select('#ishow')
     .attr('height', height - 20)
-    .attr('width', width - 575);   // A blessed value  on one hdmi monitor
+    .attr('width', width - 450);   // A blessed value  on one hdmi monitor    was 575 535
 
     try{
         window_height_value = fred.attr("height");

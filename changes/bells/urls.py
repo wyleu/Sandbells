@@ -57,4 +57,5 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('', views.home, name='root_home'),
+    path("api/system-status/", views.system_status, name="system_status"),
 ]
