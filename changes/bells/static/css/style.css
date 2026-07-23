@@ -90,6 +90,7 @@ svg {
   border-color:white;
   border-width:"1px";
   white-space: nowrap;
+  margin-left: 10px;    /* nudge menu right */
 }
 
 .frontpage_td_select_first_char{

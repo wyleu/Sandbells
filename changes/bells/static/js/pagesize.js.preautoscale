@@ -74,55 +74,58 @@ function establishChangePress(){
 };
 
 
-
 function processWindowSize() {
-  var width  = window.innerWidth  || document.documentElement.clientWidth  || document.body.clientWidth;
-  var height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
 
-  d3.select('#height_value').text(height);
-  d3.select('#width_value').text(width);
+    var width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    var height = window.innerHeight|| document.documentElement.clientHeight|| document.body.clientHeight;
 
-  // --- measured columns ---
-  var clockEl = document.getElementById('clock');
-  var menuEl  = document.querySelector('.frontpage_table_select');
-  var iframe  = document.getElementById('ishow');
+    d3.select('#height_value')
+    .text(height);
+    d3.select('#width_value')
+    .text(width);
 
-  var clockW = clockEl ? (clockEl.getBoundingClientRect().width || 250) : 250;
-  var menuW  = menuEl  ? (menuEl.getBoundingClientRect().width  || 280) : 280;
-  if (menuW > 260) menuW = 260;   // don't over-reserve for the menu
+    d3.select("#posinfo")
+    .attr('x', width + 200)
+    .attr('y', height + 200);
 
-  var gap = 12;           // flex gap / margins between the three columns
-  var safety = 4;        // small fudge so we never overflow
+    fred = d3.select('#ishow')
+    .attr('height', height - 20)
+    .attr('width', width - 450);   // A blessed value  on one hdmi monitor    was 575 535
 
-  var iframeW = Math.floor(width - clockW - menuW - (gap * 2) - safety);
-  if (iframeW < 600) iframeW = 600;   // hard floor so tables never collapse
+    try{
+        window_height_value = fred.attr("height");
+        window_width_value = fred.attr("width");
+    }
+    catch(err){
+   /*         document.getElementById("window_size").innerHTML = err.message;   */
+            console.log("BANG! " + err.message);
+            window_height_value = 'FRED';
+            window_height_value = 'GEORGE';
 
-  var iframeH = height - 20;
+    }
 
-  d3.select('#ishow')
-    .attr('height', iframeH)
-    .attr('width', iframeW);
+    try{
+    d3.select('#window_height_value')
+    .text(window_height_value);
+    d3.select('#window_width_value')
+    .text(window_width_value);
+    }
+    catch(err){
+        console.log("BANG! " + err.message);
+    }
 
-  // expose numbers for status (optional, system_info already reads attrs)
-  try {
-    d3.select('#window_height_value').text(iframeH);
-    d3.select('#window_width_value').text(iframeW);
-  } catch (err) {
-    console.log('BANG! ' + err.message);
-  }
+/*     var iframe = document.getElementById('ishow');
+    var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
 
-  // tell the iframe to scale its contents if needed (see step 2)
-  if (iframe && iframe.contentWindow) {
-    try {
-      iframe.contentWindow.postMessage({
-        type: 'sandbells-scale',
-        iframeW: iframeW,
-        iframeH: iframeH
-      }, '*');
-    } catch (e) { /* ignore cross-origin noise */ }
-  }
-}
+    table_height_value = innerDoc.getAttribute('innerHeight');
+    table_width_value = innerDoc.getAttribute('innerWidth');
 
+    d3.select('#table_height_value')
+    .text(table_height_value);
+    d3.select('#table_width_value')
+    .text(table_height_value); */
+
+    };
 establishChangePress();
 processWindowSize();
 window.onresize = processWindowSize

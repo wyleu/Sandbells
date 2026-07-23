@@ -16,12 +16,49 @@
 
   <style>
     body { margin:0; padding:0; background:white; color:black; font-family:sans-serif; }
-    .frontpage_container { display:flex; justify-content:center; gap:20px; flex-wrap:wrap; }
+    .frontpage_container { display:flex; justify-content:center; gap:20px; flex-wrap:nowrap; }
     .drumkit { display:flex; justify-content:center; gap:10px; margin:15px 0; }
     #midi-panel, .track-panel, [class*="midi"], [class*="Track"] {display: none !important; }
 
   </style>
 </head>
+<script>
+(function () {
+  function applyScale(iframeW) {
+    var root = document.querySelector('.frontpage') || document.body;
+    if (!root || !iframeW) return;
+
+    // reset so scrollWidth is natural
+    root.style.transform = 'none';
+    root.style.width = '';
+
+    var need = root.scrollWidth;
+    var scale = 1;
+    if (need > iframeW && iframeW > 0) {
+      scale = iframeW / need;
+    }
+    root.style.transformOrigin = 'top left';
+    root.style.transform = 'scale(' + scale + ')';
+    if (scale < 1) {
+      root.style.width = (100 / scale) + '%';
+    }
+  }
+
+  window.addEventListener('message', function (ev) {
+    if (ev.data && ev.data.type === 'sandbells-scale') {
+      applyScale(ev.data.iframeW);
+    }
+  });
+
+  window.addEventListener('load', function () {
+    applyScale(window.innerWidth);
+  });
+})();
+</script>
+
+
+
+
 <body>
     {% block fullscreen %}{% endblock fullscreen %}
     {% block menu %}{% endblock menu %}
