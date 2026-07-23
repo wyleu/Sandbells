@@ -22,12 +22,17 @@ fi
 source "$VENV/bin/activate"
 echo "[1/6] virtualenv activated"
 
-# 2. Cache-bust the system_info.js script tag in the template
+# 2. Cache-bust system_info.js — ?v= must stay OUTSIDE {% static %}
 SVG="$DJANGO/bells/templates/bells/svg_data.html"
 if [[ -f "$SVG" ]]; then
-  # Replace any existing ?v=... on system_info.js, or add one
   if grep -q 'system_info\.js' "$SVG"; then
-    sed -i -E "s|(system_info\.js)(\?v=[^\"']*)?|\1?v=${CACHE_BUST}|g" "$SVG"
+    # Normalise any broken form, then set a clean ?v= outside {% static %}
+    sed -i -E \
+      "s|src=\"\{% static 'js/system_info\.js[^']*' %\}[^\"]*\"|src=\"{% static 'js/system_info.js' %}?v=${CACHE_BUST}\"|g" \
+      "$SVG"
+    sed -i -E \
+      "s|src=\"\{% static \"js/system_info\.js[^\"]*\" %\}[^\"]*\"|src=\"{% static 'js/system_info.js' %}?v=${CACHE_BUST}\"|g" \
+      "$SVG"
     echo "[2/6] cache-bust applied (?v=$CACHE_BUST)"
   else
     echo "[2/6] WARNING: system_info.js not referenced in svg_data.html"
@@ -35,6 +40,8 @@ if [[ -f "$SVG" ]]; then
 else
   echo "[2/6] WARNING: $SVG not found"
 fi
+
+
 
 # 3. Collect static
 cd "$DJANGO"

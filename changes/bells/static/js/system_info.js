@@ -33,10 +33,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  function render(d, screenW, screenH, iframeW, iframeH) {
+  function render(d, screenW, screenH, bodyW, bodyH, iframeW, iframeH) {
     clearRows();
     const rows = [
       ["Screen:",   `${screenW} × ${screenH}`],
+      ["Body:",  `${bodyW}×${bodyH}`],
       ["Iframe:",   `${iframeW} × ${iframeH}`],
       ["Host:",     d.hostname],
       ["IP:",       d.ip],
@@ -56,6 +57,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const screenW = window.innerWidth  || document.documentElement.clientWidth;
     const screenH = window.innerHeight || document.documentElement.clientHeight;
 
+    const bodyW = document.body ? document.body.clientWidth  : "—";
+    const bodyH = document.body ? document.body.clientHeight : "—";
+
+
     const iframe = document.getElementById("ishow");
     let iframeW = "—", iframeH = "—";
     if (iframe) {
@@ -65,11 +70,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     fetch("/api/system-status/")
       .then(r => r.json())
-      .then(d => render(d, screenW, screenH, iframeW, iframeH))
+      .then(d => render(d, screenW, screenH, bodyW, bodyH, iframeW, iframeH))
       .catch(() => {
         clearRows();
         addRow("Status:", "unavailable", 0);
         addRow("Screen:", `${screenW} × ${screenH}`, 1);
+        addRow("Body:", `${bodyW}×${bodyH}`, 2);
       });
   }
 
