@@ -41,6 +41,23 @@
             .text("|");
     }
 
+    // Time handling
+
+var sandbellsTimeLocked = true;
+
+    function refreshTimeLock() {
+      fetch("/api/system-status/")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+           sandbellsTimeLocked = !!d.time_locked;
+        })
+        .catch(function () {
+          sandbellsTimeLocked = false;
+        });
+    }
+    refreshTimeLock();
+    setInterval(refreshTimeLock, 15000);
+
     // Element caches
 
     let digitalTimeEl = null;
@@ -87,7 +104,9 @@
     function updateDigitalClock() {
         const now = new Date();
         const str = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-        if (digitalTimeEl) digitalTimeEl.textContent = str;
+        if (digitalTimeEl) {
+            digitalTimeEl.textContent = sandbellsTimeLocked ? str : "NO LOCK";
+        }
     }
 
     function updateClock() {

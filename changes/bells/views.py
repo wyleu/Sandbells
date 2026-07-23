@@ -488,6 +488,32 @@ def system_status(request):
             return out
         except Exception:
             return "unknown"
+    # Time source / lock
+    time_source = "none"
+    time_locked = False
+    try:
+        out = subprocess.check_output(
+            ["chronyc", "sources"], text=True, timeout=5
+        )
+        for line in out.splitlines():
+            s = line.strip()
+            if not s or s.startswith("MS") or s.startswith("="):
+                continue
+            if len(s) >= 2 and s[1] == "*":   # '*' = current sync source
+                parts = s.split()
+                time_source = parts[1] if len(parts) > 1 else "synced"
+                time_locked = True
+                break
+        if not time_locked:
+            for line in out.splitlines():
+                if "sandgps" in line:
+                    time_source = "unreachable"
+                    break
+    except Exception:
+        time_source = "unknown"
+        time_locked = False
+
+    time_label = time_source if time_locked else "NO LOCK"
 
     return JsonResponse({
         "hostname": hostname,
@@ -501,4 +527,7 @@ def system_status(request):
         "nginx": svc("nginx"),
         "gunicorn": svc("gunicorn"),
         "kiosk": svc("sandbells-kiosk"),
+        "time_source": time_source,
+        "time_locked": time_locked,
+        "time_label": time_label,
     })

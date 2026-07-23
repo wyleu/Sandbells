@@ -6,23 +6,23 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!infoGroup) return;
 
   function addRow(label, value, index) {
-    const y = 800 + (index * 22);
+    const y = 790 + (index * 24);
 
     const lab = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    lab.setAttribute("x", "30");
+    lab.setAttribute("x", "18");
     lab.setAttribute("y", y);
     lab.setAttribute("fill", "red");
     lab.setAttribute("stroke", "black");
-    lab.setAttribute("font-size", "14");
+    lab.setAttribute("font-size", "16");
     lab.textContent = label;
     infoGroup.appendChild(lab);
 
     const val = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    val.setAttribute("x", "95");
+    val.setAttribute("x", "100");
     val.setAttribute("y", y);
     val.setAttribute("fill", "red");
     val.setAttribute("stroke", "black");
-    val.setAttribute("font-size", "13");
+    val.setAttribute("font-size", "15");
     val.textContent = value;
     infoGroup.appendChild(val);
   }
@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
       ["Screen:",   `${screenW} × ${screenH}`],
       ["Body:",  `${bodyW}×${bodyH}`],
       ["Iframe:",   `${iframeW} × ${iframeH}`],
+      ["NTP:",  d.time_label || "NO LOCK"],
       ["Host:",     d.hostname],
       ["IP:",       d.ip],
       ["Git:",      `${d.git_branch} (${d.git_hash})`],

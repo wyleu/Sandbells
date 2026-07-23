@@ -1,0 +1,13 @@
+[Unit]
+Description=Sandbells select local GPS NTP server (sandgps*.local)
+After=network-online.target
+Wants=network-online.target
+Before=chrony.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sandbells-time-select.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
