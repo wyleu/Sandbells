@@ -4,7 +4,7 @@
 
 Sandbells is a web application that computes and displays the step-by-step sequences of **change ringing** (English-style method ringing) between named patterns such as *Rounds*, *Jokers*, *Titums*, *Whittington’s*, *Queens*, etc.
 
-It is designed to run as a **fullscreen kiosk** on a Raspberry Pi attached to an HDMI television or monitor. The interface is intended for simple, mouse-only operation by non-technical users (“little-old-lady friendly”).
+It is designed to run as a **fullscreen kiosk** on a Raspberry Pi attached to an HDMI television or monitor. The interface is intended for simple, mouse-only operation by non-technical users.
 
 ![Sandbells Kiosk Screenshot](docs/screenshot-20260722-144857.png)
 *(Full-screen view on Raspberry Pi – clock, dual-direction change sequences, method selector, and live system status)*
