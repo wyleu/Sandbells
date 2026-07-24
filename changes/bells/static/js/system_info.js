@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!infoGroup) return;
 
   function addRow(label, value, index) {
-    const y = 790 + (index * 24);
+    const y = 620 + (index * 18);
 
     const lab = document.createElementNS("http://www.w3.org/2000/svg", "text");
     lab.setAttribute("x", "18");

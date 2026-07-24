@@ -10,13 +10,15 @@ PROJECT_DIR="${HOME}/Code/Sandbells"
 LOG_FILE="${PROJECT_DIR}/luakit.log"
 URL="http://sandbells.local:8000"
 # Fallbacks if the named host is not yet resolvable
+
 FALLBACK_URLS=(
-    "http://sandbells.local:8000"
+    "http://localhost"
+    "http://127.0.0.1"
+    "http://sandbells2.local"
     "http://localhost:8000"
     "http://127.0.0.1:8000"
-    "http://sandbells.local"
-    "http://localhost"
 )
+
 
 echo "=== Starting Solo Sandbells Kiosk $(date) ===" | tee -a "$LOG_FILE"
 echo "= = = Working version: lightdm + Luakit fullscreen on HDMI = = =" | tee -a "$LOG_FILE"
@@ -81,7 +83,7 @@ echo "Screen blanking / DPMS disabled" | tee -a "$LOG_FILE"
 # ------------------------------------------------------------------
 CHOSEN_URL=""
 for u in "${FALLBACK_URLS[@]}"; do
-    if curl -s --connect-timeout 3 --max-time 4 "$u" >/dev/null 2>&1; then
+    if curl -sf --connect-timeout 3 --max-time 4 "$u" >/dev/null 2>&1; then
         CHOSEN_URL="$u"
         echo "✓ Backend reachable at $CHOSEN_URL" | tee -a "$LOG_FILE"
         break

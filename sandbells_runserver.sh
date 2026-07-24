@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 echo "############################################################################"
 echo "#                                                                          #"
 echo "#        Sandbells Virtenv and Runserver                                   #"
@@ -8,7 +8,7 @@ echo "##########################################################################
 echo $USER
 cd /home/$USER/Code/Sandbells
 git status
-source Bellvirtenv/bin/activate
+. Bellvirtenv/bin/activate
 cd changes
 # python manage.py collectstatic --noinput 
 

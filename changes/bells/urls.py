@@ -1,8 +1,11 @@
 from django.urls import path, include
 from django.contrib.auth.models import User
 from rest_framework import routers, serializers, viewsets
+
 from . import views
 from . import models
+
+from . import status_views
 
 # Serializers define the API representation
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -57,5 +60,5 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('', views.home, name='root_home'),
-    path("api/system-status/", views.system_status, name="system_status"),
+    path("api/system-status/", status_views.system_status, name="system_status"),
 ]
