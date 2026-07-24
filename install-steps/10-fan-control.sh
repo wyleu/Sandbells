@@ -47,10 +47,10 @@ mkdir -p /home/sandbells/Code/Sandbells/fan
 cd /home/sandbells/Code/Sandbells/fan
 
 # Keep original zynthian script (do not overwrite if it exists)
-if [ ! -f zynthian-pwm-fan.py ]; then
+if [ ! -f sandbells-fan.py ]; then
     echo "Copying original zynthian PWM fan script..."
     # (Add your original script content here if needed, or assume it's already present)
-    echo "Note: Please ensure zynthian-pwm-fan.py exists in this directory."
+    echo "Note: Please ensure sandbells-fan.py exists in this directory."
 fi
 
 echo "Creating shell wrapper..."
@@ -58,7 +58,7 @@ cat > fan-control.sh << 'EOF'
 #!/bin/bash
 # Sandbells Fan Control Wrapper
 cd /home/sandbells/Code/Sandbells/fan
-exec /usr/bin/python3 ./zynthian-pwm-fan.py
+exec /usr/bin/python3 ./sandbells-fan.py
 EOF
 
 chmod +x fan-control.sh

@@ -7,4 +7,4 @@ cd /home/sandbells/Code/Sandbells/fan
 # Optional debug
 # export DEBUG=true
 
-exec /usr/bin/python3 ./zynthian-pwm-fan.py
+exec /usr/bin/python3 ./sandbells-fan.py

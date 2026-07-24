@@ -1,4 +1,12 @@
 #!/usr/bin/python3
+# =============================================================================
+# sandbells-fan.py — Sandbells PWM fan control
+#
+# Based on the Zynthian project PWM fan control script
+# (https://github.com/zynthian — original zynthian-pwm-fan.py).
+# Adapted and maintained for the Sandbells kiosk.
+# =============================================================================
+
 # Sandbells PWM Fan Control
 import RPi.GPIO as GPIO
 import time
