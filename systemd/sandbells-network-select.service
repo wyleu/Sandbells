@@ -1,0 +1,8 @@
+[Unit]
+Description=Sandbells ensure local network (WiFi fallback list)
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sandbells-network-select.sh
