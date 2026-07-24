@@ -35,24 +35,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function render(d, screenW, screenH, bodyW, bodyH, iframeW, iframeH) {
     clearRows();
+
     const rows = [
+      ["— Browser —", ""],
       ["Screen:",   `${screenW} × ${screenH}`],
-      ["Body:",  `${bodyW}×${bodyH}`],
+      ["Body:",     `${bodyW}×${bodyH}`],
       ["Iframe:",   `${iframeW} × ${iframeH}`],
-      ["NTP:",  d.time_label || "NO LOCK"],
-      ["Host:",     d.hostname],
-      ["IP:",       d.ip],
+
+      ["— Network —", ""],
+      ["WiFi:",     `${d.wifi_state || "—"}${d.wifi_ssid ? " (" + d.wifi_ssid + ")" : ""}`],
+      ["Wired:",    d.wired_state || "—"],
+      ["IPs:",      d.ip_list || d.ip || "—"],
+
+      ["— Server —", ""],
+      ["Host:",     d.hostname_local || (d.hostname + ".local")],
       ["Git:",      `${d.git_branch} (${d.git_hash})`],
-      ["Pi:",       d.pi_model.replace("Raspberry Pi ", "Pi ")],
+      ["Nginx:",    d.nginx],
+      ["Gunicorn:", d.gunicorn],
+      ["Kiosk:",    d.kiosk],
+
+      ["— Hardware —", ""],
+      ["Pi:",       (d.pi_model || "").replace("Raspberry Pi ", "Pi ")],
       ["Arch:",     d.arch],
       ["Mem:",      d.memory],
-      ["DEBUG:",    d.debug ? "True" : "False"],
-      ["Nginx:",    d.nginx],
-      ["Gcorn:",    d.gunicorn],
-      ["Kiosk:",    d.kiosk],
+      ["Temp:",     d.temp || "—"],
+      ["Fan:",      d.fan || "—"],
+
+      ["— Time —", ""],
+      ["NTP:",      d.time_label || "NO LOCK"],
     ];
+
     rows.forEach(([lab, val], i) => addRow(lab, val, i));
   }
+
 
   function refresh() {
     const screenW = window.innerWidth  || document.documentElement.clientWidth;
