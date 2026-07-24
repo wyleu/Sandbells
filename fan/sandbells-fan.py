@@ -64,6 +64,12 @@ try:
         target_speed = (scale_m * temp) + scale_b
         smooth_speed = not_below(FAN_MIN, smooth_speed - (SMOOTH_BETA * (smooth_speed - target_speed)))
         pwm_fan.ChangeDutyCycle(smooth_speed)
+        try:
+            with open("/run/sandbells-fan.pct", "w") as f:
+                f.write(str(int(round(smooth_speed))))
+        except Exception:
+            pass
+
 
         if DEBUG or temp >= 58:
             print(f"[Fan] Temp: {temp}°C | Speed: {smooth_speed:.1f}%")
