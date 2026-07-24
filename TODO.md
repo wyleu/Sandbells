@@ -9,7 +9,8 @@
 - [ ] Make kiosk run cleanly as user `sandbells` (not root)
 - [ ] Reduce luakit/WebKit memory usage (multiple processes)
 - [ ] Full kiosk mode (no tabs/edge clutter via Lua)
-- [ ] Get a better AI
+- [ ] Fan curve: quieter ramp (lower SPEED_HIGH / SMOOTH_BETA, raise TEMP_HIGH) — currently jumps to ~full in ~30s at ~65°C (“jet engine”)
+- [ ] Re-enable sandbells-fan after curve tuned (service stopped when too loud)
 
 ## Nice to Have
 
@@ -23,6 +24,8 @@
 
 ## Done Recently
 
+- [x] Sectioned status panel (network, temp, fan %, .local)
+- [x] sandbells-network-select timer + helper
 - [x] Monitor script + systemd service
 - [x] Git branch `kiosk-recovery` / `luakit-kiosk-dev` with working state
 - [x] Basic fullscreen Lua config

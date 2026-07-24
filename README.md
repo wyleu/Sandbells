@@ -19,46 +19,63 @@ It is designed to run as a **fullscreen kiosk** on a Raspberry Pi attached to an
   - Right: the reverse **Jokers → Rounds**
 - Each row shows the current order of the bells (e.g. `17654328`) together with the adjacent swaps that produce the next row (e.g. `2 to 4  3 to 2  8 to 3`)
 - Right-hand sidebar listing every available method for the selected number of bells (4–8). Clicking a method loads the corresponding change.
-- Bottom-left system status panel (hostname, IP, git branch/commit, Pi model, memory, Nginx/Gunicorn/Kiosk service state)
-
+- **System status overlay** (under the clock), in sections:
+  - **Browser** — screen / body / iframe sizes
+  - **Network** — WiFi (+ SSID), wired, IP addresses
+  - **Server** — hostname (`.local`), git branch/hash, Nginx / Gunicorn / Kiosk
+  - **Hardware** — Pi model, arch, memory, temperature, fan %
+  - **Time** — chrony source / lock (`sandgps*` or `NO LOCK`)
 The application supports 4–8 bells and many classic methods (Rounds, Titums, Whittington’s, Sew Saw, Back Rounds, Bowbells, Burdette, Hagdyke, Jacks, Jokers, Kings, Princes, Princesses, Priory, Queens, Roller Coaster, St Michael’s, Exp-ing Titums, Total Rev, …).
-
+The tower deployment is intentionally **offline** (no Internet): local WiFi and/or Ethernet, plus a GPS time server on the LAN (`sandgps*.local`). That suits limited technical support and church environments.
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  HDMI Display (TV / Monitor)                            │
-│  ┌───────────────────────────────────────────────────┐  │
-│  │  Luakit (fullscreen kiosk browser)                │  │
-│  │  → http://sandbells.local (or fallback)           │  │
-│  └───────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  HDMI Display (TV / Monitor)                                │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Luakit (fullscreen kiosk browser)                    │  │
+│  │  → http://localhost (fallbacks in start-kiosk-solo.sh)│  │  
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
                           ▲
                           │
-┌─────────────────────────────────────────────────────────┐
-│  Raspberry Pi (typically Pi 3)                          │
-│                                                         │
-│  systemd services:                                      │
-│  • sandbells-kiosk.service  (starts Luakit on boot)     │
-│  • gunicorn.service         (Django app server)         │
-│  • nginx                    (static files + reverse     │
-│                             proxy)                      │
-│                                                         │
-│  Django project: changes/                               │
-│  └── app: bells/                                        │
-│      ├── models.py      (Pattern, Change, ChangeItem…)  │
-│      ├── functions.py   (db_process – the core engine)  │
-│      ├── views.py       (display, menu, clock, …)       │
-│      ├── templates/     (display.html, home.html, …)    │
-│      └── static/        (CSS, JS, SVG, audio)           │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Raspberry Pi (typically Pi 3)                              │
+│                                                             │
+│  systemd services:                                          │
+│  • sandbells-kiosk.service  (Luakit on boot)                │
+│  • gunicorn / nginx         (Django + static)               │
+│  • sandbells-fan.service    (PWM fan → /run/…fan.pct)       │
+│  • sandbells-time-select    (prefer sandgps*.local)         │
+│  • sandbells-network-select.timer                           │
+│      (local net check + WiFi SSID fallback list)            │
+│                                                             │
+│  Django project: changes/                                   │
+│  └── app: bells/                                            │
+│      ├── models.py      (Pattern, Change, ChangeItem…)      │
+│      ├── functions.py   (db_process – the core engine)      │
+│      ├── views.py       (display, menu, clock, …)           │
+       ├──  status_views.py (/api/system-status/)             │
+│      ├── templates/     (display.html, home.html, …)        │
+│      └── static/        (CSS, JS, SVG, audio)               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### Core Logic
 The heart of the system is `bells/functions.py` → `db_process()`.  
 Given two patterns of equal length (e.g. `"12345678"` and `"17654328"`), it repeatedly swaps adjacent pairs until the target is reached, recording every intermediate row and the calls (“7 to 5”, “6 to 7”, …). The same process is run in reverse so both directions are shown simultaneously.
+
+---
+
+### Local network & time
+
+- No Internet required in the tower.
+- **Time:** `sandbells-time-select.sh` probes `sandgps*.local` and prefers that server in chrony.
+- **Network:** `sandbells-network-select.sh` (NetworkManager) checks local reachability; if down, tries configured SSIDs (e.g. `sandbells`). Driven by a systemd timer; also runnable by hand for debug:
+  `sudo sandbells-network-select.sh`
+- Install pattern matches time: numbered step installs the `sandbells-*-select` helper + unit/timer.
 
 ---
 
@@ -82,11 +99,15 @@ sudo reboot
 
 After reboot the following services should be active:
 
-| Service              | Purpose                              |
-|----------------------|--------------------------------------|
-| `sandbells-kiosk`    | Launches Luakit fullscreen           |
-| `gunicorn`           | Runs the Django application          |
-| `nginx`              | Serves static files + proxies to Gunicorn |
+| Service               | Purpose                                   |
+|-----------------------|-------------------------------------------|
+| `sandbells-kiosk`     | Launches Luakit fullscreen                |
+| `gunicorn`            | Runs the Django application               |
+| `nginx`               | Serves static files + proxies to Gunicorn |
+| sandbells-fan         | PWM fan; writes /run/sandbells-fan.pct    |
+| sandbells-time-select | Prefer GPS NTP on LAN                     |
+| sandbells-network-select.timer | Local net + WiFi fallback        |
+
 
 ### Useful day-to-day commands
 
@@ -107,6 +128,20 @@ cd changes
 python manage.py migrate
 python manage.py collectstatic --noinput
 sudo systemctl reload gunicorn
+# Status API
+curl -s http://localhost/api/system-status/ | python3 -m json.tool
+
+# Network helper
+sudo sandbells-network-select.sh
+journalctl -t sandbells-net -f
+
+# Fan
+systemctl status sandbells-fan
+cat /run/sandbells-fan.pct
+
+# Venv (must be sourced)
+source ~/Code/Sandbells/sandbells_env.sh
+
 ```
 
 ---
@@ -116,43 +151,50 @@ sudo systemctl reload gunicorn
 ```
 Sandbells/
 ├── changes/                     # Django project root
-│   ├── bells/                   # Main application
-│   │   ├── models.py            # Pattern, Change, ChangeItem, Tower, Bell…
-│   │   ├── functions.py         # db_process() – change generation engine
-│   │   ├── views.py             # display, menu, clock, portrait, …
-│   │   ├── templates/bells/     # display.html, home.html, etc.
-│   │   └── static/              # CSS, JS, SVG, audio assets
+│   ├── bells/
+│   │   ├── models.py
+│   │   ├── functions.py         # db_process()
+│   │   ├── status_views.py      # /api/system-status/
+│   │   ├── views.py             # display, menu, clock, …
+│   │   ├── templates/bells/
+│   │   └── static/
 │   ├── manage.py
 │   └── requirements.txt
-├── install-steps/               # Numbered installation scripts (01–14)
-├── systemd/                     # Service unit files
-├── nginx/                       # Production nginx.conf
-├── luakit/                      # rc.lua (fullscreen + light config)
-├── start-kiosk-solo.sh          # Robust kiosk launcher
-├── master_install.sh            # Orchestrates the whole install
-├── INSTALL-KIOSK.md             # Detailed kiosk install guide
-└── TODO.md                      # Current priorities
+├── fan/
+│   ├── sandbells-fan.py         # PWM fan (Zynthian-inspired; adapted)
+│   └── fan-control.sh
+├── install-steps/               # 01–15… + sandbells-*-select helpers
+├── systemd/                     # kiosk, fan, time-select, network-select, …
+├── nginx/
+├── luakit/
+├── start-kiosk-solo.sh
+├── master_install.sh
+├── INSTALL-KIOSK.md
+├── TODO.md
+└── README.md
 ```
 
 ---
 
 ## Current Status (July 2026)
 
-**Working**
-- Full kiosk auto-start on boot (Luakit + lightdm)
-- Screen blanking defeated (multiple layers)
-- Gunicorn + Nginx production stack
-- Django venv, migrations, collectstatic
-- Dual-direction change display
-- Method selector sidebar
-- Live system status panel
-- Clock (analogue + digital)
-- measured layout + iframe scale working on 1920 HDMI
-**Still open**
-- Run kiosk cleanly as non-root user `sandbells`
-- UI/layout polish (the remaining visual piece)
-- Dynamic SVG system-info widget
-- Log rotation & improved monitoring
+Working
+
+Kiosk auto-start, blanking defeat, Gunicorn + Nginx
+Dual-direction display, method selector, clock, 1920 layout
+Sectioned status panel (network, temp, fan %, .local, NTP)
+Fan service + duty file (curve still to quieten)
+Kiosk URL fallbacks (curl -f)
+Network-select timer + helper
+Time-select for sandgps*.local
+
+Still open
+
+Fan curve (quieter ramp; service loud at ~65 °C)
+Non-root kiosk polish
+UI polish; Luakit/WebKit CPU on Pi 3
+Log rotation & monitoring
+Ensure 15-network-select on every fresh install
 
 See `TODO.md` for the live checklist.
 
@@ -177,5 +219,5 @@ Repository: https://github.com/wyleu/Sandbells
 
 ---
 
-*Last updated: 22 July 2026*
+*Last updated: 24 July 2026*
 *Branch / date — main, July 2026
