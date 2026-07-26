@@ -7,7 +7,8 @@ log() { logger -t "$LOGTAG" "$*"; echo "$*"; }
 
 # SSID:PASSPHRASE — edit for tower / phone hotspots
 NETWORKS=(
-  "sandbells:Sandbells"
+  "Sandbells:Sandbells",
+  "sandbells:Sandbells",
   # "TowerPhone:yourpassword"
 )
 
