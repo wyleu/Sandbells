@@ -48,9 +48,11 @@ document.addEventListener('DOMContentLoaded', function () {
       ["Iframe:",   `${iframeW} × ${iframeH}`],
 
       ["— Network —", ""],
-      ["WiFi:",     `${d.wifi_state || "—"}${d.wifi_ssid ? " (" + d.wifi_ssid + ")" : ""}`],
-      ["Wired:",    d.wired_state || "—"],
-      ["IPs:",      d.ip_list || d.ip || "—"],
+      ["WiFi:",  `${d.wifi_state || "—"}${d.wifi_ssid ? " (" + d.wifi_ssid + ")" : ""}${d.wifi_ip ? " " + d.wifi_ip : ""}`],
+      ["Wired:", `${d.wired_state || "—"}${d.wired_cidr ? " " + d.wired_cidr : ""}${d.wired_method ? " (" + d.wired_method + ")" : ""}`],
+      ["IPs:",   d.ip_list || d.ip || "—"],
+      ["Addr:",  d.using_fallback ? "fallback" : (d.wired_method || d.wifi_method || "—")],
+      ["Expect:", d.fallback_ip ? `${d.fallback_ip}/${d.fallback_prefix || 24}` : "—"],
 
       ["— Server —", ""],
       ["Host:",     d.hostname_local || (d.hostname + ".local")],

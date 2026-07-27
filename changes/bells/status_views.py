@@ -1,55 +1,156 @@
+import json
 import platform
 import socket
 import subprocess
 import time
+from pathlib import Path
 
 from django.conf import settings
 from django.http import JsonResponse
+
+SETTINGS_PATH = Path("/etc/sandbells/settings.json")
+
+
+def _run(cmd, timeout=3):
+    try:
+        return subprocess.check_output(cmd, text=True, timeout=timeout).strip()
+    except Exception:
+        return ""
+
+
+def _load_settings():
+    try:
+        if SETTINGS_PATH.is_file():
+            with open(SETTINGS_PATH, encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def _iface_operstate(iface: str) -> str:
+    try:
+        with open(f"/sys/class/net/{iface}/operstate") as f:
+            return f.read().strip()
+    except Exception:
+        return "missing"
+
+
+def _iface_ipv4(iface: str):
+    """Return (ip, cidr) or ("", "")."""
+    out = _run(["ip", "-4", "-o", "addr", "show", "dev", iface])
+    for line in out.splitlines():
+        parts = line.split()
+        if "inet" in parts:
+            i = parts.index("inet")
+            if i + 1 < len(parts):
+                cidr = parts[i + 1]  # e.g. 192.168.0.111/24
+                ip = cidr.split("/")[0]
+                return ip, cidr
+    return "", ""
+
+
+def _guess_ip_source(ip: str, cidr: str) -> str:
+    if not ip:
+        return "none"
+    if ip.startswith("169.254."):
+        return "link-local"
+    # NM connection method if available
+    out = _run(
+        ["nmcli", "-t", "-f", "GENERAL.CONNECTION", "device", "show", "eth0"],
+        timeout=2,
+    )
+    # Fallback: treat RFC1918 with /24 house ranges as dhcp-ish unknown
+    return "assigned"
+
+
+def _nm_method(iface: str) -> str:
+    """dhcp | static | unknown | none"""
+    try:
+        out = _run(
+            ["nmcli", "-t", "-f", "IP4.ADDRESS,GENERAL.STATE", "device", "show", iface],
+            timeout=2,
+        )
+        if not out and not _iface_ipv4(iface)[0]:
+            return "none"
+    except Exception:
+        pass
+    # Connection method via active connection name is awkward; use addr presence
+    ip, cidr = _iface_ipv4(iface)
+    if not ip:
+        return "none"
+    if ip.startswith("169.254."):
+        return "link-local"
+    # Optional: nmcli -f ipv4.method connection show <name>
+    try:
+        conn = _run(
+            ["nmcli", "-t", "-f", "GENERAL.CONNECTION", "device", "show", iface],
+            timeout=2,
+        )
+        # format: GENERAL.CONNECTION:Wired connection 1
+        name = conn.split(":")[-1].strip() if conn else ""
+        if name and name != "--":
+            method = _run(
+                ["nmcli", "-t", "-f", "ipv4.method", "connection", "show", name],
+                timeout=2,
+            )
+            # ipv4.method:auto / manual
+            if "manual" in method:
+                return "static"
+            if "auto" in method:
+                return "dhcp"
+    except Exception:
+        pass
+    return "assigned"
 
 
 def system_status(request):
     hostname = socket.gethostname()
     hostname_local = f"{hostname}.local"
 
+    cfg = _load_settings()
+    eth_cfg = cfg.get("ethernet") or {}
+    fallback_ip = eth_cfg.get("fallback_ip") or "192.168.99.2"
+    fallback_prefix = int(eth_cfg.get("fallback_prefix") or 24)
+
     try:
-        ips = subprocess.check_output(["hostname", "-I"], text=True).strip().split()
-        ip = ips[0] if ips else "No Net"
+        ips = _run(["hostname", "-I"]).split()
         ip_list = "  ".join(ips) if ips else "No Net"
     except Exception:
-        ip = "No Net"
+        ips = []
         ip_list = "No Net"
 
-    wifi_state = "unknown"
+    wifi_state = _iface_operstate("wlan0")
+    wired_state = _iface_operstate("eth0")
+    wifi_ip, wifi_cidr = _iface_ipv4("wlan0")
+    wired_ip, wired_cidr = _iface_ipv4("eth0")
+
     wifi_ssid = ""
-    wired_state = "unknown"
     try:
-        for iface, label in [("wlan0", "wifi"), ("eth0", "wired")]:
-            try:
-                with open(f"/sys/class/net/{iface}/operstate") as f:
-                    state = f.read().strip()
-                if label == "wifi":
-                    wifi_state = state
-                else:
-                    wired_state = state
-            except FileNotFoundError:
-                pass
-        try:
-            ssid = subprocess.check_output(["iwgetid", "-r"], text=True, timeout=2).strip()
-            if ssid:
-                wifi_ssid = ssid
-        except Exception:
-            pass
+        ssid = _run(["iwgetid", "-r"], timeout=2)
+        if ssid:
+            wifi_ssid = ssid
     except Exception:
         pass
+
+    wired_method = _nm_method("eth0")
+    wifi_method = _nm_method("wlan0")
+
+    using_fallback = bool(wired_ip and wired_ip == fallback_ip)
+
+    # Primary display IP: prefer wired, then wifi, then hostname -I
+    ip = wired_ip or wifi_ip or (ips[0] if ips else "No Net")
 
     try:
         git_branch = subprocess.check_output(
             ["git", "branch", "--show-current"],
-            cwd=settings.BASE_DIR.parent, text=True
+            cwd=settings.BASE_DIR.parent,
+            text=True,
         ).strip()
         git_hash = subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
-            cwd=settings.BASE_DIR.parent, text=True
+            cwd=settings.BASE_DIR.parent,
+            text=True,
         ).strip()
     except Exception:
         git_branch = "unknown"
@@ -76,7 +177,7 @@ def system_status(request):
         pass
 
     fan_pct = "—"
-    for path in ["/run/sandbells-fan.pct", "/tmp/sandbells-fan.pct"]:
+    for path in ("/run/sandbells-fan.pct", "/tmp/sandbells-fan.pct"):
         try:
             with open(path) as f:
                 fan_pct = f.read().strip() + "%"
@@ -116,27 +217,38 @@ def system_status(request):
 
     time_label = time_source if time_locked else "NO LOCK"
 
-    return JsonResponse({
-        "hostname": hostname,
-        "hostname_local": hostname_local,
-        "ip": ip,
-        "ip_list": ip_list,
-        "wifi_state": wifi_state,
-        "wifi_ssid": wifi_ssid,
-        "wired_state": wired_state,
-        "git_branch": git_branch,
-        "git_hash": git_hash,
-        "arch": platform.machine(),
-        "pi_model": pi_model,
-        "memory": memory,
-        "temp": temp_c,
-        "fan": fan_pct,
-        "debug": settings.DEBUG,
-        "nginx": svc("nginx"),
-        "gunicorn": svc("gunicorn"),
-        "kiosk": svc("sandbells-kiosk"),
-        "time_source": time_source,
-        "time_locked": time_locked,
-        "time_label": time_label,
-        "status_tick": int (time.time()),
-    })
+    return JsonResponse(
+        {
+            "hostname": hostname,
+            "hostname_local": hostname_local,
+            "ip": ip,
+            "ip_list": ip_list,
+            "wifi_state": wifi_state,
+            "wifi_ssid": wifi_ssid,
+            "wifi_ip": wifi_ip,
+            "wifi_cidr": wifi_cidr,
+            "wifi_method": wifi_method,
+            "wired_state": wired_state,
+            "wired_ip": wired_ip,
+            "wired_cidr": wired_cidr,
+            "wired_method": wired_method,
+            "fallback_ip": fallback_ip,
+            "fallback_prefix": fallback_prefix,
+            "using_fallback": using_fallback,
+            "git_branch": git_branch,
+            "git_hash": git_hash,
+            "arch": platform.machine(),
+            "pi_model": pi_model,
+            "memory": memory,
+            "temp": temp_c,
+            "fan": fan_pct,
+            "debug": settings.DEBUG,
+            "nginx": svc("nginx"),
+            "gunicorn": svc("gunicorn"),
+            "kiosk": svc("sandbells-kiosk"),
+            "time_source": time_source,
+            "time_locked": time_locked,
+            "time_label": time_label,
+            "status_tick": int(time.time()),
+        }
+    )
