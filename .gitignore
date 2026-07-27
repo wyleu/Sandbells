@@ -7,3 +7,7 @@ Bellvirtenv/
 db.sqlite3
 *.sqlite3
 luakit.log
+# editor / local backups — use git, not .bak
+*.bak
+*~.bak
+**/*.bak

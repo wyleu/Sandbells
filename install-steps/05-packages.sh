@@ -52,6 +52,7 @@ sudo apt-get install --no-install-recommends -y \
     # Utilities
     git \
     curl \
+    jq \
     chrony \
     locales-all \
     avahi-daemon \

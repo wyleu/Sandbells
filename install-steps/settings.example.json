@@ -1,0 +1,20 @@
+{
+  "networks": [
+    { "ssid": "Sandbells", "psk": "CHANGE_ME" },
+    { "ssid": "sandbells", "psk": "CHANGE_ME" }
+  ],
+  "time_hosts": [
+    "sandgps.local",
+    "sandgps1.local",
+    "sandgps2.local",
+    "sandgps3.local"
+  ],
+  "ethernet": {
+    "dhcp_timeout_sec": 15,
+    "fallback_ip": "192.168.99.2",
+    "fallback_prefix": 24
+  },
+  "status": {
+    "poll_hint_sec": 3
+  }
+}
