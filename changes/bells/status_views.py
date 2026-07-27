@@ -1,6 +1,7 @@
 import platform
 import socket
 import subprocess
+import time
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -137,4 +138,5 @@ def system_status(request):
         "time_source": time_source,
         "time_locked": time_locked,
         "time_label": time_label,
+        "status_tick": int (time.time()),
     })

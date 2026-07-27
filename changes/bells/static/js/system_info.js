@@ -1,9 +1,14 @@
 // static/js/system_info.js
 // Status overlay under the clock + live screen / iframe widths
+// Polls /api/system-status/ so Network (and the rest) tracks hot-plug changes.
+// "Run" is a seconds counter (not wall clock) so you can see the API path is alive.
 
 document.addEventListener('DOMContentLoaded', function () {
   const infoGroup = document.getElementById("posinfo");
   if (!infoGroup) return;
+
+  const POLL_MS = 2000;
+  let pollCount = 0;
 
   function addRow(label, value, index) {
     const y = 620 + (index * 18);
@@ -61,6 +66,9 @@ document.addEventListener('DOMContentLoaded', function () {
       ["Temp:",     d.temp || "—"],
       ["Fan:",      d.fan || "—"],
 
+      ["— Status —", ""],
+      ["Run:",      `${d._run_s || 0}s`],
+
       ["— Time —", ""],
       ["NTP:",      d.time_label || "NO LOCK"],
     ];
@@ -68,33 +76,35 @@ document.addEventListener('DOMContentLoaded', function () {
     rows.forEach(([lab, val], i) => addRow(lab, val, i));
   }
 
-
   function refresh() {
-    const screenW = window.innerWidth  || document.documentElement.clientWidth;
+    const screenW = window.innerWidth || document.documentElement.clientWidth;
     const screenH = window.innerHeight || document.documentElement.clientHeight;
-
-    const bodyW = document.body ? document.body.clientWidth  : "—";
+    const bodyW = document.body ? document.body.clientWidth : "—";
     const bodyH = document.body ? document.body.clientHeight : "—";
-
 
     const iframe = document.getElementById("ishow");
     let iframeW = "—", iframeH = "—";
     if (iframe) {
-      iframeW = iframe.getAttribute("width")  || iframe.clientWidth  || "—";
+      iframeW = iframe.getAttribute("width") || iframe.clientWidth || "—";
       iframeH = iframe.getAttribute("height") || iframe.clientHeight || "—";
     }
 
     fetch("/api/system-status/")
       .then(r => r.json())
-      .then(d => render(d, screenW, screenH, bodyW, bodyH, iframeW, iframeH))
+      .then(d => {
+        pollCount += 1;
+        d._run_s = pollCount * (POLL_MS / 1000);
+        render(d, screenW, screenH, bodyW, bodyH, iframeW, iframeH);
+      })
       .catch(() => {
         clearRows();
         addRow("Status:", "unavailable", 0);
-        addRow("Screen:", `${screenW} × ${screenH}`, 1);
-        addRow("Body:", `${bodyW}×${bodyH}`, 2);
+        addRow("Run:", `${pollCount * (POLL_MS / 1000)}s`, 1);
+        addRow("Screen:", `${screenW} × ${screenH}`, 2);
       });
   }
 
   refresh();
+  setInterval(refresh, POLL_MS);
   window.addEventListener("resize", refresh);
 });
