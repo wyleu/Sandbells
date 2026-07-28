@@ -51,6 +51,7 @@ class SignalMonitor:
     def time_to_quit(self, signum, frame):
         self.now = True
 
+monitor = SignalMonitor()
 
 def measure_temp():
     try:
