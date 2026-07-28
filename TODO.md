@@ -67,3 +67,8 @@ sudo reboot
 | Disable blanking now      | `DISPLAY=:0 xset s off; xset -dpms`          |
 
 Last updated: 2026-07-21
+
+
+# TODO (install-steps):
+# - Renumber existing steps by +10
+# - Reserve 00-09 for early/pre-handling (disable cloud-init, etc.)
