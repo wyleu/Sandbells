@@ -42,6 +42,8 @@ document.addEventListener('DOMContentLoaded', function () {
     "Mem:",
     "Temp:",
     "Fan:",
+    "CPU:",
+    "Load:",
     "— Status —",
     "Run:",
     "— Time —",
@@ -106,7 +108,9 @@ document.addEventListener('DOMContentLoaded', function () {
       d.memory,
       d.temp || "—",
       d.fan || "—",
-      "",                                          // — Status —
+          d.cpu || "—",
+          d.load1 || "—",
+          "",                                      // — Status —
       `${d._run_s || 0}s`,
       "",                                          // — Time —
       d.time_label || "NO LOCK",

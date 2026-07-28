@@ -171,6 +171,36 @@ def system_status(request):
     except Exception:
         memory = "unknown"
 
+    # CPU % and 1-minute load
+    cpu_pct = "—"
+    load1 = "—"
+    try:
+        # 1-second sample via /proc/stat
+        def _cpu_times():
+            with open("/proc/stat") as f:
+                fields = f.readline().split()[1:]
+            return list(map(int, fields))
+
+        t1 = _cpu_times()
+        time.sleep(0.15)          # short sample, keeps the API snappy
+        t2 = _cpu_times()
+        idle1, idle2 = t1[3], t2[3]
+        total1, total2 = sum(t1), sum(t2)
+        idle_delta = idle2 - idle1
+        total_delta = total2 - total1
+        if total_delta > 0:
+            cpu_pct = f"{100.0 * (1.0 - idle_delta / total_delta):.0f}%"
+    except Exception:
+        pass
+
+    try:
+        with open("/proc/loadavg") as f:
+            load1 = f.read().split()[0]
+    except Exception:
+        pass
+
+
+
     temp_c = "—"
     try:
         out = subprocess.check_output(["vcgencmd", "measure_temp"], text=True)
@@ -253,5 +283,7 @@ def system_status(request):
             "time_label": time_label,
             "status_tick": int(time.time()),
             "poll_hint_sec": poll_hint_sec,
+            "cpu": cpu_pct,
+            "load1": load1,
         }
     )
