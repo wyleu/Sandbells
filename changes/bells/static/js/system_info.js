@@ -10,8 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const infoGroup = document.getElementById("posinfo");
   if (!infoGroup) return;
 
-  # const POLL_MS = 2000;
-// Base interval from settings (seconds → ms). Fallback 5 s.
+  // Base interval from settings (seconds → ms). Fallback 5 s.
   let BASE_MS = 5000;   // fallback until the first successful API reply
   let POLL_MS = BASE_MS;
   const MAX_MS = 60000;          // never wait longer than 60 s
@@ -167,6 +166,5 @@ document.addEventListener('DOMContentLoaded', function () {
   // Create the nodes once, then start polling
   createRows();
   refresh();
-  # window._sandbellsStatusInterval = setInterval(refresh, POLL_MS);
   window.addEventListener("resize", refresh);
 });
