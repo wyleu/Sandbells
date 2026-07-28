@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
     "Fan:",
     "CPU:",
     "Load:",
+    "Throt:",
     "— Status —",
     "Run:",
     "— Time —",
@@ -110,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
       d.fan || "—",
           d.cpu || "—",
           d.load1 || "—",
+          d.throttled || "—",
           "",                                      // — Status —
       `${d._run_s || 0}s`,
       "",                                          // — Time —

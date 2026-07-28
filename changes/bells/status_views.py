@@ -199,6 +199,14 @@ def system_status(request):
     except Exception:
         pass
 
+    throttled = "No"
+    try:
+        out = subprocess.check_output(["vcgencmd", "get_throttled"], text=True).strip()
+        # "throttled=0x0" → No, anything else → Yes
+        if not out.endswith("=0x0"):
+            throttled = "Yes"
+    except Exception:
+        throttled = "—"
 
 
     temp_c = "—"
@@ -285,5 +293,6 @@ def system_status(request):
             "poll_hint_sec": poll_hint_sec,
             "cpu": cpu_pct,
             "load1": load1,
+            "throttled": throttled,
         }
     )
