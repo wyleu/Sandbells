@@ -10,9 +10,14 @@ document.addEventListener('DOMContentLoaded', function () {
   const infoGroup = document.getElementById("posinfo");
   if (!infoGroup) return;
 
-  const POLL_MS = 2000;
+  # const POLL_MS = 2000;
+// Base interval from settings (seconds → ms). Fallback 5 s.
+  let BASE_MS = 5000;   // fallback until the first successful API reply
+  let POLL_MS = BASE_MS;
+  const MAX_MS = 60000;          // never wait longer than 60 s
   let pollCount = 0;
-  let valueEls = null;   // array of the value <text> elements
+  let valueEls = null;          // array of the value <text> elements
+  let intervalId = null;
 
   // Fixed list of labels (same order as before)
   const LABELS = [
@@ -82,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const values = [
       "",                                          // — Browser —
       `${screenW} × ${screenH}`,
-      `${bodyW}×${bodyH}`,
+      `${bodyW} × ${bodyH}`,
       `${iframeW} × ${iframeH}`,
       "",                                          // — Network —
       `${d.wifi_state || "—"}${d.wifi_ssid ? " (" + d.wifi_ssid + ")" : ""}${d.wifi_ip ? " " + d.wifi_ip : ""}`,
@@ -110,6 +115,11 @@ document.addEventListener('DOMContentLoaded', function () {
     updateValues(values);
   }
 
+  function scheduleNext() {
+    if (intervalId) clearTimeout(intervalId);
+    intervalId = setTimeout(refresh, POLL_MS);
+  }
+
   function refresh() {
     const screenW = window.innerWidth || document.documentElement.clientWidth;
     const screenH = window.innerHeight || document.documentElement.clientHeight;
@@ -123,24 +133,40 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     fetch("/api/system-status/")
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(d => {
+        // Adopt server-side base interval when present
+        if (d.poll_hint_sec && d.poll_hint_sec > 0) {
+          BASE_MS = d.poll_hint_sec * 1000;
+        }
+        // Success → reset to base
+        POLL_MS = BASE_MS;
+
         pollCount += 1;
-        d._run_s = pollCount * (POLL_MS / 1000);
+        d._run_s = pollCount * (BASE_MS / 1000);   // keep the counter based on base
         render(d, screenW, screenH, bodyW, bodyH, iframeW, iframeH);
       })
       .catch(() => {
+        // Failure → exponential backoff
+        POLL_MS = Math.min(POLL_MS * 2, MAX_MS);
+
         updateValues([
-          "", "unavailable", `${pollCount * (POLL_MS / 1000)}s`,
+          "", "unavailable", `${pollCount * (BASE_MS / 1000)}s`,
           `${screenW} × ${screenH}`, "", "", "", "", "", "", "", "", "", "", "", "",
           "", "", "", "", "", "", "", "", "", ""
         ]);
+      })
+      .finally(() => {
+        scheduleNext();
       });
-  }
+    }
 
   // Create the nodes once, then start polling
   createRows();
   refresh();
-  setInterval(refresh, POLL_MS);
+  # window._sandbellsStatusInterval = setInterval(refresh, POLL_MS);
   window.addEventListener("resize", refresh);
 });

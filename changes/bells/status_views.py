@@ -112,6 +112,8 @@ def system_status(request):
     eth_cfg = cfg.get("ethernet") or {}
     fallback_ip = eth_cfg.get("fallback_ip") or "192.168.99.2"
     fallback_prefix = int(eth_cfg.get("fallback_prefix") or 24)
+    status_cfg = cfg.get("status") or {}
+    poll_hint_sec = int(status_cfg.get("poll_hint_sec") or 5)
 
     try:
         ips = _run(["hostname", "-I"]).split()
@@ -250,5 +252,6 @@ def system_status(request):
             "time_locked": time_locked,
             "time_label": time_label,
             "status_tick": int(time.time()),
+            "poll_hint_sec": poll_hint_sec,
         }
     )

@@ -109,18 +109,22 @@ var sandbellsTimeLocked = true;
         }
     }
 
+    // Cached D3 selections for the hands (set in init)
+    let hourHand = null;
+    let minuteHand = null;
+    let secondHand = null;
+
     function updateClock() {
         const now = new Date();
         const h = now.getHours() % 12;
         const m = now.getMinutes();
         const s = now.getSeconds();
 
-        // Update clock hands
-        d3.select(".hour").attr("transform", `rotate(${h*30 + m*0.5} 175 175)`);
-        d3.select(".minute").attr("transform", `rotate(${m*6} 175 175)`);
-        d3.select(".second").attr("transform", `rotate(${s*6} 175 175)`);
+        // Cheap updates using cached selections
+        if (hourHand)   hourHand.attr("transform",   `rotate(${h*30 + m*0.5} 175 175)`);
+        if (minuteHand) minuteHand.attr("transform", `rotate(${m*6} 175 175)`);
+        if (secondHand) secondHand.attr("transform", `rotate(${s*6} 175 175)`);
 
-        // Update displays
         updateDate();
         updateDigitalClock();
         updateMemoryDisplay();
@@ -135,13 +139,21 @@ var sandbellsTimeLocked = true;
         digitalDateEl = document.getElementById('digital_date');
         memoryValueEl = document.getElementById('memory_value');
 
-        updateClock();                    // Initial update
-        setInterval(updateClock, 1000);   // Update every second
+        // Cache the three hand selections once
+        hourHand   = d3.select(".hour");
+        minuteHand = d3.select(".minute");
+        secondHand = d3.select(".second");
+
+        updateClock(); // Initial update
+        setInterval(updateClock, 1000); // Update every second
     }
 
     // LuaKit compatible initialization
     window.addEventListener('load', init);
     document.addEventListener('DOMContentLoaded', init);
+
+
+
     
     // Extra safety
     setTimeout(init, 300);
