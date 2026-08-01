@@ -17,6 +17,16 @@ else
     echo "Warning: show_header.sh not found"
 fi
 
+sudo -v
+
+# Ensure /etc/sandbells/settings.json exists early
+if [ ! -f /etc/sandbells/settings.json ]; then
+    echo "==> Creating /etc/sandbells/settings.json from example"
+    sudo install -d /etc/sandbells
+    sudo cp install-steps/settings.example.json /etc/sandbells/settings.json
+    echo "    Edit /etc/sandbells/settings.json later to set real WiFi passwords etc."
+fi
+
 QUICK_MODE=false
 if [[ "$1" == "--quick" || "$1" == "-q" ]]; then
     QUICK_MODE=true

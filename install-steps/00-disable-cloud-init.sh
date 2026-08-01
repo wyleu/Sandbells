@@ -2,10 +2,12 @@
 # 00-disable-cloud-init.sh
 # Cloud-init is for cloud VMs. This is an offline kiosk — remove it so it
 # cannot delay or block boot (graphical.target, multi-user.target, etc.).
-
 set -euo pipefail
 
 echo "==> Disabling cloud-init (offline kiosk)"
+
+# Ask for the password once up front
+sudo -v
 
 UNITS=(
   cloud-init.service
@@ -15,10 +17,10 @@ UNITS=(
 )
 
 for unit in "${UNITS[@]}"; do
-  systemctl disable --now "$unit" 2>/dev/null || true
-  systemctl mask "$unit" 2>/dev/null || true
+  sudo systemctl disable --now "$unit" 2>/dev/null || true
+  sudo systemctl mask "$unit" 2>/dev/null || true
 done
 
-systemctl disable cloud-init.target 2>/dev/null || true
+sudo systemctl disable cloud-init.target 2>/dev/null || true
 
 echo "==> cloud-init disabled and masked"
