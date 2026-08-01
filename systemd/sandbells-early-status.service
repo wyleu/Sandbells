@@ -1,0 +1,16 @@
+[Unit]
+Description=Sandbells early console status (before LightDM)
+Documentation=https://github.com/wyleu/Sandbells
+After=NetworkManager.service network-online.target
+Wants=network-online.target
+Before=lightdm.service graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/sandbells-early-status.sh
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=45
+
+[Install]
+WantedBy=multi-user.target
