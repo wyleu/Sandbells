@@ -152,6 +152,90 @@ show_header() {
 }
 
 # ---------------------------------------------------------------------------
+# Interactive helper
+# ---------------------------------------------------------------------------
+pause() {
+    if [ "${QUICK_MODE:-false}" = true ]; then
+        sleep 1.5
+        return
+    fi
+    echo ""
+    read -p "Press Enter to continue (or Q to stop) > " choice
+    if [[ "$choice" =~ ^[Qq]$ ]]; then
+        echo "Setup stopped safely."
+        exit 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+log() {
+    local tag="${LOGTAG:-sandbells}"
+    logger -t "$tag" "$*" 2>/dev/null || true
+    echo "$*"
+}
+
+# ---------------------------------------------------------------------------
+# Privilege / environment checks
+# ---------------------------------------------------------------------------
+need_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "ERROR: this step must be run as root (or with sudo)"
+        exit 1
+    fi
+}
+
+need_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "ERROR: required command '$1' not found"
+        return 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Package / service helpers (defensive)
+# ---------------------------------------------------------------------------
+package_installed() {
+    dpkg -s "$1" &>/dev/null
+}
+
+service_exists() {
+    systemctl list-unit-files --type=service 2>/dev/null | grep -q "^$1"
+}
+
+service_is_active() {
+    [ "$(systemctl is-active "$1" 2>/dev/null)" = "active" ]
+}
+
+service_is_enabled() {
+    [ "$(systemctl is-enabled "$1" 2>/dev/null)" = "enabled" ]
+}
+
+# Safely stop + disable a service if it exists
+stop_and_disable() {
+    local unit="$1"
+    if service_exists "$unit"; then
+        sudo systemctl stop "$unit" 2>/dev/null || true
+        sudo systemctl disable "$unit" 2>/dev/null || true
+    fi
+}
+
+# Safely enable + start a service if the unit file exists
+enable_and_start() {
+    local unit="$1"
+    if [ -f "/etc/systemd/system/$unit" ] || [ -f "/lib/systemd/system/$unit" ]; then
+        sudo systemctl daemon-reload
+        sudo systemctl enable "$unit"
+        sudo systemctl restart "$unit" 2>/dev/null || sudo systemctl start "$unit"
+    else
+        echo "WARNING: unit $unit not found — skipping enable/start"
+    fi
+}
+
+
+
+# ---------------------------------------------------------------------------
 # Small defensive helpers
 # ---------------------------------------------------------------------------
 package_installed() {

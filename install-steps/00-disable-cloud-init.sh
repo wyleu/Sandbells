@@ -1,12 +1,13 @@
 #!/bin/bash
 # 00-disable-cloud-init.sh
 # Cloud-init is for cloud VMs. This is an offline kiosk — remove it so it
-# cannot delay or block boot (graphical.target, multi-user.target, etc.).
-set -euo pipefail
+# cannot delay or block boot.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
 
 echo "==> Disabling cloud-init (offline kiosk)"
 
-# Ask for the password once up front
 sudo -v
 
 UNITS=(
@@ -17,10 +18,12 @@ UNITS=(
 )
 
 for unit in "${UNITS[@]}"; do
-  sudo systemctl disable --now "$unit" 2>/dev/null || true
+  echo "  Processing $unit ..."
+  stop_and_disable "$unit"
   sudo systemctl mask "$unit" 2>/dev/null || true
 done
 
-sudo systemctl disable cloud-init.target 2>/dev/null || true
+stop_and_disable cloud-init.target
+sudo systemctl daemon-reload 2>/dev/null || true
 
 echo "==> cloud-init disabled and masked"

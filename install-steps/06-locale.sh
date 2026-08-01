@@ -1,49 +1,29 @@
 #!/bin/bash
 # 06-locale.sh
-# Sandbells Install Step
-# Command line arguments:
-#   $1 = QUICK_MODE (true/false)
+# Sandbells Install Step – set UK English locale
+#
+# Args: $1 = QUICK_MODE (true/false)
 
-#!/bin/bash
 QUICK_MODE=${1:-false}
-pause() {
-    if [ "$QUICK_MODE" = true ]; then
-        sleep 1.5
-        return
-    fi
-    echo ""
-    read -p "Press Enter to continue (or Q to stop) > " choice
-    if [[ "$choice" =~ ^[Qq]$ ]]; then
-        echo "Setup stopped safely."
-        exit 1
-    fi
-}
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
 
-# Locale step with debug option
+echo "=================================================="
+echo "Locale Setup"
+echo "=================================================="
 
-DEBUG=${1:-false}
-
-if [ "$DEBUG" = true ]; then
-    echo "DEBUG MODE ENABLED"
-    set -x
-fi
-
-echo "[6/8] Setting UK English locale..."
-
+echo "Setting UK English locale..."
 CURRENT_LOCALE=$(locale | grep LANG= | cut -d= -f2)
 
-if [[ "$CURRENT_LOCALE" == *"en_US.UTF-8"* || "$CURRENT_LOCALE" == *"en_GB.UTF-8"* ]]; then
-    echo "Locale is already correctly set to UK English ($CURRENT_LOCALE)"
+if [[ "$CURRENT_LOCALE" == *"en_GB.UTF-8"* || "$CURRENT_LOCALE" == *"en_US.UTF-8"* ]]; then
+    echo "Locale is already set ($CURRENT_LOCALE)"
 else
-    echo "Updating locale to en_US.UTF-8..."
-    sudo locale-gen en_US.UTF-8
-    sudo update-locale LANG=en_US.UTF-8
+    echo "Updating locale to en_GB.UTF-8..."
+    sudo locale-gen en_GB.UTF-8
+    sudo update-locale LANG=en_GB.UTF-8
     sudo dpkg-reconfigure -f noninteractive locales
-    echo "Locale updated to en_US.UTF-8"
+    echo "Locale updated"
 fi
 
-if [ "$DEBUG" = true ]; then
-    set +x
-fi
 pause

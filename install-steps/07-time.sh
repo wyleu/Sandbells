@@ -10,44 +10,22 @@
 QUICK_MODE=${1:-false}
 DEBUG_MODE=${2:-false}
 
-SETTINGS="${SANDBELLS_SETTINGS:-/etc/sandbells/settings.json}"
-DEFAULT_TIME_HOSTS=(
-    "sandgps.local"
-    "sandgps1.local"
-    "sandgps2.local"
-    "sandgps3.local"
-)
-load_time_hosts() {
-    TIME_HOSTS=()
-    if [ -f "$SETTINGS" ] && command -v jq >/dev/null 2>&1; then
-        mapfile -t TIME_HOSTS < <(jq -r '.time_hosts[]? // empty' "$SETTINGS" 2>/dev/null)
-    fi
-    if [ "${#TIME_HOSTS[@]}" -eq 0 ]; then
-        TIME_HOSTS=("${DEFAULT_TIME_HOSTS[@]}")
-    fi
-}
-
-
-# Repo paths (script lives in install-steps/)
+# Shared helpers
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
+
+# Repo paths
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SELECT_SRC="$SCRIPT_DIR/sandbells-time-select.sh"
 UNIT_SRC="$REPO_DIR/systemd/sandbells-time-select.service"
 SELECT_DST="/usr/local/sbin/sandbells-time-select.sh"
 UNIT_DST="/etc/systemd/system/sandbells-time-select.service"
 
-pause() {
-    if [ "$QUICK_MODE" = true ]; then
-        sleep 1.5
-        return
-    fi
-    echo ""
-    read -p "Press Enter to continue (or Q to stop) > " choice
-    if [[ "$choice" =~ ^[Qq]$ ]]; then
-        echo "Setup stopped safely."
-        exit 1
-    fi
-}
+# ... keep the rest of the file, but remove the old
+# SETTINGS=..., DEFAULT_TIME_HOSTS=..., and load_time_hosts() definition.
+# Just call:
+load_time_hosts
+CANDIDATES=("${TIME_HOSTS[@]}")
 
 echo "=================================================="
 echo "Time Configuration (Chrony)"

@@ -1,21 +1,13 @@
 #!/bin/bash
 # 09-zram.sh
 # Sandbells ZRAM Compressed Swap Setup
+#
+# Args: $1 = QUICK_MODE (true/false)
 
 QUICK_MODE=${1:-false}
 
-pause() {
-    if [ "$QUICK_MODE" = true ]; then
-        sleep 1.5
-        return
-    fi
-    echo ""
-    read -p "Press Enter to continue (or Q to stop) > " choice
-    if [[ "$choice" =~ ^[Qq]$ ]]; then
-        echo "Setup stopped safely."
-        exit 1
-    fi
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
 
 echo "=================================================="
 echo "ZRAM Swap Configuration"

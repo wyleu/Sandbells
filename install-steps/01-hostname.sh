@@ -1,24 +1,13 @@
 #!/bin/bash
 # 01-hostname.sh
-# Sandbells Install Step
-# Command line arguments:
-#   $1 = QUICK_MODE (true/false)
+# Sandbells Install Step – set hostname if still at default
+#
+# Args: $1 = QUICK_MODE (true/false)
 
-#!/bin/bash
 QUICK_MODE=${1:-false}
 
-pause() {
-    if [ "$QUICK_MODE" = true ]; then
-        sleep 1.5
-        return
-    fi
-    echo ""
-    read -p "Press Enter to continue (or Q to stop) > " choice
-    if [[ "$choice" =~ ^[Qq]$ ]]; then
-        echo "Setup stopped safely."
-        exit 1
-    fi
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
 
 echo "=================================================="
 echo "Sandbells Hostname Setup"
@@ -35,7 +24,6 @@ if [[ "$CURRENT" != "raspberrypi" ]]; then
 fi
 
 BASE_NAME="sandbells"
-
 echo "Scanning for existing Sandbells units..."
 
 num=1
@@ -59,6 +47,6 @@ echo "Setting hostname to: $candidate"
 echo "$candidate" | sudo tee /etc/hostname > /dev/null
 sudo sed -i "s/127.0.1.1.*/127.0.1.1\t$candidate/" /etc/hosts
 sudo hostnamectl set-hostname "$candidate"
-
 echo "Hostname set to $candidate"
+
 pause
