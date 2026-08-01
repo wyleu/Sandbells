@@ -9,12 +9,12 @@ START_TIME=$(date +%s)
 TIME_SERVER="sandgps3.local"
 BROWSER="luakit"
 
-# Source shared header
-if [ -f show_header.sh ]; then
-    source show_header.sh
+# Shared helpers (header, settings loaders, defensive utilities)
+source ./install-steps/sandbells-common.sh
+
+# Now you can safely call show_header, load_time_hosts, etc.
+if type show_header &>/dev/null; then
     show_header 2>/dev/null || true
-else
-    echo "Warning: show_header.sh not found"
 fi
 
 sudo -v
