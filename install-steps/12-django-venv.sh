@@ -2,23 +2,12 @@
 # 12-django-venv.sh
 # Sandbells Install Step – Django virtualenv, requirements, migrate, collectstatic
 #
-# Command line arguments:
-#   $1 = QUICK_MODE (true/false)
+# Args: $1 = QUICK_MODE (true/false)
 
 QUICK_MODE=${1:-false}
 
-pause() {
-    if [ "$QUICK_MODE" = true ]; then
-        sleep 1.5
-        return
-    fi
-    echo ""
-    read -p "Press Enter to continue (or Q to stop) > " choice
-    if [[ "$choice" =~ ^[Qq]$ ]]; then
-        echo "Setup stopped safely."
-        exit 1
-    fi
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
 
 echo "=================================================="
 echo " 12 – Django Virtualenv + Static Files"
@@ -28,16 +17,20 @@ PROJECT_DIR="/home/sandbells/Code/Sandbells"
 VENV_DIR="${PROJECT_DIR}/Bellvirtenv"
 CHANGES_DIR="${PROJECT_DIR}/changes"
 STATIC_DEST="/var/www/sandbells/static"
+LOG_DIR="/var/log/django"
 
-# Ensure we are the right user / ownership
-if [ "$(id -un)" != "sandbells" ] && [ "$(id -un)" != "root" ]; then
-    echo "WARNING: Running as $(id -un). Prefer sandbells or root."
-fi
+# ------------------------------------------------------------------
+# 0. Ensure log directory exists (prevents PermissionError in settings.py)
+# ------------------------------------------------------------------
+echo "[0/6] Ensuring log directory $LOG_DIR ..."
+sudo mkdir -p "$LOG_DIR"
+sudo chown sandbells:sandbells "$LOG_DIR"
+sudo chmod 755 "$LOG_DIR"
 
 cd "$PROJECT_DIR" || { echo "ERROR: $PROJECT_DIR not found"; exit 1; }
 
 # ------------------------------------------------------------------
-# 1. System packages needed for building Python wheels on Pi
+# 1. System packages needed for building Python wheels
 # ------------------------------------------------------------------
 echo "[1/6] Installing Python build dependencies..."
 sudo apt-get update -qq
@@ -45,7 +38,6 @@ sudo apt-get install -y --no-install-recommends \
     python3-venv python3-pip python3-dev \
     libpq-dev build-essential libjpeg-dev zlib1g-dev \
     libffi-dev libssl-dev
-
 pause
 
 # ------------------------------------------------------------------
@@ -58,15 +50,11 @@ if [ ! -d "$VENV_DIR" ]; then
 else
     echo "Virtualenv already exists – will upgrade packages."
 fi
-
-# Make sure ownership is correct
 sudo chown -R sandbells:sandbells "$VENV_DIR"
 
 # shellcheck disable=SC1091
 source "${VENV_DIR}/bin/activate"
-
 pip install --upgrade pip setuptools wheel
-
 pause
 
 # ------------------------------------------------------------------
@@ -79,11 +67,10 @@ else
     echo "WARNING: requirements.txt not found – installing minimal set"
     pip install django gunicorn psycopg2-binary whitenoise pillow
 fi
-
 pause
 
 # ------------------------------------------------------------------
-# 4. Django migrations + canonical fixtures
+# 4. Django migrations + fixtures
 # ------------------------------------------------------------------
 echo "[4/6] Running Django migrations..."
 cd "$CHANGES_DIR" || { echo "ERROR: changes/ directory missing"; exit 1; }
@@ -97,7 +84,6 @@ python manage.py loaddata bells/fixtures/towers.json 2>/dev/null || \
     echo "WARNING: towers.json not loaded (already present or missing)"
 python manage.py loaddata bells/fixtures/patterns.json 2>/dev/null || \
     echo "WARNING: patterns.json not loaded (already present or missing)"
-
 pause
 
 # ------------------------------------------------------------------
@@ -107,12 +93,9 @@ echo "[5/6] Collecting static files → $STATIC_DEST ..."
 sudo mkdir -p "$STATIC_DEST"
 sudo chown -R sandbells:sandbells /var/www/sandbells
 
-# Clear + collect
-python manage.py collectstatic --noinput --clear \
-    --settings=changes.settings 2>/dev/null || \
-python manage.py collectstatic --noinput --clear
+python manage.py collectstatic --noinput --clear 2>/dev/null || \
+    python manage.py collectstatic --noinput --clear
 
-# Also copy into the nginx alias location if different
 if [ -d "${CHANGES_DIR}/bells/static" ]; then
     sudo cp -a "${CHANGES_DIR}/bells/static/." "$STATIC_DEST/" 2>/dev/null || true
 fi
@@ -123,11 +106,10 @@ fi
 sudo chown -R sandbells:sandbells /var/www/sandbells
 echo "Static files ready at $STATIC_DEST"
 ls -la "$STATIC_DEST" | head -20
-
 pause
 
 # ------------------------------------------------------------------
-# 6. Quick sanity check
+# 6. Sanity check
 # ------------------------------------------------------------------
 echo "[6/6] Sanity check..."
 python -c "import django; print('Django', django.get_version())"
@@ -138,4 +120,5 @@ echo ""
 echo "Django virtualenv + static files COMPLETE."
 echo "Venv: $VENV_DIR"
 echo "Static: $STATIC_DEST"
+echo "Logs: $LOG_DIR"
 pause

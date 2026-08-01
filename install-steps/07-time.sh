@@ -1,8 +1,8 @@
 #!/bin/bash
 # 07-time.sh
 # Sandbells Chrony Time Configuration Step
-# - Probe sandgps.local / sandgps1–3
-# - Write chrony.conf for this install
+# - Probe sandgps*.local from settings.json
+# - Write chrony.conf
 # - Install boot-time re-scan script + systemd unit
 #
 # Args: $1 = QUICK_MODE (true/false)  $2 = DEBUG_MODE (true/false)
@@ -10,27 +10,18 @@
 QUICK_MODE=${1:-false}
 DEBUG_MODE=${2:-false}
 
-# Shared helpers
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/sandbells-common.sh"
 
-# Repo paths
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 SELECT_SRC="$SCRIPT_DIR/sandbells-time-select.sh"
 UNIT_SRC="$REPO_DIR/systemd/sandbells-time-select.service"
 SELECT_DST="/usr/local/sbin/sandbells-time-select.sh"
 UNIT_DST="/etc/systemd/system/sandbells-time-select.service"
 
-# ... keep the rest of the file, but remove the old
-# SETTINGS=..., DEFAULT_TIME_HOSTS=..., and load_time_hosts() definition.
-# Just call:
-load_time_hosts
-CANDIDATES=("${TIME_HOSTS[@]}")
-
 echo "=================================================="
 echo "Time Configuration (Chrony)"
 echo "=================================================="
-
 
 load_time_hosts
 CANDIDATES=("${TIME_HOSTS[@]}")
@@ -39,7 +30,7 @@ if [ "$DEBUG_MODE" = true ]; then
     set -x
 fi
 
-# --- probe now (for this install session) ---
+# --- probe for local GPS time servers ---
 echo "Searching for local GPS time servers..."
 TIME_SERVER=""
 FOUND_LIST=()
@@ -52,7 +43,7 @@ for host in "${CANDIDATES[@]}"; do
             TIME_SERVER="$host"
         fi
     else
-        echo "  miss:  $host"
+        echo "  miss: $host"
     fi
 done
 
@@ -66,14 +57,15 @@ else
     echo "No local sandgps*.local server found — using public NTP only."
 fi
 
-# --- write chrony for this install ---
+# --- write chrony config (with timeouts so it cannot hang) ---
 echo ""
 echo "Updating chrony config..."
-sudo systemctl stop chrony 2>/dev/null || true
+
+timeout 10 sudo systemctl stop chrony 2>/dev/null || true
 sudo cp /etc/chrony/chrony.conf /etc/chrony/chrony.conf.bak 2>/dev/null || true
 
 if [ -n "$TIME_SERVER" ]; then
-    cat | sudo tee /etc/chrony/chrony.conf > /dev/null <<EOF
+    sudo tee /etc/chrony/chrony.conf > /dev/null <<EOF
 pool ntp.ubuntu.com iburst
 server $TIME_SERVER iburst prefer
 makestep 1.0 3
@@ -81,7 +73,7 @@ rtcsync
 EOF
     echo "Chrony config updated (prefer $TIME_SERVER)."
 else
-    cat | sudo tee /etc/chrony/chrony.conf > /dev/null <<EOF
+    sudo tee /etc/chrony/chrony.conf > /dev/null <<EOF
 pool ntp.ubuntu.com iburst
 makestep 1.0 3
 rtcsync
@@ -90,11 +82,14 @@ EOF
 fi
 
 echo "Restarting chrony..."
-sudo systemctl restart chrony
+timeout 15 sudo systemctl restart chrony 2>/dev/null || {
+    echo "Warning: chrony restart timed out — continuing anyway"
+    sudo systemctl start chrony 2>/dev/null || true
+}
 
 echo "Waiting for time sync..."
 if ! timeout 15 chronyc waitsync 2>/dev/null; then
-    echo "Warning: Time sync timeout. This is common on first boot without GPS server."
+    echo "Warning: Time sync timeout (common on first boot without GPS)."
     chronyc sources 2>/dev/null || true
     chronyc tracking 2>/dev/null || true
 fi
@@ -105,7 +100,7 @@ timeout 8 chronyc sources || true
 echo "Clock Status:"
 chronyc tracking 2>/dev/null | grep -E "Stratum|Reference|System time|Leap" || true
 
-# --- install boot-time re-scan (clean build support) ---
+# --- install boot-time re-scan ---
 echo ""
 echo "Installing boot-time GPS NTP selector..."
 
@@ -120,14 +115,13 @@ fi
 
 sudo install -m 755 "$SELECT_SRC" "$SELECT_DST"
 echo "  installed $SELECT_DST"
-
 sudo install -m 644 "$UNIT_SRC" "$UNIT_DST"
 echo "  installed $UNIT_DST"
 
 sudo systemctl daemon-reload
 sudo systemctl enable sandbells-time-select.service
-sudo systemctl restart sandbells-time-select.service 2>/dev/null || \
-    sudo systemctl start sandbells-time-select.service
+timeout 10 sudo systemctl restart sandbells-time-select.service 2>/dev/null || \
+    timeout 10 sudo systemctl start sandbells-time-select.service 2>/dev/null || true
 
 echo "  enabled sandbells-time-select.service"
 systemctl is-enabled sandbells-time-select.service || true

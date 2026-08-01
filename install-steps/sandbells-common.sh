@@ -251,4 +251,8 @@ service_is_active() {
 }
 
 need_cmd() {
-    command -v "$1" >/dev/
+    command -v "$1" >/dev/null 2>&1 || {
+        echo "ERROR: required command '$1' not found"
+        return 1
+    }
+}

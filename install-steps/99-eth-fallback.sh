@@ -1,23 +1,36 @@
 #!/bin/bash
-# 99-eth-fallback.sh — install eth0 DHCP-then-static recovery
-set -e
+# 99-eth-fallback.sh
+# Install eth0 DHCP-then-static recovery
+#
+# Args: $1 = QUICK_MODE (true/false)
+
+QUICK_MODE=${1:-false}
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/sandbells-common.sh"
 
 echo "=== 99 eth fallback (192.168.99.2/24) ==="
 
-install -d /etc/sandbells
-install -d /usr/local/sbin
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+HELPER_SRC="$SCRIPT_DIR/sandbells-eth-fallback.sh"
+HELPER_DST="/usr/local/sbin/sandbells-eth-fallback.sh"
+UNIT_DST="/etc/systemd/system/sandbells-eth-fallback.service"
 
-# Helper (path relative to repo root when run from master_install)
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [ -f "$ROOT/install-steps/sandbells-eth-fallback.sh" ]; then
-  install -m 755 "$ROOT/install-steps/sandbells-eth-fallback.sh" /usr/local/sbin/sandbells-eth-fallback.sh
+# Ensure directories exist
+sudo install -d /etc/sandbells
+sudo install -d /usr/local/sbin
+
+# Install helper script
+if [ -f "$HELPER_SRC" ]; then
+    sudo install -m 755 "$HELPER_SRC" "$HELPER_DST"
+    echo "  installed $HELPER_DST"
 else
-  # inline copy if you keep helper text only in this step
-  echo "Place sandbells-eth-fallback.sh beside this script or in install-steps/"
-  exit 1
+    echo "ERROR: missing $HELPER_SRC"
+    exit 1
 fi
 
-cat >/etc/systemd/system/sandbells-eth-fallback.service <<'EOF'
+# Install systemd unit
+sudo tee "$UNIT_DST" > /dev/null <<'EOF'
 [Unit]
 Description=Sandbells eth0 static fallback if DHCP fails
 After=network-pre.target NetworkManager.service
@@ -32,8 +45,13 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-systemctl daemon-reload
-systemctl enable sandbells-eth-fallback.service
+echo "  installed $UNIT_DST"
 
+sudo systemctl daemon-reload
+sudo systemctl enable sandbells-eth-fallback.service
+
+echo ""
 echo "Installed. Reboot off-LAN to test: host 192.168.99.1 ↔ Pi 192.168.99.2"
-echo "To disable fallback on a managed network:  sudo touch /etc/sandbells/network-enabled"
+echo "To disable fallback on a managed network: sudo touch /etc/sandbells/network-enabled"
+
+pause
