@@ -1,8 +1,9 @@
 [Unit]
-Description=Sandbells select local GPS NTP server (sandgps*.local)
-After=network-online.target
+Description=Sandbells ensure chrony sources from time_hosts (settings.json)
+After=network-online.target NetworkManager.service
 Wants=network-online.target
-Before=chrony.service
+# Run after chrony exists so restart is valid; sources.d is read on start too
+After=chrony.service
 
 [Service]
 Type=oneshot
