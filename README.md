@@ -1,251 +1,257 @@
 # Sandbells
 
-**Django-based Church Bell Change-Ringing Display & Kiosk**
+**Django-based Church Bell Change-Ringing Display and Kiosk**
 
-Sandbells is a web application that computes and displays the step-by-step sequences of **change ringing** (English-style method ringing) between named patterns such as *Rounds*, *Jokers*, *Titums*, *Whittington’s*, *Queens*, etc.
+Sandbells is a web application that computes and displays the step-by-step sequences of change ringing (English-style method ringing) between named patterns such as Rounds, Jokers, Titums, Whittington’s, Queens, and many others.
 
-It is designed to run as a **fullscreen kiosk** on a Raspberry Pi attached to an HDMI television or monitor. The interface is intended for simple, mouse-only operation by non-technical users.
+It is designed to run as a fullscreen kiosk on a Raspberry Pi attached to an HDMI television or monitor. The interface is intended for simple, mouse-only operation by non-technical users.
 
 ![Sandbells Kiosk Screenshot](docs/screenshot-20260722-144857.png)
+
 *(Full-screen view on Raspberry Pi – clock, dual-direction change sequences, method selector, and live system status)*
 
 ---
 
-## What You See on the Screen
+## What you see on the screen
 
-- **Analogue + digital clock** and current date (top-left)
-- Two side-by-side columns showing the complete transition:
-  - Left: e.g. **Rounds → Jokers**
-  - Right: the reverse **Jokers → Rounds**
-- Each row shows the current order of the bells (e.g. `17654328`) together with the adjacent swaps that produce the next row (e.g. `2 to 4  3 to 2  8 to 3`)
-- Right-hand sidebar listing every available method for the selected number of bells (4–8). Clicking a method loads the corresponding change.
-- **System status overlay** (under the clock), in sections:
+- Analogue and digital clock and current date (top-left)
+- Two side-by-side columns showing the complete transition (e.g. Rounds to Jokers and the reverse)
+- Each row shows the current order of the bells together with the adjacent swaps that produce the next row
+- Right-hand sidebar listing available methods for 4–8 bells
+- System status overlay under the clock:
   - **Browser** — screen / body / iframe sizes
-  - **Network** — WiFi (+ SSID), wired, IP addresses
-  - **Server** — hostname (`.local`), git branch/hash, Nginx / Gunicorn / Kiosk
-  - **Hardware** — Pi model, arch, memory, temperature, fan %
-  - **Time** — chrony source / lock (`sandgps*` or `NO LOCK`)
-The application supports 4–8 bells and many classic methods (Rounds, Titums, Whittington’s, Sew Saw, Back Rounds, Bowbells, Burdette, Hagdyke, Jacks, Jokers, Kings, Princes, Princesses, Priory, Queens, Roller Coaster, St Michael’s, Exp-ing Titums, Total Rev, …).
-The tower deployment is intentionally **offline** (no Internet): local WiFi and/or Ethernet, plus a GPS time server on the LAN (`sandgps*.local`). That suits limited technical support and church environments.
----
+  - **Network** — WiFi (and SSID), wired, IP addresses, recovery fallback
+  - **Server** — hostname (.local), git branch/hash, Nginx / Gunicorn / Kiosk
+  - **Hardware** — Pi model, arch, memory, temperature, fan percent
+  - **Time** — chrony source / lock (10.42.0.1, sandmon.local, sandgps*, or NO LOCK)
 
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  HDMI Display (TV / Monitor)                                │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │  Luakit (fullscreen kiosk browser)                    │  │
-│  │  → http://localhost (fallbacks in start-kiosk-solo.sh)│  │  
-│  └───────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                          ▲
-                          │
-┌─────────────────────────────────────────────────────────────┐
-│  Raspberry Pi (typically Pi 3)                              │
-│                                                             │
-│  systemd services:                                          │
-│  • sandbells-kiosk.service  (Luakit on boot)                │
-│  • gunicorn / nginx         (Django + static)               │
-│  • sandbells-fan.service    (PWM fan → /run/…fan.pct)       │
-│  • sandbells-time-select    (prefer sandgps*.local)         │
-│  • sandbells-network-select.timer                           │
-│      (local net check + WiFi SSID fallback list)            │
-│                                                             │
-│  Django project: changes/                                   │
-│  └── app: bells/                                            │
-│      ├── models.py      (Pattern, Change, ChangeItem…)      │
-│      ├── functions.py   (db_process – the core engine)      │
-│      ├── views.py       (display, menu, clock, …)           │
-       ├──  status_views.py (/api/system-status/)             │
-│      ├── templates/     (display.html, home.html, …)        │
-│      └── static/        (CSS, JS, SVG, audio)               │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Core Logic
-The heart of the system is `bells/functions.py` → `db_process()`.  
-Given two patterns of equal length (e.g. `"12345678"` and `"17654328"`), it repeatedly swaps adjacent pairs until the target is reached, recording every intermediate row and the calls (“7 to 5”, “6 to 7”, …). The same process is run in reverse so both directions are shown simultaneously.
+Tower deployment is intended to work with or without Internet: local WiFi (for example the Sandbells AP on sandmon) and/or Ethernet, with GPS-backed time from a local server.
 
 ---
 
-### Local network & time
+## Architecture overview
 
-- No Internet required in the tower.
-- **Time:** `sandbells-time-select.sh` probes `sandgps*.local` and prefers that server in chrony.
-- **Network:** `sandbells-network-select.sh` (NetworkManager) checks local reachability; if down, tries configured SSIDs (e.g. `sandbells`). Driven by a systemd timer; also runnable by hand for debug:
-  `sudo sandbells-network-select.sh`
-- Install pattern matches time: numbered step installs the `sandbells-*-select` helper + unit/timer.
+HDMI display runs Luakit fullscreen against http://localhost (with fallbacks in start-kiosk-solo.sh).
 
----
+On the Pi (kiosk host such as sandbells or sandbells2):
 
-## Quick Start (Fresh Install on Raspberry Pi)
+- **sandbells-kiosk.service** — Luakit after LightDM
+- **gunicorn** / **nginx** — Django and static files
+- **sandbells-fan.service** — PWM fan; duty file under /run
+- **sandbells-time-select** — chrony sources from settings.json time_hosts
+- **sandbells-network-select.timer** — local net check and WiFi SSID fallback list
+- **sandbells-early-status** — optional console status before LightDM (install step 16)
 
-```bash
-# Clone / update
-cd ~/Code
-git clone https://github.com/wyleu/Sandbells.git   # or git pull
-cd Sandbells
+Config file: **/etc/sandbells/settings.json**
 
-# Make scripts executable
-chmod +x master_install.sh install-steps/*.sh start-kiosk-solo.sh
+Django project: **changes/** with app **bells/** (models, functions.db_process, views, status_views, templates, static).
 
-# Run the full installer (or --quick)
-./master_install.sh
+Optional tower infrastructure (separate repository):
 
-# Reboot – the kiosk should appear automatically on the HDMI screen
-sudo reboot
-```
+- **sandmon.local** — WiFi AP (SSID Sandbells) and GPS/PPS chrony stratum 1
+- https://github.com/wyleu/Sandmon
 
-After reboot the following services should be active:
+### Core logic
 
-| Service               | Purpose                                   |
-|-----------------------|-------------------------------------------|
-| `sandbells-kiosk`     | Launches Luakit fullscreen                |
-| `gunicorn`            | Runs the Django application               |
-| `nginx`               | Serves static files + proxies to Gunicorn |
-| sandbells-fan         | PWM fan; writes /run/sandbells-fan.pct    |
-| sandbells-time-select | Prefer GPS NTP on LAN                     |
-| sandbells-network-select.timer | Local net + WiFi fallback        |
-
-
-### Useful day-to-day commands
-
-```bash
-# Kiosk
-systemctl status sandbells-kiosk
-sudo systemctl restart sandbells-kiosk
-journalctl -u sandbells-kiosk -f
-
-# Web stack
-sudo systemctl restart gunicorn nginx
-sudo systemctl reload nginx          # after nginx.conf changes
-
-# After code changes
-cd ~/Code/Sandbells
-source Bellvirtenv/bin/activate
-cd changes
-python manage.py migrate
-python manage.py collectstatic --noinput
-sudo systemctl reload gunicorn
-# Status API
-curl -s http://localhost/api/system-status/ | python3 -m json.tool
-
-# Network helper
-sudo sandbells-network-select.sh
-journalctl -t sandbells-net -f
-
-# Fan
-systemctl status sandbells-fan
-cat /run/sandbells-fan.pct
-
-# Venv (must be sourced)
-source ~/Code/Sandbells/sandbells_env.sh
-
-```
+The heart of the system is bells/functions.py → db_process(). Given two patterns of equal length, it repeatedly swaps adjacent pairs until the target is reached, recording every intermediate row and the calls. The same process is run in reverse so both directions are shown at once.
 
 ---
 
-## Project Layout (high level)
+## Configuration
 
-```
-Sandbells/
-├── changes/                     # Django project root
-│   ├── bells/
-│   │   ├── models.py
-│   │   ├── functions.py         # db_process()
-│   │   ├── status_views.py      # /api/system-status/
-│   │   ├── views.py             # display, menu, clock, …
-│   │   ├── templates/bells/
-│   │   └── static/
-│   ├── manage.py
-│   └── requirements.txt
-├── fan/
-│   ├── sandbells-fan.py         # PWM fan (Zynthian-inspired; adapted)
-│   └── fan-control.sh
-├── install-steps/               # 01–15… + sandbells-*-select helpers
-├── systemd/                     # kiosk, fan, time-select, network-select, …
-├── nginx/
-├── luakit/
-├── start-kiosk-solo.sh
-├── master_install.sh
-├── INSTALL-KIOSK.md
-├── TODO.md
-└── README.md
-```
+Path: **/etc/sandbells/settings.json**
 
----
+Created from install-steps/settings.example.json on first install. Typical content:
 
-## Current Status (July 2026)
+    {
+      "networks": [
+        { "ssid": "Sandbells", "psk": "CHANGE_ME" }
+      ],
+      "time_hosts": [
+        "10.42.0.1",
+        "sandmon.local",
+        "sandgps.local",
+        "sandgps1.local",
+        "sandgps2.local",
+        "sandgps3.local"
+      ],
+      "ethernet": {
+        "dhcp_timeout_sec": 15,
+        "fallback_ip": "192.168.99.2",
+        "fallback_prefix": 24
+      },
+      "status": {
+        "poll_hint_sec": 3
+      }
+    }
 
-Working
+- **networks** — SSIDs used by network-select / WiFi setup
+- **time_hosts** — ordered list for chrony (first entry is preferred when sources are written)
+- **ethernet** — static recovery when DHCP fails on the tower cable
 
-Kiosk auto-start, blanking defeat, Gunicorn + Nginx
-Dual-direction display, method selector, clock, 1920 layout
-Sectioned status panel (network, temp, fan %, .local, NTP)
-Fan service + duty file (curve still to quieten)
-Kiosk URL fallbacks (curl -f)
-Network-select timer + helper
-Time-select for sandgps*.local
-
-Still open
-
-Fan curve (quieter ramp; service loud at ~65 °C)
-Non-root kiosk polish
-UI polish; Luakit/WebKit CPU on Pi 3
-Log rotation & monitoring
-Ensure 15-network-select on every fresh install
-
-See `TODO.md` for the live checklist.
+Do not commit real WiFi passwords; keep secrets only on the machine.
 
 ---
 
-## Development Notes
+## Local network and time
 
-- Default number of bells is 8.
-- Patterns are stored as simple strings (`"12345678"`, `"17654328"`, …).
-- The `Change` model can pre-compute and store intermediate steps; the live display can also generate them on the fly via `db_process()`.
-- MIDI export of any pattern is supported.
-- The application includes REST endpoints (`/api/`) for some models.
+- No Internet is required in the tower if sandmon (or another GPS time host) is reachable on the LAN or AP.
+- **Time:** sandbells-time-select.sh reads time_hosts, writes /etc/chrony/sources.d/sandbells.sources, and restarts chrony with a timeout. The systemd unit is ordered After=chrony (never Before=chrony) so boot cannot deadlock.
+- **Network:** sandbells-network-select.sh checks local reachability; if down, tries configured SSIDs. Driven by a timer; also runnable by hand as: sudo sandbells-network-select.sh
+- **AP and GPS time:** Sandmon provides SSID Sandbells, AP address 10.42.0.1, hostname sandmon.local, and chrony stratum 1 from GPS/PPS.
+- Install pattern: a numbered step installs the helper into /usr/local/sbin and the unit file from the repo **systemd/** directory only.
+
+---
+
+## Quick start (fresh install)
+
+    cd ~/Code
+    git clone https://github.com/wyleu/Sandbells.git
+    cd Sandbells
+
+    chmod +x master_install.sh install-steps/[0-9][0-9]-*.sh start-kiosk-solo.sh
+
+    ./master_install.sh
+    # or: ./master_install.sh --quick
+
+    # Then set real SSIDs/passwords and time_hosts if needed:
+    # sudo nano /etc/sandbells/settings.json
+
+    sudo reboot
+
+After reboot the kiosk should appear on the HDMI screen.
+
+### Services after a successful install
+
+- **sandbells-kiosk** — Luakit fullscreen (enabled at install; starts on boot after LightDM)
+- **gunicorn** / **nginx** — Django app and static files
+- **sandbells-fan** — PWM fan
+- **sandbells-time-select** — ensure chrony sources from time_hosts
+- **sandbells-network-select.timer** — local net and WiFi fallback
+- **sandbells-early-status** — optional pre-LightDM console status (step 16)
+
+### Day-to-day commands
+
+    systemctl status sandbells-kiosk
+    sudo systemctl restart sandbells-kiosk
+    journalctl -u sandbells-kiosk -f
+
+    sudo systemctl restart gunicorn nginx
+
+    cd ~/Code/Sandbells
+    source Bellvirtenv/bin/activate
+    cd changes
+    python manage.py migrate
+    python manage.py collectstatic --noinput
+    sudo systemctl reload gunicorn
+
+    curl -s http://localhost/api/system-status/ | python3 -m json.tool
+
+    sudo sandbells-time-select.sh
+    chronyc sources -v
+    sudo sandbells-network-select.sh
+
+    systemctl status sandbells-fan
+    cat /run/sandbells-fan.pct
+
+---
+
+## Systemd layout
+
+- **systemd/** in this repository is the only place unit files are maintained.
+- **install-steps** copy those units into /etc/systemd/system and enable them. Prefer install -m 644 from the repo path.
+- Do not rely on long-term hand edits under /etc/systemd/system.
+
+Kiosk unit: After=lightdm.service and WantedBy=graphical.target. Do not use After=graphical.target on the kiosk unit (that deadlocks with WantedBy=graphical.target).
+
+Time-select unit: After=chrony.service and TimeoutStartSec=60. Do not use Before=chrony while the script restarts chrony.
+
+Install step 14 installs and enables the kiosk service; it does not start it during the install. The unit starts on the next reboot, or with:
+
+    sudo systemctl start sandbells-kiosk
+
+---
+
+## Project layout
+
+    Sandbells/
+    ├── changes/                 # Django project
+    │   └── bells/               # models, db_process, views, status API, templates, static
+    ├── fan/
+    ├── install-steps/           # numbered NN-*.sh steps and runtime helpers
+    │   ├── settings.example.json
+    │   └── sandbells-common.sh
+    ├── systemd/                 # all unit files (source of truth)
+    ├── nginx/
+    ├── luakit/
+    ├── start-kiosk-solo.sh
+    ├── master_install.sh
+    ├── INSTALL-KIOSK.md
+    ├── TODO.md
+    └── README.md
+
+master_install.sh runs every install-steps/[0-9][0-9]-*.sh in filename order (including 16-early-status when present).
 
 ---
 
 ## Recovery Ethernet (no DHCP / tower cable)
 
-When sandbells2 has no home LAN and uses the static fallback:
+When the kiosk has no home LAN and uses the static fallback:
 
-| Host        | Interface     | Address            |
-|-------------|---------------|--------------------|
-| sandbells2  | eth0          | `192.168.99.2/24`  |
-| Admin laptop| USB Ethernet  | `192.168.99.1/24`  |
+- Kiosk eth0: 192.168.99.2/24
+- Admin laptop USB Ethernet: 192.168.99.1/24
 
-**On the admin machine** (not automatic):
+On the admin machine:
 
-```bash
-# Sandbells_connect (or equivalent)
-./sandbells-eth-link.sh          # sets dongle to 192.168.99.1, pings .2
-# or manually:
-sudo ip link set eth1 up
-sudo ip addr flush dev eth1
-sudo ip addr add 192.168.99.1/24 dev eth1
-ping -c 2 192.168.99.2
-ssh sandbells@192.168.99.2
+    ./sandbells-eth-link.sh
 
-Use the USB Ethernet iface (eth1 etc.), not WiFi.
-Home WiFi (192.168.0.x) will not reach 192.168.99.2.
-Status panel: using_fallback: true, wired_method: static.
-API on-box: curl -sS http://127.0.0.1/api/system-status/ | python3 -m json.tool
-From laptop, prefer Host: sandbells2.local if nginx returns 444 for raw IP.
+Or manually set the USB Ethernet interface to 192.168.99.1/24, then:
 
+    ping -c 2 192.168.99.2
+    ssh sandbells@192.168.99.2
 
-## Licence & Credits
-
-Church-bell change ringing is a centuries-old English tradition.  
-This software is a practical tool to help ringers visualise and practise the methods.
-
-Repository: https://github.com/wyleu/Sandbells
+Use the USB Ethernet interface, not WiFi. Home WiFi (192.168.0.x) will not reach 192.168.99.2.
 
 ---
 
-*Last updated: 24 July 2026*
-*Branch / date — main, July 2026
+## Current status (August 2026)
+
+Working:
+
+- Kiosk auto-start after LightDM, blanking defeat, Gunicorn and Nginx
+- Dual-direction display, method selector, clock, status panel
+- Fan service and duty file
+- Network-select timer and helper
+- Time-select from settings time_hosts (sandmon, 10.42.0.1, sandgps*)
+- Chrony sources.d layout; boot-safe time-select and kiosk unit ordering
+- Early-status unit (step 16)
+- Recovery Ethernet fallback
+
+Still open:
+
+- Fan curve (quieter ramp)
+- UI polish; Luakit/WebKit CPU on smaller Pis
+- Log rotation and monitoring
+
+See TODO.md for the live checklist.
+
+---
+
+## Development notes
+
+- Default number of bells is 8.
+- Patterns are stored as simple strings such as "12345678".
+- Intermediate steps can be stored on the Change model or generated live via db_process().
+- MIDI export of patterns is supported.
+- REST endpoints under /api/ include system status and some model APIs.
+
+---
+
+## Licence and credits
+
+Church-bell change ringing is a centuries-old English tradition. This software is a practical tool to help ringers visualise and practise the methods.
+
+- Repository: https://github.com/wyleu/Sandbells
+- Tower AP and GPS time: https://github.com/wyleu/Sandmon
+
+Last updated: 4 August 2026 (branch main)
