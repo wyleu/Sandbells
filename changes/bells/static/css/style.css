@@ -168,6 +168,15 @@ svg {
   text-align: left;
 }
 
+/* Rounds only: first letter green, rest red (override button colour) */
+.changenamebutton .rounds_menu_first {
+  color: green !important;
+}
+
+.changenamebutton .rounds_menu_rest {
+  color: black !important;   /* same as .frontpage_td_select_other_char */
+}
+
 .change_count{
   text-align: middle;
   font-size: large;
