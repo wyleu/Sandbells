@@ -1,10 +1,11 @@
-from django.shortcuts import render
-
 import io
 import datetime
 import socket
 import subprocess
 import json
+import random
+from django.shortcuts import render, redirect
+
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
@@ -96,6 +97,44 @@ def menu(request, number = 8):
     # The following allows content in iframe windows.
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
+
+def random_display(request, number=None):
+    """
+    Redirect to a random from→to display.
+    /random/       — any bell count that has at least 2 enabled patterns
+    /random/8/     — only patterns with number=8 (etc.)
+    """
+    base = Pattern.objects.filter(enable=True)
+
+    if number is not None:
+        patterns = list(base.filter(number=number))
+        if len(patterns) < 2:
+            raise Http404(
+                f"Need at least 2 enabled patterns on {number} bells for random display"
+            )
+    else:
+        # Prefer a number that has ≥2 patterns
+        from django.db.models import Count
+        candidates = (
+            base.values("number")
+            .annotate(n=Count("id"))
+            .filter(n__gte=2)
+            .values_list("number", flat=True)
+        )
+        candidates = list(candidates)
+        if not candidates:
+            raise Http404("Need at least 2 enabled patterns for random display")
+        number = random.choice(candidates)
+        patterns = list(base.filter(number=number))
+
+    from_pat, to_pat = random.sample(patterns, 2)
+
+    return redirect(
+        "display_tofrom_index_view",
+        number=number,
+        to_name=to_pat.name,
+        from_name=from_pat.name,
+    )
 
 
 def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe contents
