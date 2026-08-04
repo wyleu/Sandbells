@@ -131,31 +131,28 @@ echo "Blanking disable measures installed."
 pause
 
 # ------------------------------------------------------------------
-# 4. Install the systemd kiosk service
+# 4. Install the systemd kiosk service (source of truth: repo systemd/)
 # ------------------------------------------------------------------
 echo "[4/8] Installing sandbells-kiosk.service..."
-sudo cp "${SYSTEMD_DIR}/sandbells-kiosk.service" /etc/systemd/system/
+sudo install -m 644 "${SYSTEMD_DIR}/sandbells-kiosk.service" \
+    /etc/systemd/system/sandbells-kiosk.service
 sudo systemctl daemon-reload
+sudo systemctl enable sandbells-kiosk.service
+echo "  installed and enabled sandbells-kiosk.service"
 
 pause
 
 # ------------------------------------------------------------------
-# 5. Enable the service (do NOT start yet – wait for reboot test)
+# 5. Boot target + remove competing kiosk units
 # ------------------------------------------------------------------
-echo "[5/8] Enabling sandbells-kiosk.service to start on boot..."
-sudo systemctl enable sandbells-kiosk.service
-
-# Make sure old competing services are disabled
+echo "[5/8] Graphical boot target and cleanup..."
 sudo systemctl disable luakit-fullscreen.service 2>/dev/null || true
 sudo systemctl disable midori-fullscreen.service 2>/dev/null || true
 sudo systemctl disable sandbells.service 2>/dev/null || true
-# ------------------------------------------------------------------
-# Ensure we boot into the graphical target (not multi-user/text)
-# ------------------------------------------------------------------
+
 echo "Setting default boot target to graphical.target..."
 sudo systemctl set-default graphical.target
 sudo systemctl enable lightdm.service
-
 
 pause
 
