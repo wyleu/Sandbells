@@ -4,6 +4,8 @@
     { "ssid": "sandbells", "psk": "CHANGE_ME" }
   ],
   "time_hosts": [
+    "10.42.0.1",
+    "sandmon.local", 
     "sandgps.local",
     "sandgps1.local",
     "sandgps2.local",
