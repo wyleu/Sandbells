@@ -1,9 +1,11 @@
 from django.test import TestCase
 from django.test import Client
 from django.test.utils import setup_test_environment
+from django.urls import reverse
+
+from unittest.mock import patch
 
 from .models import Pattern
-
 
 from .functions import (
     correct,
@@ -369,5 +371,42 @@ class TestProcess(TestCase):
                     f"Failed on {name}\nGot: {result[0]}\nExpected: {expected_rows}"
                 )
 
+class TestRandomDisplay(TestCase):
+    """
+    Spec for kiosk random startup:
+      /random/8/rounds/ → left seed→A, right A→B (when fully implemented).
+    Until then, assert URL + response shape without rewriting display().
+    """
 
+    def setUp(self):
+        self.client = Client()
+        Pattern.objects.create(name="Rounds", pattern="12345678", order=0, enable=True)
+        Pattern.objects.create(name="Jokers", pattern="17654328", order=10, enable=True)
+        Pattern.objects.create(name="Queens", pattern="13572468", order=20, enable=True)
+        Pattern.objects.create(name="Kings", pattern="75312468", order=30, enable=True)
+        Pattern.objects.create(name="Rounds", pattern="123456", order=0, enable=True)  # 6-bell noise
+
+    def test_random_seed_url_reverse(self):
+        url = reverse(
+            "random_display_seed",
+            kwargs={"number": 8, "seed_name": "rounds"},
+        )
+        self.assertEqual(url, "/random/8/rounds/")
+
+    def test_random_8_rounds_responds(self):
+        r = self.client.get("/random/8/rounds/")
+        # Current impl may 302 to /display/.../; two-leg may be 200
+        self.assertIn(r.status_code, (200, 302), r.content[:200] if r.content else "")
+
+    def test_display_rounds_to_jokers_still_ok(self):
+        """Characterisation: existing display path must not break."""
+        r = self.client.get("/display/8/jokers/rounds/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["from_pattern"].name, "Rounds")
+        self.assertEqual(r.context["to_pattern"].name, "Jokers")
+
+    def test_need_two_patterns_on_number(self):
+        Pattern.objects.filter(number=8).exclude(name="Rounds").delete()
+        r = self.client.get("/random/8/rounds/")
+        self.assertEqual(r.status_code, 404)
 

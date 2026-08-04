@@ -98,7 +98,7 @@ def menu(request, number = 8):
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
-def random_display(request, number=None):
+def random_display(request, number=None, seed_name="Rounds"):
     """
     Redirect to a random from→to display.
     /random/       — any bell count that has at least 2 enabled patterns

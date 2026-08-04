@@ -50,6 +50,7 @@ urlpatterns = [
     path('pattern/<int:number>/', views.pattern_list, name = 'patterns_list'),
     path('random/', views.random_display, name='random_display'),
     path('random/<int:number>/', views.random_display, name='random_display_number'),
+    path('random/<int:number>/<str:seed_name>/',views.random_display,name='random_display_seed',),
     path('<int:tower_id>/d3/',views.some_d3_base ,name= 'tower_D3'),
     path('<int:tower_id>/json/',views.tower_detail_json ,name= 'tower_json'),
     path('<int:tower_id>/pdf/', views.some_pdf_view, name='tower_pdf'),
