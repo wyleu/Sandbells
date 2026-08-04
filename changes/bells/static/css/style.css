@@ -93,6 +93,15 @@ svg {
   margin-left: 10px;    /* nudge menu right */
 }
 
+/* Rounds in the method menu: first letter green, rest red */
+.rounds_menu_first {
+  color: green;
+}
+.rounds_menu_rest {
+  color: red;
+}
+
+
 .frontpage_td_select_first_char{
   /* align-items: left; */
   margin-right: 4px;

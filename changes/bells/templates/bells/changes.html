@@ -38,14 +38,18 @@
                 number ="{{ item.number }}"
                 {% if item.number != num %} hidden {% endif %}>
                 <td class="change_td_displayed"> 
-                  <button 
-                    id="/display/{{item.number}}/{{item.name}}/"
-                    number="{{item.number}}"
-                    numbers="{{numbers}}"
-                    class="changenamebutton"
-                    >
-                    <span class="frontpage_td_select_first_char shadow">{{item.name|slice:":1"}}</span><span class="frontpage_td_select_other_char shadow">{{item.name|slice:"1:"}}</span>
-                    
+
+                  <button
+                     id="/display/{{item.number}}/{{item.name}}/"
+                     number="{{item.number}}"
+                     numbers="{{numbers}}"
+                     class="changenamebutton"
+                     >
+                     {% if item.name|lower == "rounds" %}
+                         <span class="frontpage_td_select_first_char rounds_menu_first shadow">{{ item.name|slice:":1" }}</span><span class="frontpage_td_select_other_char rounds_menu_rest shadow">{{ item.name|slice:"1:" }}</span>
+                     {% else %}
+                         <span class="frontpage_td_select_first_char shadow">{{ item.name|slice:":1" }}</span><span class="frontpage_td_select_other_char shadow">{{ item.name|slice:"1:" }}</span>
+                     {% endif %}
                   </button>
                 </td>
                 <td>
