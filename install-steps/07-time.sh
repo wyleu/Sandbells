@@ -1,10 +1,8 @@
+cat > ~/Code/Sandbells/install-steps/07-time.sh << 'EOF'
 #!/bin/bash
 # 07-time.sh
-# Sandbells Chrony Time Configuration Step
-# - Read time_hosts from settings.json (sandmon, sandgps*, 10.42.0.1, …)
-# - Ensure chrony 4 confdir/sourcedir layout
-# - Install sandbells-time-select ensure helper + systemd unit
-# - Run one reconcile now
+# Install time-select ensure helper + systemd unit, run one reconcile
+# Chrony sources come from settings.json time_hosts via sandbells-time-select.sh
 #
 # Args: $1 = QUICK_MODE (true/false)  $2 = DEBUG_MODE (true/false)
 
@@ -22,7 +20,7 @@ SELECT_DST="/usr/local/sbin/sandbells-time-select.sh"
 UNIT_DST="/etc/systemd/system/sandbells-time-select.service"
 
 echo "=================================================="
-echo "Time Configuration (Chrony)"
+echo "Time Configuration (Chrony ensure)"
 echo "=================================================="
 
 if [ "$DEBUG_MODE" = true ]; then
@@ -43,13 +41,11 @@ for f in "$SELECT_SRC" "$UNIT_SRC"; do
     fi
 done
 
-# Install ensure helper + unit first so we can run the same path as boot
 sudo install -m 755 "$SELECT_SRC" "$SELECT_DST"
 echo "  installed $SELECT_DST"
 sudo install -m 644 "$UNIT_SRC" "$UNIT_DST"
 echo "  installed $UNIT_DST"
 
-# Mild unit description refresh (optional local edit if still sandgps-only text)
 sudo systemctl daemon-reload
 sudo systemctl enable sandbells-time-select.service
 
@@ -72,3 +68,5 @@ systemctl is-active sandbells-time-select.service || true
 echo ""
 echo "Time configuration step completed"
 pause
+EOF
+chmod +x ~/Code/Sandbells/install-steps/07-time.sh
