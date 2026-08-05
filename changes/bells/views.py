@@ -20,7 +20,6 @@ from django.http import FileResponse
 from django.shortcuts import render
 from django.template import loader
 
-
 from bells.models import Bell, Tower, Pattern
 from bells.functions import (
     db_process,
@@ -137,100 +136,78 @@ def random_display(request, number=None, seed_name="Rounds"):
     )
 
 
-def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe contents
-
-    lines_per_page = 20
+def display(request, number=8, to_name="", from_name="Rounds"):
+    # iframe contents — composer: directed legs only (reverse = second build_leg)
 
     from_patterns = Pattern.objects.filter(
         number=number,
-        enable = True
-    ).order_by('order')  
+        enable=True,
+    ).order_by("order")
     to_patterns = Pattern.objects.filter(
         number=number,
-        enable=True
-    ).order_by('order','name') 
+        enable=True,
+    ).order_by("order", "name")
 
-    numbers = set(Pattern.objects.filter(enable=True).order_by('number').values_list('number', flat=True))
+    numbers = set(
+        Pattern.objects.filter(enable=True)
+        .order_by("number")
+        .values_list("number", flat=True)
+    )
 
     try:
         from_pattern = Pattern.objects.get(
-            name__iexact = from_name,
-            number = number,
-            enable=True
+            name__iexact=from_name,
+            number=number,
+            enable=True,
         )
-    except  Pattern.DoesNotExist:
+    except Pattern.DoesNotExist:
         raise NotFound("No From Pattern Found")
-    
+
     try:
         to_pattern = Pattern.objects.get(
-            name__iexact = to_name,
-            number = number,
-            enable=True
-
+            name__iexact=to_name,
+            number=number,
+            enable=True,
         )
-    except  Pattern.DoesNotExist:
+    except Pattern.DoesNotExist:
         context = {
-               'from_patterns':from_patterns,
-               'to_patterns':to_patterns,
-               'from_pattern':from_pattern,
-               'number': int(number),
-               'numbers': sorted(numbers)
+            "from_patterns": from_patterns,
+            "to_patterns": to_patterns,
+            "from_pattern": from_pattern,
+            "number": int(number),
+            "numbers": sorted(numbers),
         }
-    
-        response = render(request, 'bells/display.html', context)
-        # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
-        return response
-        
-    code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
-    revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
+        return render(request, "bells/display.html", context)
 
-    to_pattern.populate_count(len(result[0])-1)
+    from bells.legs import build_leg
 
-    result = demuck_result_list(result)
-    revresult = demuck_result_list(revresult) 
-    
+    leg_forward = build_leg(from_pattern, to_pattern)
+    leg_reverse = build_leg(to_pattern, from_pattern)
+    legs = [leg_forward, leg_reverse]
 
-    if len(result) < lines_per_page:
-        forward_and_back = True
-    else:
-        forward_and_back = False
-        lines_per_page = int(1 + len(result) / 2 )
+    if leg_forward.lines:
+        to_pattern.populate_count(max(len(leg_forward.lines) - 1, 0))
 
-    paginator1 = Paginator(result, lines_per_page)
-    page1 = paginator1.get_page(1).object_list
+    rounds = "".join([str(no + 1) for no in range(number)])
 
-    if forward_and_back:
-        # Two Forward & Back
-        paginator2 = Paginator(revresult, lines_per_page)
-        page2 = paginator2.get_page(1).object_list 
-    else:
-        paginator2 = Paginator(result, lines_per_page)
-        page2 = paginator2.get_page(2).object_list
-    
-    forwresult = demuck_result(page1)
-    revresult = demuck_result(page2)
+    context = {
+        "from_patterns": from_patterns,
+        "to_patterns": to_patterns,
+        "from_pattern": from_pattern,
+        "to_pattern": to_pattern,
+        "legs": legs,
+        "result": leg_forward.lines,
+        "revresult": leg_reverse.lines,
+        "result_block": [leg_forward.lines, leg_reverse.lines],
+        "number": int(number),
+        "numbers": sorted(numbers),
+        "count": len(to_patterns),
+        "rounds": rounds,
+        "forward_and_back": True,
+    }
 
-    rounds = ''.join([ str(no+1) for no in range(number)])
+    return render(request, "bells/display.html", context)
 
-    context = {'from_patterns':from_patterns,
-               'to_patterns':to_patterns,
-               'from_pattern':from_pattern,
-               'to_pattern':to_pattern,
-               "result": forwresult,
-               "revresult": revresult,
-               "result_block" : [forwresult, revresult],
-               'number': int(number),
-               'numbers': sorted(numbers),
-               'count': len(to_patterns),
-               'page1': page1,
-               'page2': page2,
-               'rounds': rounds,
-               'forward_and_back': forward_and_back,
-               }
-    
-    response = render(request, 'bells/display.html', context)
-    # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
-    return response
 
 
 def tower_detail_json(request, tower_id=1):
