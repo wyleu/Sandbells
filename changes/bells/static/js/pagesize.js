@@ -10,52 +10,38 @@ function processChangePress(bellstring){
         .attr('src', bellstring);
     };
 
-function processNumberPress(num){
-    //console.log('Number Press', num);
+
+function processNumberPress(num) {
+    num = String(num);
+
+    // Never disable number buttons — they are always resets
+    d3.selectAll(".changenumberbutton")
+        .attr("disabled", null);
+
+    // Show only methods for this bell count
+    d3.selectAll(".change_displayed")
+        .attr("hidden", function () {
+            return String(this.getAttribute("number")) === num ? null : "hidden";
+        });
+
+    // Selected digit red; others black (method names untouched)
+    d3.selectAll(".changenumberbutton span")
+        .attr("class", "frontpage_td_select_other_char shadow");
 
     d3.selectAll(".changenumberbutton")
-    .filter(function(d){
-        //console.log('First Number Filter ',d,this.getAttribute("num"), num);
-        return this.getAttribute("num") == num
-    })
-    .attr('disabled', "disabled");
+        .filter(function () {
+            return String(this.getAttribute("number")) === num;
+        })
+        .select("span")
+        .attr("class", "frontpage_td_select_first_char shadow");
 
-    d3.selectAll(".changenumberbutton")
-    .filter(function(d){
-        //console.log('Second Number Filter ',d,this.getAttribute("num"), num);
-        return this.getAttribute("num") != num
-    })
-    .attr('disabled', null);
-
-    d3.selectAll('.change_displayed')
-    .filter(function(d){
-         //console.log('First Filter ',d,this.getAttribute("number"), num);
-         return this.getAttribute("number") == num
-         }
-        )
-    .attr("hidden",null);
-
-    d3.selectAll('.change_displayed')
-    .filter(function(d){
-         // console.log('Second Filter ',d,this.getAttribute("number"), num);
-         return this.getAttribute("number") != num 
-         }
-        )
-    .attr("hidden", 'hidden');
-
-    d3.selectAll(".frontpage_td_select_first_char")
-    .attr("class", "frontpage_td_select_other_char shadow");
+    // Reset centre: Rounds → random (and second leg when random supports it)
+    processChangePress("/random/" + num + "/rounds/");
+}
 
 
-    d3.selectAll(".frontpage_td_select_other_char")
-    .filter(function(d){
-        // console.log('Light it up Filter ',d,this.getAttribute("number"), num);
-        return this.getAttribute("number") == num 
-        }
-       )
-    .attr("class", "frontpage_td_select_first_char shadow");
 
-};
+
 
 function establishChangePress(){
     console.log('EstablishChangePress');
@@ -63,15 +49,13 @@ function establishChangePress(){
     .on("click", function(d, i ,e){
         //console.log(this.getAttribute('id'), d, i, e);
         processChangePress(this.getAttribute('id'));
-        }
-    );
+        });
     d3.selectAll(".changenumberbutton")
     .on("click", function(d, i, e){
         //console.log('Number Change:-', this.getAttribute('id'), d, i, e);
         processNumberPress(this.getAttribute('number'));
-        }
-    );
-};
+        });
+}
 
 
 

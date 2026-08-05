@@ -397,8 +397,14 @@ class TestRandomDisplay(TestCase):
 
     def test_random_8_rounds_responds(self):
         r = self.client.get("/random/8/rounds/")
-        # Current impl may 302 to /display/.../; two-leg may be 200
-        self.assertIn(r.status_code, (200, 302), r.content[:200] if r.content else "")
+        self.assertEqual(r.status_code, 200)  # no longer 302
+        self.assertEqual(len(r.context["legs"]), 2)
+        self.assertEqual(r.context["legs"][0].from_pattern.name, "Rounds")
+        # A is left.to and right.from
+        self.assertEqual(
+            r.context["legs"][0].to_pattern.pk,
+            r.context["legs"][1].from_pattern.pk,
+        )
 
     def test_display_rounds_to_jokers_still_ok(self):
         """Characterisation: existing display path must not break."""

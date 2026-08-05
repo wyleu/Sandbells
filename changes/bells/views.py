@@ -97,43 +97,91 @@ def menu(request, number = 8):
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
+
 def random_display(request, number=None, seed_name="Rounds"):
     """
-    Redirect to a random from→to display.
-    /random/       — any bell count that has at least 2 enabled patterns
-    /random/8/     — only patterns with number=8 (etc.)
+    /random/  /random/<n>/  /random/<n>/<seed>/
+    Left:  seed → A
+    Right: A → B
+    (two directed legs; no redirect)
     """
+    from django.db.models import Count
+    from bells.legs import build_leg
+
     base = Pattern.objects.filter(enable=True)
 
-    if number is not None:
-        patterns = list(base.filter(number=number))
-        if len(patterns) < 2:
-            raise Http404(
-                f"Need at least 2 enabled patterns on {number} bells for random display"
-            )
-    else:
-        # Prefer a number that has ≥2 patterns
-        from django.db.models import Count
-        candidates = (
+    if number is None:
+        candidates = list(
             base.values("number")
             .annotate(n=Count("id"))
             .filter(n__gte=2)
             .values_list("number", flat=True)
         )
-        candidates = list(candidates)
         if not candidates:
             raise Http404("Need at least 2 enabled patterns for random display")
         number = random.choice(candidates)
-        patterns = list(base.filter(number=number))
 
-    from_pat, to_pat = random.sample(patterns, 2)
+    patterns = list(base.filter(number=number))
+    if len(patterns) < 2:
+        raise Http404(
+            f"Need at least 2 enabled patterns on {number} bells for random display"
+        )
 
-    return redirect(
-        "display_tofrom_index_view",
-        number=number,
-        to_name=to_pat.name,
-        from_name=from_pat.name,
+    try:
+        seed = Pattern.objects.get(
+            name__iexact=seed_name, number=number, enable=True
+        )
+    except Pattern.DoesNotExist:
+        try:
+            seed = Pattern.objects.get(
+                name__iexact="Rounds", number=number, enable=True
+            )
+        except Pattern.DoesNotExist:
+            seed = patterns[0]
+
+    others_a = [p for p in patterns if p.pk != seed.pk]
+    random_a = random.choice(others_a)
+
+    others_b = [p for p in patterns if p.pk not in (seed.pk, random_a.pk)]
+    if not others_b:
+        others_b = [seed]  # only two patterns total
+    random_b = random.choice(others_b)
+
+    legs = [
+        build_leg(seed, random_a),      # left:  Rounds → A
+        build_leg(random_a, random_b),  # right: A → B
+    ]
+
+    from_patterns = Pattern.objects.filter(number=number, enable=True).order_by("order")
+    to_patterns = Pattern.objects.filter(number=number, enable=True).order_by(
+        "order", "name"
     )
+    numbers = set(
+        Pattern.objects.filter(enable=True)
+        .order_by("number")
+        .values_list("number", flat=True)
+    )
+    rounds = "".join(str(no + 1) for no in range(number))
+
+    context = {
+        "from_patterns": from_patterns,
+        "to_patterns": to_patterns,
+        "from_pattern": seed,
+        "to_pattern": random_a,
+        "legs": legs,
+        "result": legs[0].lines,
+        "revresult": legs[1].lines,
+        "result_block": [legs[0].lines, legs[1].lines],
+        "number": int(number),
+        "numbers": sorted(numbers),
+        "count": len(to_patterns),
+        "rounds": rounds,
+        "forward_and_back": True,
+    }
+    return render(request, "bells/display.html", context)
+
+
+
 
 
 def display(request, number=8, to_name="", from_name="Rounds"):
