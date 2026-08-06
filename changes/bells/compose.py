@@ -1,5 +1,6 @@
 """Shared payload for display / random_display pattern windows."""
 from __future__ import annotations
+
 import random
 
 from django.http import Http404
