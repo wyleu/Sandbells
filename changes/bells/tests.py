@@ -587,3 +587,58 @@ class TestChimeRoundsLeg(TestCase):
         self.assertEqual(r.context["to_pattern"].pattern, "2347")
         # template should treat to_pattern.pattern == rounds as rounds styling
         self.assertEqual(r.context["to_pattern"].pattern, r.context["rounds"])
+
+
+    def test_known_patterns_in_context_for_path_colour(self):
+        Pattern.objects.all().delete()
+        Pattern.objects.create(name="Rounds", pattern="1234", order=0, enable=True)
+        Pattern.objects.create(name="Chime4", pattern="2437", order=10, enable=True)
+
+        r = self.client.get("/display/4/chime4/rounds/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIsNotNone(r.context.get("known_patterns"))
+        self.assertIn("2437", r.context["known_patterns"])
+        self.assertEqual(r.context["rounds"], "2347")
+        # Chime4 end is known and not prescribed rounds → red path in template
+        self.assertIn(r.context["to_pattern"].pattern, r.context["known_patterns"])
+        self.assertNotEqual(r.context["to_pattern"].pattern, r.context["rounds"])
+
+
+    def test_princesses_mid_path_uses_pattern_hit_not_large_red(self):
+        """
+        Rounds → Queens on 8 passes through Princesses (13527468).
+        That mid hit must be plain+pattern-hit (dark red), not largecharfrom.
+        Ends: Rounds green, Queens large red.
+        """
+        Pattern.objects.all().delete()
+        Pattern.objects.create(name="Rounds", pattern="12345678", order=0, enable=True)
+        Pattern.objects.create(name="Princesses", pattern="13527468", order=15, enable=True)
+        Pattern.objects.create(name="Queens", pattern="13572468", order=20, enable=True)
+
+        r = self.client.get("/display/8/queens/rounds/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["rounds"], "12345678")
+        self.assertIn("13527468", r.context["known_patterns"])
+        self.assertEqual(r.context["to_pattern"].pattern, "13572468")
+
+        html = r.content.decode("utf-8")
+
+        # Mid known pattern: dark-red path style
+        self.assertIn("pattern-hit", html)
+        # Rough: near Princesses dataring we should not only see largecharfrom
+        idx = html.find('dataring="13527468"')
+        self.assertGreater(idx, -1)
+        snippet = html[idx : idx + 800]
+        self.assertIn("pattern-hit", snippet)
+        self.assertNotIn("largecharfrom", snippet)
+
+        # Queens end still large red
+        idx_q = html.find('dataring="13572468"')
+        self.assertGreater(idx_q, -1)
+        snippet_q = html[idx_q : idx_q + 800]
+        self.assertIn("largecharfrom", snippet_q)
+
+        # Rounds opening green
+        idx_r = html.find('dataring="12345678"')
+        snippet_r = html[idx_r : idx_r + 800]
+        self.assertIn("largecharround", snippet_r)

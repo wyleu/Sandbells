@@ -28,27 +28,33 @@
                         class="ring_button"
                         dataring="{{ line.pattern }}"
                         alt="Bell_{{ line.index }}">
-                        {% for char in line.pattern %}
-                            <span class="
-                                {% if line.pattern == rounds %}
-                                    {% if char == line.swappair.0 or char == line.swappair.1 %} largechar largecharround
-                                    {% else %} largechar largecharround shadow
-                                    {% endif %}
-                                {% elif line.pattern in from_pattern.pattern %}
-                                    {% if char == line.swappair.0 or char == line.swappair.1 %} largechar largecharfrom
-                                    {% else %} largechar largecharfrom shadow
-                                    {% endif %}
-                                {% elif line.pattern in to_pattern.pattern %}
-                                    {% if char == line.swappair.0 or char == line.swappair.1 %} largechar largecharto
-                                    {% else %} largechar largecharto shadow
-                                    {% endif %}
-                                {% else %}
-                                    {% if char == line.swappair.0 or char == line.swappair.1 %} plainchar swapchar shadow
-                                    {% else %} plainchar
-                                    {% endif %}
-                                {% endif %}
-                            ">{{ char }}</span>
-                        {% endfor %}
+
+
+
+{% for char in line.pattern %}
+    <span class="
+        {% if line.pattern == rounds %}
+            {% if char == line.swappair.0 or char == line.swappair.1 %} largechar largecharround
+            {% else %} largechar largecharround shadow
+            {% endif %}
+        {% elif line.pattern == from_pattern.pattern or line.pattern == to_pattern.pattern %}
+            {% if char == line.swappair.0 or char == line.swappair.1 %} largechar largecharfrom
+            {% else %} largechar largecharfrom shadow
+            {% endif %}
+        {% elif line.pattern in known_patterns %}
+            {% if char == line.swappair.0 or char == line.swappair.1 %} plainchar pattern-hit swapchar shadow
+            {% else %} plainchar pattern-hit
+            {% endif %}
+        {% else %}
+            {% if char == line.swappair.0 or char == line.swappair.1 %} plainchar swapchar shadow
+            {% else %} plainchar
+            {% endif %}
+        {% endif %}
+    ">{{ char }}</span>
+{% endfor %}
+
+
+
                     </button>
                 </td>
                 {% if "Lead" in line.first %}

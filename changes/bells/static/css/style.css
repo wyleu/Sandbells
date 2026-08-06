@@ -402,6 +402,11 @@ text {
   color: rgb(85, 78, 85);
 }
 
+.plainchar.pattern-hit {
+  color: #8b0000; /* dark red */
+}
+
+
 .swapchar {
   font-weight: bold;
 }

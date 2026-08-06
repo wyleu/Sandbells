@@ -168,6 +168,13 @@ def random_display(request, number=None, seed_name="Rounds"):
        random_b.pattern,
     )
 
+    # after rounds = rounds_from_patterns(...)
+    known_patterns = set(
+        Pattern.objects.filter(number=number, enable=True)
+        .values_list("pattern", flat=True)
+    )
+    # optional: only same digit-set as this leg
+    # known_patterns = {p for p in known_patterns if rounds_from_patterns(p) == rounds}
 
     context = {
         "from_patterns": from_patterns,
@@ -182,6 +189,7 @@ def random_display(request, number=None, seed_name="Rounds"):
         "numbers": sorted(numbers),
         "count": len(to_patterns),
         "rounds": rounds,
+        "known_patterns": known_patterns,
         "forward_and_back": True,
     }
     return render(request, "bells/display.html", context)
@@ -281,11 +289,14 @@ def display(request, number=8, to_name="", from_name="Rounds"):
     if leg_forward.lines:
         to_pattern.populate_count(max(len(leg_forward.lines) - 1, 0))
 
-    # rounds = from_row
-    # NOT: rounds = "".join(str(n+1) for n in range(number))
-    # NOT only when name is Rounds
     rounds = rounds_from_patterns(from_row, to_row)
 
+    known_patterns = set(
+        Pattern.objects.filter(number=number, enable=True)
+        .values_list("pattern", flat=True)
+    )
+    # optional: only same digit-set as this leg
+    # known_patterns = {p for p in known_patterns if rounds_from_patterns(p) == rounds}
 
     context = {
         "from_patterns": from_patterns,
@@ -300,6 +311,7 @@ def display(request, number=8, to_name="", from_name="Rounds"):
         "numbers": sorted(numbers),
         "count": len(to_patterns),
         "rounds": rounds,
+        "known_patterns": known_patterns,
         "forward_and_back": True,
     }
     return render(request, "bells/display.html", context)
