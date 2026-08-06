@@ -210,6 +210,47 @@ def clock(request):
     context = {}
     return render(request, 'bells/clock.html', context)
 
+
+def portrait_view(request, number, to_name, from_name="Rounds"):
+
+    # A printable list of a change
+    #TODO make the implicit "Rounds" explicit 
+    # to_pattern = Pattern.objects.get(order=0) Perhaps? 
+
+
+    try:
+        number = int(number)
+    except ValueError:
+        raise NonIntegerBellCount("Bells number not an Integer")
+
+    try:
+        from_pat = Pattern.objects.get(
+            name__iexact=from_name, number=number, enable=True
+        )
+    except Pattern.DoesNotExist:
+        raise NotFound("No From Pattern Found")
+
+    try:
+        to_pat = Pattern.objects.get(
+            name__iexact=to_name, number=number, enable=True
+        )
+    except Pattern.DoesNotExist:
+        raise NotFound("No To Pattern Found")
+
+    ctx = compose_directed_legs(
+        [(from_pat, to_pat), (to_pat, from_pat)],
+        number,
+        from_pattern=from_pat,
+        to_pattern=to_pat,
+    )
+    return render(request, "bells/portrait.html", ctx)
+
+
+
+
+
+
+
 def portrait_view(request, number, to_name, from_name="Rounds"):
     # A printable list of a change
     #TODO make the implicit "Rounds" explicit 
@@ -341,42 +382,6 @@ def some_draw(request, bells=8):
     return FileResponse(buffer, as_attachment=True, filename='draw.pdf')
 
 # General functions
-
-def demuck_result(result):
-    res_string = []
-    for index, pair in enumerate(result):
-        if result[index][1]:
-            swaptwopair = '%s%s' % (result[index][0],result[index][1][5])
-        else:
-            swaptwopair = "££"
-        res_dict = {'pattern':pair[0],
-                    'first': pair[1],
-                    'second':pair[2],
-                    'third': pair[3],
-                    'swappair': pair[4],
-                    'index': pair[5]
-                    }
-        res_string.append(res_dict)
-    return res_string
-
-def demuck_result_list(result):
-    res_string = []
-    for index, pair in enumerate(result[0]):
-        if result[1][index][1]:
-            swaptwopair = '%s%s' % (result[1][index][1][0],result[1][index][1][5])
-            index_count = result[1][index][4]
-        else:
-            swaptwopair = "££"
-            index_count =  ''
-        res_list = [pair,
-                    result[1][index][0],
-                    result[1][index][1],
-                    result[1][index][2],
-                    swaptwopair,
-                    index_count,
-                    ]
-        res_string.append(res_list)
-    return res_string
 
 def timedatestatus(request):
 

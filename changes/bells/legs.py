@@ -7,7 +7,7 @@ from django.core.paginator import Paginator
 
 from bells.functions import db_process, rounds_from_patterns
 from bells.models import Pattern
-
+from bells.demuck import demuck_result, demuck_result_list
 
 @dataclass
 class Leg:
@@ -23,8 +23,6 @@ def build_leg(from_pat: Pattern, to_pat: Pattern, max_lines: int = 20) -> Leg:
     digit set (e.g. Westminster chimes → 2347, not DB 1234).
 
     """
-    # Lazy import avoids circular import with views during refactor
-    from bells.views import demuck_result, demuck_result_list
 
     from_row: str = from_pat.pattern
     to_row: str = to_pat.pattern
