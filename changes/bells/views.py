@@ -25,7 +25,9 @@ from bells.functions import (
     db_process,
     ZeroLengthChange, 
     NonIntegerBellCount,
-    NotFound)
+    NotFound,
+    rounds_from_patterns,
+)
 
 def home(request, number = 8 ):
     # Render the iframe container
@@ -44,7 +46,7 @@ def home(request, number = 8 ):
     to_patterns = Pattern.objects.filter(
         enable=True
         ).order_by('number', 'order','name') 
-    
+
     hostname = socket.gethostname().replace('"','')
     # hostname -I  for ip address
 ##
@@ -68,7 +70,7 @@ def home(request, number = 8 ):
         'to_patterns': to_patterns,
         'count': len(to_patterns),
         }
-    
+
     return render(request, 'bells/home.html', context)
 
 def menu(request, number = 8):
@@ -81,9 +83,7 @@ def menu(request, number = 8):
 
     to_patterns = Pattern.objects.filter(
         enable=True
-        ).order_by('number','order','name') 
-    
-                   
+        ).order_by('number','order','name')
 
     context = {
         'number' : number,
@@ -91,7 +91,7 @@ def menu(request, number = 8):
         'count': len(to_patterns),
         'to_patterns': to_patterns
         }
-    
+
     response=  render(request, 'bells/menu.html', context)
     # The following allows content in iframe windows.
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
@@ -207,7 +207,7 @@ def bell_band(request, number=8):
 
 
 def display(request, number=8, to_name="", from_name="Rounds"):
-    # iframe contents — composer: directed legs only (reverse = second build_leg)
+    # iframe contents — directed legs; Rounds uses rounds_from_patterns(target)
 
     from_patterns = Pattern.objects.filter(
         number=number,
@@ -217,7 +217,6 @@ def display(request, number=8, to_name="", from_name="Rounds"):
         number=number,
         enable=True,
     ).order_by("order", "name")
-
     numbers = set(
         Pattern.objects.filter(enable=True)
         .order_by("number")
@@ -249,16 +248,34 @@ def display(request, number=8, to_name="", from_name="Rounds"):
         }
         return render(request, "bells/display.html", context)
 
+    from_row = from_pattern.pattern
+    to_row = to_pattern.pattern
+    if not from_name or from_pattern.name.lower() == "rounds":
+        from_row = rounds_from_patterns(to_row)
+    if sorted(set(from_row)) != sorted(set(ch for ch in to_row if ch.isdigit())):
+        from_row = rounds_from_patterns(to_row)
+
+    class _Pat:
+        def __init__(self, name, pattern):
+            self.name = name
+            self.pattern = pattern
+
+    from_for_leg = (
+        from_pattern
+        if from_row == from_pattern.pattern
+        else _Pat(from_pattern.name, from_row)
+    )
+
     from bells.legs import build_leg
 
-    leg_forward = build_leg(from_pattern, to_pattern)
-    leg_reverse = build_leg(to_pattern, from_pattern)
+    leg_forward = build_leg(from_for_leg, to_pattern)
+    leg_reverse = build_leg(to_pattern, from_for_leg)
     legs = [leg_forward, leg_reverse]
 
     if leg_forward.lines:
         to_pattern.populate_count(max(len(leg_forward.lines) - 1, 0))
 
-    rounds = "".join([str(no + 1) for no in range(number)])
+    rounds = from_row
 
     context = {
         "from_patterns": from_patterns,
@@ -275,7 +292,6 @@ def display(request, number=8, to_name="", from_name="Rounds"):
         "rounds": rounds,
         "forward_and_back": True,
     }
-
     return render(request, "bells/display.html", context)
 
 

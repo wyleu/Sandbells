@@ -220,3 +220,19 @@ def midi_file(current: str, required: str = None):
         # write it to disk
         with open("%s.mid" % (track_name,), 'wb') as outf:
             mf.writeFile(outf)
+
+
+def bells_in_pattern(pattern: str) -> list:
+    seen = []
+    for ch in pattern or "":
+        if ch.isdigit() and ch not in seen:
+            seen.append(ch)
+    return seen
+
+def rounds_from_patterns(*patterns) -> str:
+    bells = set()
+    for p in patterns:
+        for ch in (p or ""):
+            if ch.isdigit():
+                bells.add(ch)
+    return "".join(sorted(bells))

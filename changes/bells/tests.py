@@ -1,10 +1,9 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.test import Client
 from django.test.utils import setup_test_environment
 from django.urls import reverse
-
-from unittest.mock import patch
-
 
 from bells.legs import Leg, build_leg
 from .models import Pattern
@@ -18,8 +17,11 @@ from .functions import (
     same,
     swap,
     compare,
-    db_process
+    db_process,
+    rounds_from_patterns,
+    bells_in_pattern,
     )
+    # or from bells.legs import ... once you place the helpers
 
 from .functions import (
     RepeatInCurrent,
@@ -418,9 +420,9 @@ class TestRandomDisplay(TestCase):
         r = self.client.get("/random/8/rounds/")
         self.assertEqual(r.status_code, 404)
 
+
 class TestBuildLeg(TestCase):
     """Unit tests for directed legs — no auto-reverse."""
-
     def setUp(self):
         self.rounds = Pattern.objects.create(
             name="Rounds", pattern="12345678", order=0, enable=True
@@ -431,22 +433,18 @@ class TestBuildLeg(TestCase):
         self.queens = Pattern.objects.create(
             name="Queens", pattern="13572468", order=20, enable=True
         )
-
     def test_build_leg_returns_leg_instance(self):
         leg = build_leg(self.rounds, self.jokers)
         self.assertIsInstance(leg, Leg)
         self.assertEqual(leg.from_pattern.name, "Rounds")
         self.assertEqual(leg.to_pattern.name, "Jokers")
-
     def test_build_leg_lines_start_and_end_patterns(self):
         leg = build_leg(self.rounds, self.jokers)
         self.assertGreaterEqual(len(leg.lines), 1)
         self.assertEqual(leg.lines[0]["pattern"], self.rounds.pattern)
         self.assertEqual(leg.lines[-1]["pattern"], self.jokers.pattern)
-
     @patch("bells.legs.db_process")
     def test_build_leg_calls_db_process_once_directed(self, mock_db):
-        # Minimal fake result shape for demuck_result_list
         mock_db.return_value = (
             [],
             (
@@ -458,15 +456,12 @@ class TestBuildLeg(TestCase):
             ),
             None,
         )
-        # demuck may be picky — if this mock is too thin, drop this test
-        # and keep the integration tests above.
         try:
             build_leg(self.rounds, self.jokers)
         except Exception:
             self.skipTest("mock shape does not satisfy demuck; integration tests suffice")
             return
         mock_db.assert_called_once_with(self.rounds.pattern, self.jokers.pattern)
-
     def test_reverse_is_second_build_leg(self):
         forward = build_leg(self.rounds, self.jokers)
         reverse = build_leg(self.jokers, self.rounds)
@@ -477,7 +472,6 @@ class TestBuildLeg(TestCase):
         self.assertEqual(forward.lines[0]["pattern"], self.rounds.pattern)
         self.assertEqual(reverse.lines[0]["pattern"], self.jokers.pattern)
         self.assertEqual(reverse.lines[-1]["pattern"], self.rounds.pattern)
-
     def test_two_composers_do_not_share_auto_reverse(self):
         """Classic there-and-back is two calls, not one magic pair."""
         legs = [
@@ -488,3 +482,46 @@ class TestBuildLeg(TestCase):
         self.assertEqual(legs[0].to_pattern.name, "Queens")
         self.assertEqual(legs[1].from_pattern.name, "Queens")
         self.assertEqual(legs[1].to_pattern.name, "Rounds")
+
+
+class TestRoundsFromPatterns(TestCase):
+    def test_plain_four_bells(self):
+        self.assertEqual(rounds_from_patterns("1234"), "1234")
+        self.assertEqual(rounds_from_patterns("1234", "2413"), "1234")
+    def test_chime4_style_not_1234(self):
+        self.assertEqual(rounds_from_patterns("2437"), "2347")
+        self.assertEqual(rounds_from_patterns("2437", "2347"), "2347")
+    def test_union_across_leg(self):
+        self.assertEqual(rounds_from_patterns("24", "37"), "2347")
+    def test_eight_bells(self):
+        self.assertEqual(rounds_from_patterns("13572468"), "12345678")
+    def test_order_independent(self):
+        self.assertEqual(
+            rounds_from_patterns("7243", "2347"),
+            rounds_from_patterns("2347", "7243"),
+        )
+    def test_empty(self):
+        self.assertEqual(rounds_from_patterns(""), "")
+        self.assertEqual(rounds_from_patterns(), "")
+    def test_bells_in_pattern_first_seen(self):
+        self.assertEqual(bells_in_pattern("2437"), ["2", "4", "3", "7"])
+        self.assertEqual(bells_in_pattern("1123"), ["1", "2", "3"])
+
+
+class TestChimeRoundsLeg(TestCase):
+    def setUp(self):
+        self.client = Client()
+        Pattern.objects.create(
+            name="Rounds", pattern="1234", order=0, enable=True
+        )
+        Pattern.objects.create(
+            name="Chime4", pattern="2437", order=10, enable=True
+        )
+    def test_rounds_to_chime4_path_starts_at_2347(self):
+        """Westminster set: prescribed rounds are 2347, not 1234."""
+        r = self.client.get("/display/4/chime4/rounds/")
+        self.assertEqual(r.status_code, 200)
+        block = r.context.get("result") or r.context.get("result_block")[0]
+        first = block[0]
+        pattern = first["pattern"] if isinstance(first, dict) else first[0]
+        self.assertEqual(pattern, "2347")
