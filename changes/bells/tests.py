@@ -16,8 +16,11 @@ from .functions import (
     same,
     swap,
     compare,
-    db_process
+    db_process,
+    rounds_from_patterns,
+    bells_in_pattern,
     )
+    # or from bells.legs import ... once you place the helpers
 
 from .functions import (
     RepeatInCurrent,
@@ -410,3 +413,32 @@ class TestRandomDisplay(TestCase):
         r = self.client.get("/random/8/rounds/")
         self.assertEqual(r.status_code, 404)
 
+class TestRoundsFromPatterns(TestCase):
+    def test_plain_four_bells(self):
+        self.assertEqual(rounds_from_patterns("1234"), "1234")
+        self.assertEqual(rounds_from_patterns("1234", "2413"), "1234")
+
+    def test_chime4_style_not_1234(self):
+        # digits 2,4,3,7 → rounds 2347
+        self.assertEqual(rounds_from_patterns("2437"), "2347")
+        self.assertEqual(rounds_from_patterns("2437", "2347"), "2347")
+
+    def test_union_across_leg(self):
+        self.assertEqual(rounds_from_patterns("24", "37"), "2347")
+
+    def test_eight_bells(self):
+        self.assertEqual(rounds_from_patterns("13572468"), "12345678")
+
+    def test_order_independent(self):
+        self.assertEqual(
+            rounds_from_patterns("7243", "2347"),
+            rounds_from_patterns("2347", "7243"),
+        )
+
+    def test_empty(self):
+        self.assertEqual(rounds_from_patterns(""), "")
+        self.assertEqual(rounds_from_patterns(), "")
+
+    def test_bells_in_pattern_first_seen(self):
+        self.assertEqual(bells_in_pattern("2437"), ["2", "4", "3", "7"])
+        self.assertEqual(bells_in_pattern("1123"), ["1", "2", "3"])
