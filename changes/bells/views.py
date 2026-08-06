@@ -222,11 +222,11 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
     else:
         paginator2 = Paginator(result, lines_per_page)
         page2 = paginator2.get_page(2).object_list
-    
+
     forwresult = demuck_result(page1)
     revresult = demuck_result(page2)
 
-    rounds = ''.join([ str(no+1) for no in range(number)])
+    rounds = from_row
 
     context = {'from_patterns':from_patterns,
                'to_patterns':to_patterns,
@@ -243,7 +243,7 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
                'rounds': rounds,
                'forward_and_back': forward_and_back,
                }
-    
+
     response = render(request, 'bells/display.html', context)
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
