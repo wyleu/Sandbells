@@ -548,3 +548,42 @@ class TestChimeRoundsLeg(TestCase):
         # With only Chime4 as alternate, A is Chime4 → 2347
         self.assertEqual(first_line, "2347")
         self.assertNotEqual(first_line, "1234")
+
+
+    def test_context_rounds_is_prescribed_digits_not_stage_1234(self):
+        """
+        Highlighting key: rounds == rounds_from_patterns(patterns on the leg),
+        never the classic 1234… stage string when the set is Westminster.
+        """
+        Pattern.objects.all().delete()
+        Pattern.objects.create(name="Rounds", pattern="1234", order=0, enable=True)
+        Pattern.objects.create(name="Chime4", pattern="2437", order=10, enable=True)
+
+        r = self.client.get("/display/4/chime4/rounds/")
+        self.assertEqual(r.status_code, 200)
+
+        prescribed = rounds_from_patterns("2437")  # "2347"
+        self.assertEqual(r.context["rounds"], prescribed)
+        self.assertNotEqual(r.context["rounds"], "1234")
+
+        block = r.context.get("result") or r.context["result_block"][0]
+        first = block[0]
+        first_pat = first["pattern"] if isinstance(first, dict) else first[0]
+        self.assertEqual(first_pat, prescribed)
+        # structural nicety: opening row is rounds by value
+        self.assertEqual(first_pat, r.context["rounds"])
+
+
+    def test_chime1_pattern_matches_context_rounds(self):
+        """Chime1 is 2347 — same string as prescribed rounds; colour key is value."""
+        Pattern.objects.all().delete()
+        Pattern.objects.create(name="Rounds", pattern="1234", order=0, enable=True)
+        Pattern.objects.create(name="Chime1", pattern="2347", order=1, enable=True)
+        Pattern.objects.create(name="Chime5", pattern="7324", order=5, enable=True)
+
+        r = self.client.get("/display/4/chime1/chime5/")  # or chime5 → chime1 if that URL works
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["rounds"], "2347")
+        self.assertEqual(r.context["to_pattern"].pattern, "2347")
+        # template should treat to_pattern.pattern == rounds as rounds styling
+        self.assertEqual(r.context["to_pattern"].pattern, r.context["rounds"])

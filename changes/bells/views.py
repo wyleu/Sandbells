@@ -161,7 +161,13 @@ def random_display(request, number=None, seed_name="Rounds"):
         .order_by("number")
         .values_list("number", flat=True)
     )
-    rounds = "".join(str(no + 1) for no in range(number))
+
+    rounds = rounds_from_patterns(
+       seed.pattern,
+       random_a.pattern,
+       random_b.pattern,
+    )
+
 
     context = {
         "from_patterns": from_patterns,
@@ -275,7 +281,11 @@ def display(request, number=8, to_name="", from_name="Rounds"):
     if leg_forward.lines:
         to_pattern.populate_count(max(len(leg_forward.lines) - 1, 0))
 
-    rounds = from_row
+    # rounds = from_row
+    # NOT: rounds = "".join(str(n+1) for n in range(number))
+    # NOT only when name is Rounds
+    rounds = rounds_from_patterns(from_row, to_row)
+
 
     context = {
         "from_patterns": from_patterns,
