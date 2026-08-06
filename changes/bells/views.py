@@ -29,6 +29,8 @@ from bells.functions import (
     rounds_from_patterns,
 )
 
+from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
+
 def home(request, number = 8 ):
     # Render the iframe container
     context = {}
@@ -97,102 +99,19 @@ def menu(request, number = 8):
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
     return response
 
-
 def random_display(request, number=None, seed_name="Rounds"):
-    """
-    /random/  /random/<n>/  /random/<n>/<seed>/
-    Left:  seed → A
-    Right: A → B
-    (two directed legs; no redirect)
-    """
-    from django.db.models import Count
-    from bells.legs import build_leg
+    # ... existing pick number / patterns / sample seed, A, B ...
 
-    base = Pattern.objects.filter(enable=True)
-
-    if number is None:
-        candidates = list(
-            base.values("number")
-            .annotate(n=Count("id"))
-            .filter(n__gte=2)
-            .values_list("number", flat=True)
-        )
-        if not candidates:
-            raise Http404("Need at least 2 enabled patterns for random display")
-        number = random.choice(candidates)
-
-    patterns = list(base.filter(number=number))
-    if len(patterns) < 2:
-        raise Http404(
-            f"Need at least 2 enabled patterns on {number} bells for random display"
-        )
-
-    try:
-        seed = Pattern.objects.get(
-            name__iexact=seed_name, number=number, enable=True
-        )
-    except Pattern.DoesNotExist:
-        try:
-            seed = Pattern.objects.get(
-                name__iexact="Rounds", number=number, enable=True
-            )
-        except Pattern.DoesNotExist:
-            seed = patterns[0]
-
-    others_a = [p for p in patterns if p.pk != seed.pk]
-    random_a = random.choice(others_a)
-
-    others_b = [p for p in patterns if p.pk not in (seed.pk, random_a.pk)]
-    if not others_b:
-        others_b = [seed]  # only two patterns total
-    random_b = random.choice(others_b)
-
-    legs = [
-        build_leg(seed, random_a),      # left:  Rounds → A
-        build_leg(random_a, random_b),  # right: A → B
-    ]
-
-    from_patterns = Pattern.objects.filter(number=number, enable=True).order_by("order")
-    to_patterns = Pattern.objects.filter(number=number, enable=True).order_by(
-        "order", "name"
+    number, seed, random_a, random_b = pick_random_leg_patterns(number, seed_name)
+    ctx = compose_directed_legs(
+        [(seed, random_a), (random_a, random_b)],
+        number,
+        from_pattern=seed,
+        to_pattern=random_a,
     )
-    numbers = set(
-        Pattern.objects.filter(enable=True)
-        .order_by("number")
-        .values_list("number", flat=True)
-    )
+    return render(request, "bells/display.html", ctx)
 
-    rounds = rounds_from_patterns(
-       seed.pattern,
-       random_a.pattern,
-       random_b.pattern,
-    )
 
-    # after rounds = rounds_from_patterns(...)
-    known_patterns = set(
-        Pattern.objects.filter(number=number, enable=True)
-        .values_list("pattern", flat=True)
-    )
-    # optional: only same digit-set as this leg
-    # known_patterns = {p for p in known_patterns if rounds_from_patterns(p) == rounds}
-
-    context = {
-        "from_patterns": from_patterns,
-        "to_patterns": to_patterns,
-        "from_pattern": seed,
-        "to_pattern": random_a,
-        "legs": legs,
-        "result": legs[0].lines,
-        "revresult": legs[1].lines,
-        "result_block": [legs[0].lines, legs[1].lines],
-        "number": int(number),
-        "numbers": sorted(numbers),
-        "count": len(to_patterns),
-        "rounds": rounds,
-        "known_patterns": known_patterns,
-        "forward_and_back": True,
-    }
-    return render(request, "bells/display.html", context)
 
 
 def bell_band(request, number=8):
@@ -222,100 +141,27 @@ def bell_band(request, number=8):
 
 def display(request, number=8, to_name="", from_name="Rounds"):
     # iframe contents — directed legs; Rounds uses rounds_from_patterns(target)
-
-    from_patterns = Pattern.objects.filter(
-        number=number,
-        enable=True,
-    ).order_by("order")
-    to_patterns = Pattern.objects.filter(
-        number=number,
-        enable=True,
-    ).order_by("order", "name")
-    numbers = set(
-        Pattern.objects.filter(enable=True)
-        .order_by("number")
-        .values_list("number", flat=True)
-    )
-
     try:
-        from_pattern = Pattern.objects.get(
-            name__iexact=from_name,
-            number=number,
-            enable=True,
-        )
+        from_pat = Pattern.objects.get(name__iexact=from_name, number=number, enable=True)
     except Pattern.DoesNotExist:
         raise NotFound("No From Pattern Found")
-
     try:
-        to_pattern = Pattern.objects.get(
-            name__iexact=to_name,
-            number=number,
-            enable=True,
-        )
+        to_pat = Pattern.objects.get(name__iexact=to_name, number=number, enable=True)
     except Pattern.DoesNotExist:
-        context = {
-            "from_patterns": from_patterns,
-            "to_patterns": to_patterns,
-            "from_pattern": from_pattern,
-            "number": int(number),
-            "numbers": sorted(numbers),
-        }
-        return render(request, "bells/display.html", context)
+        ctx = menu_patterns(number)
+        ctx["from_pattern"] = from_pat
+        return render(request, "bells/display.html", ctx)
 
-    from_row = from_pattern.pattern
-    to_row = to_pattern.pattern
-    if not from_name or from_pattern.name.lower() == "rounds":
-        from_row = rounds_from_patterns(to_row)
-    if sorted(set(from_row)) != sorted(set(ch for ch in to_row if ch.isdigit())):
-        from_row = rounds_from_patterns(to_row)
-
-    class _Pat:
-        def __init__(self, name, pattern):
-            self.name = name
-            self.pattern = pattern
-
-    from_for_leg = (
-        from_pattern
-        if from_row == from_pattern.pattern
-        else _Pat(from_pattern.name, from_row)
+    # resolve from_pat / to_pat by name (or early return menu_patterns)
+    ctx = compose_directed_legs(
+        [(from_pat, to_pat), (to_pat, from_pat)],
+        number,
+        from_pattern=from_pat,
+        to_pattern=to_pat,
     )
-
-    from bells.legs import build_leg
-
-    leg_forward = build_leg(from_for_leg, to_pattern)
-    leg_reverse = build_leg(to_pattern, from_for_leg)
-    legs = [leg_forward, leg_reverse]
-
-    if leg_forward.lines:
-        to_pattern.populate_count(max(len(leg_forward.lines) - 1, 0))
-
-    rounds = rounds_from_patterns(from_row, to_row)
-
-    known_patterns = set(
-        Pattern.objects.filter(number=number, enable=True)
-        .values_list("pattern", flat=True)
-    )
-    # optional: only same digit-set as this leg
-    # known_patterns = {p for p in known_patterns if rounds_from_patterns(p) == rounds}
-
-    context = {
-        "from_patterns": from_patterns,
-        "to_patterns": to_patterns,
-        "from_pattern": from_pattern,
-        "to_pattern": to_pattern,
-        "legs": legs,
-        "result": leg_forward.lines,
-        "revresult": leg_reverse.lines,
-        "result_block": [leg_forward.lines, leg_reverse.lines],
-        "number": int(number),
-        "numbers": sorted(numbers),
-        "count": len(to_patterns),
-        "rounds": rounds,
-        "known_patterns": known_patterns,
-        "forward_and_back": True,
-    }
-    return render(request, "bells/display.html", context)
-
+    if ctx["legs"][0].lines:
+        to_pat.populate_count(max(len(ctx["legs"][0].lines) - 1, 0))
+    return render(request, "bells/display.html", ctx)
 
 
 def tower_detail_json(request, tower_id=1):
