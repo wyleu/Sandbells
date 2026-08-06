@@ -26,7 +26,9 @@ from bells.functions import (
     db_process,
     ZeroLengthChange, 
     NonIntegerBellCount,
-    NotFound)
+    NotFound,
+    rounds_from_patterns,
+)
 
 def home(request, number = 8 ):
     # Render the iframe container
@@ -45,7 +47,7 @@ def home(request, number = 8 ):
     to_patterns = Pattern.objects.filter(
         enable=True
         ).order_by('number', 'order','name') 
-    
+
     hostname = socket.gethostname().replace('"','')
     # hostname -I  for ip address
 ##
@@ -69,7 +71,7 @@ def home(request, number = 8 ):
         'to_patterns': to_patterns,
         'count': len(to_patterns),
         }
-    
+
     return render(request, 'bells/home.html', context)
 
 def menu(request, number = 8):
@@ -82,9 +84,7 @@ def menu(request, number = 8):
 
     to_patterns = Pattern.objects.filter(
         enable=True
-        ).order_by('number','order','name') 
-    
-                   
+        ).order_by('number','order','name')
 
     context = {
         'number' : number,
@@ -92,7 +92,7 @@ def menu(request, number = 8):
         'count': len(to_patterns),
         'to_patterns': to_patterns
         }
-    
+
     response=  render(request, 'bells/menu.html', context)
     # The following allows content in iframe windows.
     # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
@@ -144,11 +144,11 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
     from_patterns = Pattern.objects.filter(
         number=number,
         enable = True
-    ).order_by('order')  
+    ).order_by('order')
     to_patterns = Pattern.objects.filter(
         number=number,
         enable=True
-    ).order_by('order','name') 
+    ).order_by('order','name')
 
     numbers = set(Pattern.objects.filter(enable=True).order_by('number').values_list('number', flat=True))
 
@@ -160,7 +160,7 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
         )
     except  Pattern.DoesNotExist:
         raise NotFound("No From Pattern Found")
-    
+
     try:
         to_pattern = Pattern.objects.get(
             name__iexact = to_name,
@@ -176,19 +176,35 @@ def display(request,  number = 8, to_name='', from_name="Rounds"):    # iframe c
                'number': int(number),
                'numbers': sorted(numbers)
         }
-    
+
         response = render(request, 'bells/display.html', context)
         # response ['Content-Security-Policy'] = "frame-ancestors 'self' http://localhost:8000/"
         return response
-        
-    code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
-    revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
+
+    """
+       Same idea if you later use build_leg: pass the resolved strings or a temporary pattern-like object;
+       the important part is not calling db_process("1234", "2437").
+    """
+
+
+    from_row = from_pattern.pattern
+    to_row = to_pattern.pattern
+
+    # Named Rounds (or empty from) → prescribed rounds from the *target* digit set
+    if not from_name or from_pattern.name.lower() == "rounds":
+        from_row = rounds_from_patterns(to_row)
+
+    # Optional safety: if digit sets still differ, prefer target-derived rounds
+    if sorted(set(from_row)) != sorted(set(ch for ch in to_row if ch.isdigit())):
+        from_row = rounds_from_patterns(to_row)
+
+    code, result, swappair = db_process(from_row, to_row)
+    revcode, revresult, swappair = db_process(to_row, from_row)
 
     to_pattern.populate_count(len(result[0])-1)
 
     result = demuck_result_list(result)
-    revresult = demuck_result_list(revresult) 
-    
+    revresult = demuck_result_list(revresult)
 
     if len(result) < lines_per_page:
         forward_and_back = True

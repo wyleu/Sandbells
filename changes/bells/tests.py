@@ -442,3 +442,23 @@ class TestRoundsFromPatterns(TestCase):
     def test_bells_in_pattern_first_seen(self):
         self.assertEqual(bells_in_pattern("2437"), ["2", "4", "3", "7"])
         self.assertEqual(bells_in_pattern("1123"), ["1", "2", "3"])
+
+class TestChimeRoundsLeg(TestCase):
+    def setUp(self):
+        self.client = Client()
+        Pattern.objects.create(
+            name="Rounds", pattern="1234", order=0, enable=True
+        )
+        Pattern.objects.create(
+            name="Chime4", pattern="2437", order=10, enable=True
+        )
+
+    def test_rounds_to_chime4_path_starts_at_2347(self):
+        """Westminster set: prescribed rounds are 2347, not 1234."""
+        r = self.client.get("/display/4/chime4/rounds/")
+        self.assertEqual(r.status_code, 200)
+        # First column first row dataring / first line pattern
+        block = r.context.get("result") or r.context.get("result_block")[0]
+        first = block[0]
+        pattern = first["pattern"] if isinstance(first, dict) else first[0]
+        self.assertEqual(pattern, "2347")
