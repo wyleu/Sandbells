@@ -1,0 +1,57 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sandbells — Bell band ({{ number }})</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #1a1a1a; color: #eee; font-family: sans-serif; }
+    .wrap { display: flex; flex-direction: column; height: 100%; }
+    header { padding: 0.5rem 1rem; font-size: 0.9rem; opacity: 0.8; }
+    #bell-band-host { flex: 1; min-height: 0; width: 100%; }
+    .hint { padding: 0.5rem 1rem; font-size: 0.8rem; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>Bell band — {{ number }} bells (MIDI F1–F2 major later)</header>
+    <div id="bell-band-host"></div>
+    <p class="hint">Click a bell to strike. Isolated page: /bells/{{ number }}/</p>
+  </div>
+
+  {{ bells_json|json_script:"bells-data" }}
+  <script src="{% static 'js/bell_band.js' %}"></script>
+  <script>
+    (function () {
+      var bells = JSON.parse(document.getElementById("bells-data").textContent);
+      var host = document.getElementById("bell-band-host");
+
+      function size() {
+        return {
+          width: host.clientWidth || 400,
+          height: host.clientHeight || 400
+        };
+      }
+
+      function redraw() {
+        var s = size();
+        BellBand.draw(host, {
+          bells: bells,
+          width: s.width,
+          height: s.height,
+          onPadClick: function (bell) {
+            BellBand.strike(host, bell, { to: "ru", back: "c" });
+          }
+        });
+      }
+
+      redraw();
+      window.addEventListener("resize", function () {
+        clearTimeout(window.__bellBandResize);
+        window.__bellBandResize = setTimeout(redraw, 100);
+      });
+    })();
+  </script>
+</body>
+</html>

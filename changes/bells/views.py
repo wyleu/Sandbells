@@ -181,7 +181,29 @@ def random_display(request, number=None, seed_name="Rounds"):
     return render(request, "bells/display.html", context)
 
 
+def bell_band(request, number=8):
+    """
+    Standalone bell-band page (circle of N bells).
+    /bells/  /bells/8/
+    """
+    try:
+        number = int(number)
+    except (TypeError, ValueError):
+        number = 8
+    if number < 1:
+        number = 1
+    if number > 12:
+        number = 12
 
+    # 1..N for the circle; MIDI/colour live in JS config for now
+    bells = list(range(1, number + 1))
+
+    context = {
+        "number": number,
+        "bells": bells,
+        "bells_json": bells,  # template can json_script this
+    }
+    return render(request, "bells/bell_band.html", context)
 
 
 def display(request, number=8, to_name="", from_name="Rounds"):
