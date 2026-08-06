@@ -525,3 +525,26 @@ class TestChimeRoundsLeg(TestCase):
         first = block[0]
         pattern = first["pattern"] if isinstance(first, dict) else first[0]
         self.assertEqual(pattern, "2347")
+
+    def test_random_4_rounds_seed_uses_prescribed_rounds_for_chime(self):
+        """
+        /random/4/rounds/ must not start at DB Rounds 1234 when the
+        first target is a Westminster chime (digits 2,3,4,7).
+        """
+        Pattern.objects.all().delete()
+        Pattern.objects.create(name="Rounds", pattern="1234", order=0, enable=True)
+        Pattern.objects.create(name="Chime4", pattern="2437", order=10, enable=True)
+
+        r = self.client.get("/random/4/rounds/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.context["legs"]), 2)
+
+        first_line = r.context["legs"][0].lines[0]["pattern"]
+        to_pat = r.context["legs"][0].to_pattern.pattern
+
+        # Prescribed rounds for whatever was chosen as A
+        expected = rounds_from_patterns(to_pat)
+        self.assertEqual(first_line, expected)
+        # With only Chime4 as alternate, A is Chime4 → 2347
+        self.assertEqual(first_line, "2347")
+        self.assertNotEqual(first_line, "1234")
