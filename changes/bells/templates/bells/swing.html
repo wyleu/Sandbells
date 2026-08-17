@@ -72,13 +72,20 @@
         c.style.top = s.top;
       }
 
-      function flashClapper(bellEl) {
-        setClapper(bellEl, STRIKE_DEG);
-        clearTimeout(bellEl._clapTimer);
-        bellEl._clapTimer = setTimeout(function () {
-          setClapper(bellEl, REST_DEG);
-        }, 140);
-      }
+    const POS_A = 45;    // ~4:30
+    const POS_B = 225;   // ~10:30
+
+    function flashClapper(bellEl) {
+      const next = bellEl._clapSide === "B" ? "A" : "B";
+      bellEl._clapSide = next;
+      setClapper(bellEl, next === "A" ? POS_A : POS_B);
+    }
+
+    // init: all at A (or alternate by index if you prefer)
+    bells.forEach(function (el) {
+      el._clapSide = "A";
+      setClapper(el, POS_A);
+    });
 
       function layout() {
         const R = 0.32;
@@ -108,6 +115,53 @@
           flashClapper(el);
         });
       });
+
+      window.Swing = {
+        flash: function (i) {
+          const el = document.getElementById("bell-" + i);
+          if (el) flashClapper(el);
+        },
+        flashAll: function () {
+          bells.forEach(flashClapper);
+        }
+      };
+
+
+    const NOTE_BASE = 60; // must match sandswing midi.note_base
+    const NUM = n;
+
+    function onMidiMessage(event) {
+      const d = event.data;
+      if (!d || d.length < 2) return;
+      const status = d[0] & 0xf0;
+      const note = d[1];
+      // Note On with velocity > 0
+      if (status === 0x90 && d[2] > 0) {
+        const i = note - NOTE_BASE;
+        if (i >= 0 && i < NUM) window.Swing.flash(i);
+      }
+    }
+
+    function bindMidiInputs() {
+      if (!navigator.requestMIDIAccess) {
+        console.warn("Web MIDI not available in this browser");
+        return;
+      }
+      navigator.requestMIDIAccess({ sysex: false }).then(function (access) {
+        function hook() {
+          access.inputs.forEach(function (input) {
+            input.onmidimessage = onMidiMessage;
+            console.log("MIDI in:", input.name);
+          });
+        }
+        hook();
+        access.onstatechange = hook;
+      }).catch(function (err) {
+        console.warn("MIDI access failed", err);
+      });
+    }
+
+    bindMidiInputs();
 
       layout();
       window.addEventListener("resize", layout);
