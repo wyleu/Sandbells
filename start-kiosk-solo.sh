@@ -100,7 +100,25 @@ fi
 # Do NOT pipe to tee under systemd – it breaks process tracking and
 # causes Restart=always to spawn many copies.
 # ------------------------------------------------------------------
+# exec luakit -U -u "$CHOSEN_URL"
+
 echo "Launching Luakit kiosk → $CHOSEN_URL" | tee -a "$LOG_FILE"
 
-exec luakit -U -u "$CHOSEN_URL"
+luakit -U -u "$CHOSEN_URL" &
+LUAKIT_PID=$!
 
+# Wait until the window exists (max ~30s)
+for i in $(seq 1 60); do
+  if DISPLAY=:0 xdotool search --name 'SANDBELLS' >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+
+sleep 1
+DISPLAY=:0 xdotool search --name 'SANDBELLS' windowsize %@ 1920 1080 windowmove %@ 0 0 2>/dev/null || true
+DISPLAY=:0 xdotool search --name 'SANDBELLS' windowactivate %@ 2>/dev/null || true
+DISPLAY=:0 xdotool search --name 'SANDBELLS' key F11 2>/dev/null || true
+
+echo "Luakit geometry forced 1920x1080 / F11" | tee -a "$LOG_FILE"
+wait "$LUAKIT_PID"

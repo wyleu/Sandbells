@@ -1,4 +1,3 @@
-cat > ~/Code/Sandbells/install-steps/07-time.sh << 'EOF'
 #!/bin/bash
 # 07-time.sh
 # Install time-select ensure helper + systemd unit, run one reconcile
@@ -68,5 +67,3 @@ systemctl is-active sandbells-time-select.service || true
 echo ""
 echo "Time configuration step completed"
 pause
-EOF
-chmod +x ~/Code/Sandbells/install-steps/07-time.sh
