@@ -40,6 +40,7 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('draw/', views.some_draw, name='draw'),
     path('menu/', views.menu, name ='menu'),
+    path("swing/<int:n>/", views.swing_display, name="swing_display"),
     path('clock/analogue/', views.clock_analogue, name = 'analogue_clock'),
     path('clock/', views.clock, name = 'clock'),
     path('timedatestatus/', views.timedatestatus, name = 'timedatestatus'),

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Swing {{ n }}</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; }
+    #stage-wrap {
+      height: 100%; width: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #stage {
+      position: relative;
+      width: min(100vw, 100vh);
+      height: min(100vw, 100vh);
+      max-width: 100%; max-height: 100%;
+    }
+    .bell {
+      position: absolute;
+      border-radius: 50%;
+      box-sizing: border-box;
+      border: 3px solid rgba(255,255,255,0.85);
+    }
+    .clapper {
+      position: absolute;
+      width: 22%;
+      height: 22%;
+      border-radius: 50%;
+      background: #111;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: left 0.12s ease-out, top 0.12s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage-wrap">
+    <div id="stage" data-n="{{ n }}">
+      {% for i in bell_indexes %}
+      <div class="bell" data-i="{{ i }}" id="bell-{{ i }}">
+        <div class="clapper"></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <script>
+    (function () {
+      const stage = document.getElementById("stage");
+      const n = parseInt(stage.dataset.n, 10);
+      const bells = [...stage.querySelectorAll(".bell")];
+
+      const COLORS = [
+        "#b33", "#a80", "#8a0", "#2a2", "#2aa", "#24a", "#62a", "#a22"
+      ];
+
+      const REST_DEG = 45;     // ~4:30
+      const STRIKE_DEG = 225;  // ~10:30
+      const CLAPPER_R = 0.28;
+
+      function clapperStyle(deg) {
+        const rad = (deg * Math.PI) / 180;
+        const x = 50 + 100 * CLAPPER_R * Math.cos(rad);
+        const y = 50 + 100 * CLAPPER_R * Math.sin(rad);
+        return { left: x + "%", top: y + "%" };
+      }
+
+      function setClapper(bellEl, deg) {
+        const c = bellEl.querySelector(".clapper");
+        const s = clapperStyle(deg);
+        c.style.left = s.left;
+        c.style.top = s.top;
+      }
+
+      function flashClapper(bellEl) {
+        setClapper(bellEl, STRIKE_DEG);
+        clearTimeout(bellEl._clapTimer);
+        bellEl._clapTimer = setTimeout(function () {
+          setClapper(bellEl, REST_DEG);
+        }, 140);
+      }
+
+      function layout() {
+        const R = 0.32;
+        const sizeTenor = 0.24;
+        const sizeTreble = sizeTenor * 0.75;
+
+        bells.forEach(function (el, i) {
+          const t = n === 1 ? 1 : i / (n - 1);
+          const diam = sizeTreble + t * (sizeTenor - sizeTreble);
+          const ang = -Math.PI / 2 + (i / n) * Math.PI * 2;
+          const x = 0.5 + R * Math.cos(ang);
+          const y = 0.5 + R * Math.sin(ang);
+
+          el.style.width = diam * 100 + "%";
+          el.style.height = diam * 100 + "%";
+          el.style.marginLeft = -diam * 50 + "%";
+          el.style.marginTop = -diam * 50 + "%";
+          el.style.left = x * 100 + "%";
+          el.style.top = y * 100 + "%";
+          el.style.background = COLORS[i % COLORS.length];
+        });
+      }
+
+      bells.forEach(function (el) {
+        setClapper(el, REST_DEG);
+        el.addEventListener("click", function () {
+          flashClapper(el);
+        });
+      });
+
+      layout();
+      window.addEventListener("resize", layout);
+    })();
+  </script>
+</body>
+</html>

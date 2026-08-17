@@ -112,6 +112,18 @@ def random_display(request, number=None, seed_name="Rounds"):
     return render(request, "bells/display.html", ctx)
 
 
+def swing_display(request, n: int):
+    if n < 1 or n > 16:
+        raise Http404("bell count out of range")
+    # Optional later: ?solo=1 already implied by this page
+    return render(
+        request,
+        "bells/swing.html",
+        {
+            "n": n,
+            "bell_indexes": list(range(n)),  # 0 = treble (high F), n-1 = tenor
+        },
+    )
 
 
 def bell_band(request, number=8):
