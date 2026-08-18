@@ -68,4 +68,5 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('', views.home, name='root_home'),
     path("api/system-status/", status_views.system_status, name="system_status"),
+    path("api/farm/device-status/",views.farm_device_status,name="farm_device_status"),
 ]

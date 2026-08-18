@@ -6,6 +6,9 @@ import json
 import random
 import socket
 
+from urllib.request import urlopen
+from urllib.error import URLError
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
@@ -127,7 +130,6 @@ def farm_status(request, index=0):
         "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
     })
 
-
 def swing_display(request, n: int):
     if n < 1 or n > 16:
         raise Http404("bell count out of range")
@@ -140,6 +142,21 @@ def swing_display(request, n: int):
         },
     )
 
+def farm_device_status(request):
+    url = (request.GET.get("url") or "").strip()
+    allowed = {inst.get("status_url") for inst in load_farm_instances() if inst.get("status_url")}
+    if url not in allowed:
+        return JsonResponse({"error": "url not in farm registry", "got": url}, status=400)
+
+    last_err = None
+    for _ in range(2):
+        try:
+            with urlopen(url, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            return JsonResponse(data)
+        except Exception as e:
+            last_err = e
+    return JsonResponse({"error": str(last_err)}, status=502)
 
 def bell_band(request, number=8):
     """
@@ -386,6 +403,7 @@ def load_farm_instances():
             "family": "sandsense",
             "name": "sandsense-clock",
             "role": "escapement",
+            "status_url": "http://192.168.0.154/status",
         },
         {
             "id": "sandswing-bench",
@@ -395,4 +413,3 @@ def load_farm_instances():
             "role": "swing",
         },
     ]
-
