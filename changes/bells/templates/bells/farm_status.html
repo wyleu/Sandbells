@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Farm · {{ inst.name }}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1rem; background: #111; color: #eee; }
+    header { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    a { color: #8af; }
+    #st-json { white-space: pre-wrap; border: 1px solid #333; padding: 1rem; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="{% url 'farm_status_index' prev %}">← Prev</a>
+    <strong>{{ index|add:1 }} / {{ count }}</strong>
+    <a href="{% url 'farm_status_index' next %}">Next →</a>
+    <span>{{ inst.kind }} · {{ inst.family }} · {{ inst.name }}</span>
+  </header>
+
+  {% if inst.kind == "host" %}
+    <pre id="st-json">Loading…</pre>
+    <script>
+    (function () {
+      var el = document.getElementById("st-json");
+      function tick() {
+        fetch("/api/system-status/", { cache: "no-store" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) { el.textContent = JSON.stringify(data, null, 2); })
+          .catch(function (e) { el.textContent = "Error: " + e; });
+      }
+      tick();
+      setInterval(tick, 5000);
+    })();
+    </script>
+  {% else %}
+    <p>Pico / remote stub: {{ inst.id }} (live data later)</p>
+  {% endif %}
+
+</body>
+</html>

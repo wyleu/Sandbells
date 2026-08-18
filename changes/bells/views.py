@@ -4,21 +4,22 @@ import socket
 import subprocess
 import json
 import random
-from django.shortcuts import render, redirect
-
+import socket
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
 from reportlab.graphics.shapes import *
+
 from django.core import serializers
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator,EmptyPage
 from django.http import HttpResponse
 from django.http import Http404
 from django.http import JsonResponse
 from django.http import FileResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.template import loader
+
 
 from bells.models import Bell, Tower, Pattern
 from bells.functions import (
@@ -112,22 +113,19 @@ def random_display(request, number=None, seed_name="Rounds"):
     return render(request, "bells/display.html", ctx)
 
 def farm_status(request, index=0):
-    instances = load_farm_instances()  # list of dicts
+    instances = load_farm_instances()
     if not instances:
         return render(request, "bells/farm_status_empty.html")
     index = index % len(instances)
     inst = instances[index]
-    return render(
-        request,
-        "bells/farm_status.html",
-        {
-            "inst": inst,
-            "index": index,
-            "count": len(instances),
-            "prev": (index - 1) % len(instances),
-            "next": (index + 1) % len(instances),
-        },
-    )
+    return render(request, "bells/farm_status.html", {
+        "inst": inst,
+        "index": index,
+        "count": len(instances),
+        "prev": (index - 1) % len(instances),
+        "next": (index + 1) % len(instances),
+        "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
+    })
 
 
 def swing_display(request, n: int):
