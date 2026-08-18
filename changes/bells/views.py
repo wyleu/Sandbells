@@ -274,67 +274,6 @@ def portrait_view(request, number, to_name, from_name="Rounds"):
     )
     return render(request, "bells/portrait.html", ctx)
 
-
-
-
-
-
-
-def portrait_view(request, number, to_name, from_name="Rounds"):
-    # A printable list of a change
-    #TODO make the implicit "Rounds" explicit 
-    # to_pattern = Pattern.objects.get(order=0) Perhaps?
-    
-    try:
-        number=int(number)
-    except ValueError:
-        raise NonIntegerBellCount('Bells number not an Integer')
-
-    try:
-        from_pattern = Pattern.objects.get(
-            name__iexact = from_name,
-            number = number
-        )
-
-    except  Pattern.DoesNotExist:
-        from_patterns = Pattern.objects.filter(
-            name__icontains = from_name,
-            number = number
-        ).order_by('order','name',)
-        if from_patterns:
-            from_pattern = from_patterns[0]
-        else:
-            raise NotFound("No From Pattern Found")
-    
-    try:
-        to_pattern = Pattern.objects.get(
-            name__iexact = to_name,
-            number = number
-        )
-    except  Pattern.DoesNotExist:
-        to_patterns = Pattern.objects.filter(
-            name__icontains =to_name,
-            number = number
-        ).order_by('order','name',)
-        if to_patterns:
-            to_pattern = to_patterns[0]
-        else:
-            raise NotFound("No To Pattern Found")
- 
-
-    code, result, swappair = db_process(from_pattern.pattern, to_pattern.pattern)
-    revcode, revresult, swappair = db_process(to_pattern.pattern, from_pattern.pattern)
-
-    forwresult = demuck_result(result)
-    revresult = demuck_result(revresult)
-
-    context = {'to_pattern': to_pattern,
-               'from_pattern': from_pattern,
-               "result": forwresult,
-               "revresult": revresult
-               }
-    return render(request, 'bells/portrait.html', context)
-
 def pattern_list(request, number):
     # A list of known patterns filtered by numbers
     patterns = Pattern.objects.filter(number=number, order__lt=200).order_by('name')
