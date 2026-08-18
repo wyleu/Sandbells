@@ -111,7 +111,19 @@ def random_display(request, number=None, seed_name="Rounds"):
     )
     return render(request, "bells/display.html", ctx)
 
-
+def farm_status(request, index=0):
+    instances = load_farm_instances()  # list of dicts
+    if not instances:
+        return render(request, "bells/farm_status_empty.html")
+    index = index % len(instances)
+    inst = instances[index]
+    return render(request, "bells/farm_status.html", {
+        "inst": inst,
+        "index": index,
+        "count": len(instances),
+        "prev": (index - 1) % len(instances),
+        "next": (index + 1) % len(instances),
+    })
 
 
 def bell_band(request, number=8):
