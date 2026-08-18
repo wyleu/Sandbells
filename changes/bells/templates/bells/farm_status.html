@@ -31,9 +31,36 @@
           .then(function (data) { el.textContent = JSON.stringify(data, null, 2); })
           .catch(function (e) { el.textContent = "Error: " + e; });
       }
+    function browserSizes() {
+      var iframe = document.querySelector("iframe"); // if any on this page
+      return {
+        screen: window.screen.width + "×" + window.screen.height,
+        window: window.innerWidth + "×" + window.innerHeight,
+        body: document.body ? document.body.clientWidth + "×" + document.body.clientHeight : "—",
+        iframe: iframe
+          ? iframe.clientWidth + "×" + iframe.clientHeight
+          : "n/a (no iframe on farm status)"
+      };
+    } 
+    
+    function tick() {
+        fetch("/api/system-status/", { cache: "no-store" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            data.browser = browserSizes();
+            el.textContent = JSON.stringify(data, null, 2);
+          })
+          .catch(function (e) {
+            el.textContent = "Error: " + e;
+          });
+      }
+      
       tick();
       setInterval(tick, 5000);
     })();
+
+    
+    
     </script>
   {% else %}
     <p>Pico / remote stub: {{ inst.id }} (live data later)</p>
