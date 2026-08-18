@@ -117,13 +117,30 @@ def farm_status(request, index=0):
         return render(request, "bells/farm_status_empty.html")
     index = index % len(instances)
     inst = instances[index]
-    return render(request, "bells/farm_status.html", {
-        "inst": inst,
-        "index": index,
-        "count": len(instances),
-        "prev": (index - 1) % len(instances),
-        "next": (index + 1) % len(instances),
-    })
+    return render(
+        request,
+        "bells/farm_status.html",
+        {
+            "inst": inst,
+            "index": index,
+            "count": len(instances),
+            "prev": (index - 1) % len(instances),
+            "next": (index + 1) % len(instances),
+        },
+    )
+
+
+def swing_display(request, n: int):
+    if n < 1 or n > 16:
+        raise Http404("bell count out of range")
+    return render(
+        request,
+        "bells/swing.html",
+        {
+            "n": n,
+            "bell_indexes": list(range(n)),  # 0 = treble … n-1 = tenor
+        },
+    )
 
 
 def bell_band(request, number=8):
@@ -415,4 +432,30 @@ def timedatestatus(request):
 
 def timedatetest(request):
     return render(request, 'bells/timedatetest.html')
+
+def load_farm_instances():
+    """Temporary static list until farm registry exists."""
+    return [
+        {
+            "id": "sandbells2",
+            "kind": "host",
+            "family": "sandbells",
+            "name": "sandbells2",
+            "role": "kiosk",
+        },
+        {
+            "id": "sandsense-clock",
+            "kind": "pico",
+            "family": "sandsense",
+            "name": "sandsense-clock",
+            "role": "escapement",
+        },
+        {
+            "id": "sandswing-bench",
+            "kind": "pico",
+            "family": "sandswing",
+            "name": "sandswing-bench",
+            "role": "swing",
+        },
+    ]
 
