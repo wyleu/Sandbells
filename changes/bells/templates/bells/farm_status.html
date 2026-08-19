@@ -4,21 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>Farm · {{ inst.name }}</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 1rem; background: #111; color: #eee; }
-    header { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
-    a { color: #8af; }
-    #st-json, #ss-lines {
-      white-space: pre-wrap;
-      border: 1px solid #333;
-      padding: 1rem;
-      border-radius: 8px;
-      max-height: 24rem;
-      overflow: auto;
-    }
-    dl { display: grid; grid-template-columns: 10rem 1fr; gap: 0.25rem 1rem; }
-    dt { opacity: 0.7; }
-  </style>
+  <link rel="stylesheet" href="{% static 'css/farm_status.css' %}">
 </head>
 <body>
   <header>
@@ -30,41 +16,11 @@
 
   {% if inst.kind == "host" %}
     <pre id="st-json">Loading…</pre>
-    <script>
-    (function () {
-      var el = document.getElementById("st-json");
-      function browserSizes() {
-        var iframe = document.querySelector("iframe");
-        return {
-          screen: window.screen.width + "×" + window.screen.height,
-          window: window.innerWidth + "×" + window.innerHeight,
-          body: document.body
-            ? document.body.clientWidth + "×" + document.body.clientHeight
-            : "—",
-          iframe: iframe
-            ? iframe.clientWidth + "×" + iframe.clientHeight
-            : "n/a (no iframe on farm status)"
-        };
-      }
-      function tick() {
-        fetch("/api/system-status/", { cache: "no-store" })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            data.browser = browserSizes();
-            el.textContent = JSON.stringify(data, null, 2);
-          })
-          .catch(function (e) {
-            el.textContent = "Error: " + e;
-          });
-      }
-      tick();
-      setInterval(tick, 5000);
-    })();
-    </script>
 
   {% elif inst.family == "sandsense" %}
     <section class="farm-sandsense">
       <h2>{{ inst.name }}</h2>
+      <div id="ss-orb" class="orb orb-green"></div>
       <dl id="ss-meta">
         <dt>IP</dt><dd id="ss-ip">—</dd>
         <dt>WiFi</dt><dd id="ss-ssid">—</dd>
@@ -76,62 +32,20 @@
       </dl>
       <pre id="ss-lines">Loading…</pre>
     </section>
-    <script>
-    (function () {
-      
-      var remote = "{{ inst.status_url|default:'' }}";
-      var url = remote ? ("/api/farm/device-status/?url=" + encodeURIComponent(remote)) : "";
-      
-      function $(id) { return document.getElementById(id); }
-
-    function tick() {
-      if (!url) {
-        $("ss-lines").textContent = "No status_url";
-        return;
-      }
-      fetch(url, { cache: "no-store" })
-        .then(function (r) {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          return r.json();
-        })
-        .then(function (d) {
-          if (d.error || d.lines === undefined) {
-            // keep previous numbers; only show error in the log area
-            $("ss-lines").textContent =
-              (d.error ? "Proxy/device: " + d.error : "Bad payload") +
-              "\n\n" + ($("ss-lines").textContent || "");
-            return;
-          }
-          $("ss-ip").textContent = d.ip || "—";
-          $("ss-ssid").textContent = d.ssid || "—";
-          $("ss-temp").textContent =
-            d.temp_c != null ? d.temp_c + " °C" : "—";
-          $("ss-pll").textContent =
-            (d.pll_enabled ? "ON" : "OFF") +
-            " locked=" + !!d.pll_locked +
-            " misses=" + (d.misses != null ? d.misses : "—");
-          $("ss-ticks").textContent =
-            (d.ticks_this_period != null ? d.ticks_this_period : "—") +
-            " / " + (d.report_interval_s != null ? d.report_interval_s : "—") + "s";
-          $("ss-adc").textContent =
-            d.adc_avg != null ? d.adc_avg : "—";
-          $("ss-last").textContent = d.last_line || "—";
-          $("ss-lines").textContent = (d.lines || []).join("\n");
-        })
-        .catch(function (e) {
-          // do not blank the dl — only annotate
-          $("ss-lines").textContent =
-            "Offline: " + e + "\n\n" + ($("ss-lines").textContent || "");
-        });
-    }
-
-      tick();
-      setInterval(tick, 3000);
-    })();
-    </script>
 
   {% else %}
     <p>Pico / remote stub: {{ inst.id }} (live data later)</p>
   {% endif %}
+
+    <script src="{% static 'js/farm_status.js' %}"></script>
+    <script>
+      FarmStatus.start({
+        kind: "{{ inst.kind }}",
+        family: "{{ inst.family }}",
+        statusUrl: "{{ inst.status_url|default:'' }}",
+        wsUrl: "ws://192.168.0.154/ws",   // ← put the real Pico IP or .local name here
+        interval: 3000
+      });
+    </script>
 </body>
 </html>

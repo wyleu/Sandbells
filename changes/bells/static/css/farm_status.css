@@ -1,0 +1,61 @@
+/* farm_status.css – Farm Status detail page */
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 1rem;
+  background: #111;
+  color: #eee;
+}
+
+header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+a {
+  color: #8af;
+}
+
+#st-json,
+#ss-lines {
+  white-space: pre-wrap;
+  border: 1px solid #333;
+  padding: 1rem;
+  border-radius: 8px;
+  max-height: 24rem;
+  overflow: auto;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: 0.25rem 1rem;
+}
+
+dt {
+  opacity: 0.7;
+}
+
+/* sandsense orb */
+.orb {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  margin: 1rem 0;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.orb-red {
+  background: #c22;
+}
+
+.orb-green {
+  background: #2a4;
+}
+
+.orb-flash {
+  transform: scale(1.15);
+}

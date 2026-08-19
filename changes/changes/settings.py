@@ -92,7 +92,22 @@ CSP_STYLE_SRC = [
 
 CSP_IMG_SRC = ["'self'"]
 CSP_MEDIA_SRC = ["'self'", "http://sandbells.local", "https://sandbells.local"]
-CSP_CONNECT_SRC = ["'self'", "http://sandbells.local", "https://sandbells.local"]
+# CSP_CONNECT_SRC = ["'self'", "http://sandbells.local", "https://sandbells.local"]
+
+CSP_CONNECT_SRC = [
+    "'self'",
+    "http://sandbells.local",
+    "https://sandbells.local",
+    "http://sandbells2.local",
+    "https://sandbells2.local",
+    # Allow WebSockets + HTTP to any device on the typical home/tower LANs
+    "ws:",
+    "wss:",
+    "http://192.168.0.0/16",
+    "http://10.0.0.0/8",
+    "http://172.16.0.0/12",
+]
+
 CSP_FRAME_SRC = ["'self'"]
 CSP_FRAME_ANCESTORS = ["'self'"]
 
