@@ -13,12 +13,45 @@
   <script src="{% static 'js/howler.min.js' %}?v={{ git_hash }}"></script>
   <script src="{% static 'js/clock_analogue.js' %}?v={{ git_hash }}"></script>
   <script src="{% static 'js/apps.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/bell_band.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/kiosk_bells.js' %}?v={{ git_hash }}"></script>
+
 
   <style>
     body { margin:0; padding:0; background:white; color:black; font-family:sans-serif; }
     .frontpage_container { display:flex; justify-content:center; gap:20px; flex-wrap:nowrap; }
     .drumkit { display:flex; justify-content:center; gap:10px; margin:15px 0; }
     #midi-panel, .track-panel, [class*="midi"], [class*="Track"] {display: none !important; }
+
+    #west {
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       width: 250px;          /* match clock width */
+       overflow: visible;
+    }
+    #clock-wrap {
+         width: 250px;
+         height: auto;         /* face only — not 890 */
+         overflow: visible;
+    }
+    #clock-wrap svg {
+         width: 250px;
+         height: auto;
+         display: block;
+    }
+
+
+    #bell-circle {
+      width: 250px;
+      height: 250px;
+      min-width: 250px;
+      min-height: 250px;
+      outline: 2px solid #c00;   /* debug — remove later */
+      overflow: visible;
+      flex: 0 0 250px;
+    }
+
 
   </style>
 </head>

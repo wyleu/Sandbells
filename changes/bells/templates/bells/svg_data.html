@@ -1,5 +1,6 @@
 {% load static %}
-<svg id="clock" height="890px" width="250px" viewBox="0 450 350 350" class="clockSvg shadow">
+<svg id="clock" width="250" height="360" viewBox="0 0 350 500" class="clockSvg shadow">
+
   <g id="posinfo" class="info"></g>
   
   <circle class="frame" cx="175" cy="175" r="145" stroke="black" stroke-width="8px"></circle>
@@ -21,4 +22,6 @@
 
 <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/clock_analogue.js" %}?v={{ git_hash }}"></script>
 <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/pagesize.js" %}?v={{ git_hash }}"></script>
+<!--
 <script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static 'js/system_info.js' %}?v={{ git_hash }}"></script>
+-->

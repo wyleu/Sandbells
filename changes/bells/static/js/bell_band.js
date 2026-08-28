@@ -23,8 +23,10 @@
    }
 
   function layoutBellsOnCircle(bells, cx, cy, radius, theta0) {
+
     theta0 = theta0 != null ? theta0 : -Math.PI / 2;
     var n = bells.length;
+
     if (!n) return [];
     var step = (2 * Math.PI) / n;
     return bells.map(function (bell, i) {
@@ -58,9 +60,11 @@
     var mouthR = padR * 0.9;
      // In layoutBellsOnCircle call inside draw():
      // Centre the gap between last and first on the top → 1 and 8 flank the top
+
+    var n = bells.length;
+
     var theta0 = opts.theta0 != null ? opts.theta0 : (-Math.PI / 2 - Math.PI / n);
     var nodes = layoutBellsOnCircle(bells, cx, cy, radius, theta0);
-    var n = bells.length;
 
     el.innerHTML = "";
     var NS = "http://www.w3.org/2000/svg";

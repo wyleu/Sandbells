@@ -4,8 +4,15 @@
 SANDBELLS
 {% endblock title%}
 
-  {% block display %}
-    {% include "bells/svg_data.html" %} 
-    {% include "bells/iframe.html" %}
-    {% include "bells/changes.html" %}
-  {% endblock display %}
+{% block display %}
+  <div id="west">
+    <div id="clock-wrap">
+      {% include "bells/svg_data.html" %}
+    </div>
+    <div id="bell-circle"></div>
+  </div>
+  {% include "bells/iframe.html" %}
+  {% include "bells/changes.html" %}
+{% endblock display %}
+
+
