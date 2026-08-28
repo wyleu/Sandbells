@@ -38,8 +38,12 @@
 {% endblock fullscreen%}
 
 {% block scripts %}
-<script src="{% static 'js/howler.min.js' %}"></script>
-<script src="{% static 'js/apps.js' %}"></script>
-<script src="{% static 'js/clock_analogue.js' %}"></script>
-<script src="{% static 'js/pagesize.js' %}"></script>
+<script src="{% static 'js/jquery.min.js' %}?v={{ git_hash }}"></script>
+<script src="{% static 'js/d3.v3.min.js' %}?v={{ git_hash }}"></script>
+
+
+<script src="{% static 'js/howler.min.js' %}?v={{ git_hash }}"></script>
+<script src="{% static 'js/apps.js' %}?v={{ git_hash }}"></script>
+<script src="{% static 'js/clock_analogue.js' %}?v={{ git_hash }}"></script>
+<script src="{% static 'js/pagesize.js' %}?v={{ git_hash }}"></script>
 {% endblock scripts %}

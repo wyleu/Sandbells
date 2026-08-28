@@ -8,6 +8,14 @@
 </head>
 <body>
   <header>
+     <a href="/" target="_top" id="link-home" class="branding">Sandbells</a>
+     <script>
+       (function () {
+          var a = document.getElementById("link-home");
+          var back = sessionStorage.getItem("sandbellsReturn");
+          if (a && back) a.setAttribute("href", back);
+       })();
+     </script>
     <a href="{% url 'farm_status_index' prev %}">← Prev</a>
     <strong>{{ index|add:1 }} / {{ count }}</strong>
     <a href="{% url 'farm_status_index' next %}">Next →</a>

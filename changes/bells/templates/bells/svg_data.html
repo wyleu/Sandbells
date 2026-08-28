@@ -19,6 +19,6 @@
   </g>
 </svg>
 
-<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/clock_analogue.js" %}"></script>
-<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/pagesize.js" %}"></script>
-<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static 'js/system_info.js' %}?v=5"></script>
+<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/clock_analogue.js" %}?v={{ git_hash }}"></script>
+<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static "js/pagesize.js" %}?v={{ git_hash }}"></script>
+<script nonce="{{request.csp_nonce}}" type="text/javascript" src="{% static 'js/system_info.js' %}?v={{ git_hash }}"></script>

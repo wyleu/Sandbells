@@ -70,7 +70,10 @@
                         {% if forloop.counter == 1 %}
                             <div class="branding shadow">{{ forloop.counter }}--Playing...</div>
                         {% else %}
-                            <div class="branding shadow">{{ forloop.counter }}-Sandbells</div>
+                            <div class="branding shadow">
+                                {{ forloop.counter }}-<a href="/farm/status/" target="_top"
+                                onclick="sessionStorage.setItem('sandbellsReturn', '/')">Sandbells</a>
+                            </div>
                         {% endif %}
                     </td>
                 {% else %}
@@ -127,7 +130,10 @@
                         {% if forloop.counter == 1 %}
                             <div class="branding shadow">{{ forloop.counter }}--Playing...</div>
                         {% else %}
-                            <div class="branding shadow">{{ forloop.counter }}-Sandbells</div>
+                            <div class="branding shadow">
+                               {{ forloop.counter }}-<a href="/farm/status/" target="_top"
+                               onclick="sessionStorage.setItem('sandbellsReturn', '/')">Sandbells</a>
+                            </div>
                         {% endif %}
                     </td>
                 {% else %}

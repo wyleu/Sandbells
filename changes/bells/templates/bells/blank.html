@@ -6,13 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Sandbells{% endblock title %}</title>
 
-  <script src="{% static 'js/jquery.min.js' %}"></script>
-  <script src="{% static 'js/d3.v3.min.js' %}"></script>
-  <script src="{% static 'js/howler.min.js' %}"></script>
-  <script src="{% static 'js/clock_analogue.js' %}"></script>
-  <script src="{% static 'js/apps.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ git_hash }}">
 
-  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <script src="{% static 'js/jquery.min.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/d3.v3.min.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/howler.min.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/clock_analogue.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/apps.js' %}?v={{ git_hash }}"></script>
 
   <style>
     body { margin:0; padding:0; background:white; color:black; font-family:sans-serif; }
