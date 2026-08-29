@@ -7,28 +7,23 @@
     ll: { x: -0.35, y:  0.30 }
   };
   var BELL_COLOURS = {
-    1: "#ff2020",
-    2: "#ff8c00",
-    3: "#ffd000",
-    4: "#22c022",
-    5: "#00d4d4",
-    6: "#2050ff",
-    7: "#e000e0",
-    8: "#8b0000"
+    1: "#ff2020", 2: "#ff8c00", 3: "#ffd000", 4: "#22c022",
+    5: "#00d4d4", 6: "#2050ff", 7: "#e000e0", 8: "#8b0000"
   };
-
-  // 0 = all mouths equal; 0.25 = old 0.75…1.25 look. Try 0.10–0.14.var SIZE_SPREAD = 0.12;
   var SIZE_SPREAD = 0.12;
+  // 2-side = ll (short), 4-side = ru (long) — tape axis
+  var TAPE_NEG = CLAPPER_POS.ll;
+  var TAPE_POS = CLAPPER_POS.ru;
+  var TAPE_MAX_NEG = 0.40;
+  var TAPE_MAX_POS = 0.80;
 
-  function colourFor(bell) {
-    return BELL_COLOURS[bell] || "#888";
-  }
+  function colourFor(bell) { return BELL_COLOURS[bell] || "#888"; }
 
   function sizeScale(bell, n, spread) {
     if (n <= 1) return 1;
     var k = spread != null ? spread : SIZE_SPREAD;
-    var t = (Number(bell) - 1) / (n - 1);   // 0 treble … 1 tenor
-    return 1 + k * (2 * t - 1);             // 1-k … 1+k, mid bells ≈ 1
+    var t = (Number(bell) - 1) / (n - 1);
+    return 1 + k * (2 * t - 1);
   }
 
   function layoutBellsOnCircle(bells, cx, cy, radius, theta0) {
@@ -39,28 +34,38 @@
     return bells.map(function (bell, i) {
       var angle = theta0 + i * step;
       return {
-        bell: bell,
-        index: i,
-        angle: angle,
+        bell: bell, index: i, angle: angle,
         x: cx + radius * Math.sin(angle),
         y: cy - radius * Math.cos(angle)
       };
     });
   }
 
-  function clapperOffset(pos, R) {
-    var p = CLAPPER_POS[pos] || CLAPPER_POS.c;
-    return { cx: p.x * R, cy: p.y * R };
+  function tapeT(u) {
+    u = Number(u);
+    if (isNaN(u)) return 0;
+    if (u <= 2) return -1 + (u / 2);
+    if (u <= 3) return 0;
+    if (u >= 7) return 1;
+    return (u - 3) / 4;
+  }
+
+  function tapeOffset(t, amp, mouthR) {
+    amp = amp == null ? 1 : amp;
+    t = t * amp;
+    var side = t < 0 ? TAPE_NEG : TAPE_POS;
+    var max = (t < 0 ? TAPE_MAX_NEG : TAPE_MAX_POS) * mouthR;
+    var mag = Math.abs(t) * max;
+    return { cx: side.x / 0.46 * mag, cy: side.y / 0.46 * mag };
   }
 
   function draw(container, opts) {
     opts = opts || {};
     var el = typeof container === "string" ? document.querySelector(container) : container;
     if (!el) return null;
-    var bells = opts.bells && opts.bells.length ? opts.bells.slice() : [1, 2, 3, 4, 5, 6, 7, 8];
+    var bells = opts.bells && opts.bells.length ? opts.bells.slice() : [1,2,3,4,5,6,7,8];
     var n = bells.length;
-    var w = opts.width || el.clientWidth || 400;
-    var h = opts.height || el.clientHeight || 400;
+    var w = opts.width || 250, h = opts.height || 250;
     var cx = w / 2, cy = h / 2;
     var radius = opts.radius != null ? opts.radius : Math.min(w, h) * 0.35;
     var padR = opts.padR != null ? opts.padR : Math.min(w, h) * 0.11;
@@ -75,16 +80,13 @@
     svg.setAttribute("width", "100%");
     svg.setAttribute("height", "100%");
     svg.setAttribute("class", "bell-band-svg");
-
     var defs = document.createElementNS(NS, "defs");
     svg.appendChild(defs);
-
     var mouthByBell = {};
 
     nodes.forEach(function (d) {
       var mouthR = baseMouth * sizeScale(d.bell, n, opts.sizeSpread);
       mouthByBell[d.bell] = mouthR;
-
       var clipId = "bell-mouth-clip-" + d.bell;
       var clip = document.createElementNS(NS, "clipPath");
       clip.setAttribute("id", clipId);
@@ -107,12 +109,10 @@
 
       var clipped = document.createElementNS(NS, "g");
       clipped.setAttribute("clip-path", "url(#" + clipId + ")");
-      var off = clapperOffset("c", mouthR);
       var clap = document.createElementNS(NS, "circle");
       clap.setAttribute("class", "bell-clapper");
-      clap.setAttribute("data-pos", "c");
-      clap.setAttribute("cx", String(off.cx));
-      clap.setAttribute("cy", String(off.cy));
+      clap.setAttribute("cx", "0");
+      clap.setAttribute("cy", "0");
       clap.setAttribute("r", String(mouthR * 0.4));
       clap.setAttribute("fill", colourFor(d.bell));
       clipped.appendChild(clap);
@@ -123,68 +123,83 @@
       ring.setAttribute("stroke", colourFor(d.bell));
       ring.setAttribute("stroke-width", String(Math.max(2, mouthR * 0.12)));
 
+      var num = document.createElementNS(NS, "text");
+      num.setAttribute("class", "bell-num");
+      num.setAttribute("x", String(mouthR * 0.92));
+      num.setAttribute("y", String(mouthR * 0.92));
+      num.setAttribute("text-anchor", "middle");
+      num.setAttribute("dominant-baseline", "middle");
+      num.setAttribute("fill", "#000");
+      num.setAttribute("font-size", String(Math.max(9, mouthR * 0.55)));
+      num.setAttribute("font-family", "sans-serif");
+      num.setAttribute("font-weight", "700");
+      num.setAttribute("pointer-events", "none");
+      num.textContent = String(d.bell);
+
       g.appendChild(fill);
       g.appendChild(clipped);
       g.appendChild(ring);
+      g.appendChild(num);
       if (opts.onPadClick) {
-        g.addEventListener("click", function (ev) {
-          opts.onPadClick(d.bell, d, ev);
-        });
+        g.addEventListener("click", function (ev) { opts.onPadClick(d.bell, d, ev); });
       }
       svg.appendChild(g);
     });
 
     el.appendChild(svg);
-    el.__bellBand = { bells: bells, mouthByBell: mouthByBell };
+    el.__bellBand = { bells: bells, mouthByBell: mouthByBell, tape: {} };
     return { svg: svg, nodes: nodes };
   }
 
-  function animateClapper(circleEl, mouthR, fromKey, toKey, durationMs, done) {
-    var from = CLAPPER_POS[fromKey] || CLAPPER_POS.c;
-    var to = CLAPPER_POS[toKey] || CLAPPER_POS.c;
-    var x0 = from.x * mouthR, y0 = from.y * mouthR;
-    var x1 = to.x * mouthR, y1 = to.y * mouthR;
-    var t0 = null;
-    durationMs = durationMs || 160;
-    function ease(t) { return t * (2 - t); }
-    function frame(ts) {
-      if (t0 == null) t0 = ts;
-      var t = Math.min(1, (ts - t0) / durationMs);
-      var e = ease(t);
-      circleEl.setAttribute("cx", x0 + (x1 - x0) * e);
-      circleEl.setAttribute("cy", y0 + (y1 - y0) * e);
-      if (t < 1) requestAnimationFrame(frame);
-      else if (done) done();
-    }
-    requestAnimationFrame(frame);
-  }
-
-  function strike(host, bell, opts) {
-    opts = opts || {};
+  function setTape(host, bell, u, amp) {
     var el = typeof host === "string" ? document.querySelector(host) : host;
     if (!el) return;
     var circle = el.querySelector('.bell-pad[data-bell="' + bell + '"] .bell-clapper');
     if (!circle) return;
     var mouthR = (el.__bellBand && el.__bellBand.mouthByBell && el.__bellBand.mouthByBell[bell]) || 20;
-    var ms = opts.duration || 120;
-    function go(a, b, next) {
-      animateClapper(circle, mouthR, a, b, ms, next);
+    var off = tapeOffset(tapeT(u), amp, mouthR);
+    circle.setAttribute("cx", String(off.cx));
+    circle.setAttribute("cy", String(off.cy));
+    if (el.__bellBand) {
+      el.__bellBand.tape[bell] = { u: u, amp: amp };
     }
-    go("rl", "c", function () {
-      go("c", "lu", function () {
-        go("lu", "c", function () {
-          go("c", "rl", function () {
-            circle.setAttribute("data-pos", "rl");
-            if (opts.onDone) opts.onDone(bell);
-          });
-        });
-      });
-    });
+  }
+
+  function setPose(host, bell, pose, opts) {
+    opts = opts || {};
+    if (pose === "down") return setTape(host, bell, 2.5, 0);
+    if (pose === "stood") return setTape(host, bell, opts.dir === "ccw" ? 0.3 : 6.5, 1);
+    if (pose === "swing" || pose === "settling") {
+      return setTape(host, bell, opts.u != null ? opts.u : 5, opts.amp != null ? opts.amp : 1);
+    }
+    setTape(host, bell, 2.5, 0);
+  }
+
+  function settleDemo(host, bell, opts) {
+    opts = opts || {};
+    var amp = opts.amp != null ? opts.amp : 1;
+    var omega = opts.omega != null ? opts.omega : 3.2;
+    var decay = opts.decay != null ? opts.decay : 0.992;
+    var t0 = null;
+    function frame(ts) {
+      if (t0 == null) t0 = ts;
+      var t = (ts - t0) / 1000;
+      amp *= decay;
+      var u = 2.5 + amp * 2.4 * Math.sin(omega * t * Math.PI * 2);
+      if (u < 0) u = 0;
+      if (u > 7) u = 7;
+      setTape(host, bell, u, 1);
+      if (amp > 0.04) requestAnimationFrame(frame);
+      else setTape(host, bell, 2.5, 0);
+    }
+    requestAnimationFrame(frame);
   }
 
   global.BellBand = {
     draw: draw,
-    strike: strike,
+    setTape: setTape,
+    setPose: setPose,
+    settleDemo: settleDemo,
     layoutBellsOnCircle: layoutBellsOnCircle,
     CLAPPER_POS: CLAPPER_POS
   };
