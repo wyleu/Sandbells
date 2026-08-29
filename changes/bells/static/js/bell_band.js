@@ -6,28 +6,35 @@
     rl: { x:  0.35, y:  0.30 },
     ll: { x: -0.35, y:  0.30 }
   };
-
   var BELL_COLOURS = {
-      1: "#ff2020",  // light / bright red
-      2: "#ff8c00",  // orange
-      3: "#ffd000",  // yellow
-      4: "#22c022",  // green
-      5: "#00d4d4",  // cyan
-      6: "#2050ff",  // blue
-      7: "#e000e0",  // magenta
-      8: "#8b0000"   // dark red
-     };
+    1: "#ff2020",
+    2: "#ff8c00",
+    3: "#ffd000",
+    4: "#22c022",
+    5: "#00d4d4",
+    6: "#2050ff",
+    7: "#e000e0",
+    8: "#8b0000"
+  };
 
-   function colourFor(bell, n) {
-      return BELL_COLOURS[bell] || "#888";
-   }
+  // 0 = all mouths equal; 0.25 = old 0.75…1.25 look. Try 0.10–0.14.var SIZE_SPREAD = 0.12;
+  var SIZE_SPREAD = 0.12;
+
+  function colourFor(bell) {
+    return BELL_COLOURS[bell] || "#888";
+  }
+
+  function sizeScale(bell, n, spread) {
+    if (n <= 1) return 1;
+    var k = spread != null ? spread : SIZE_SPREAD;
+    var t = (Number(bell) - 1) / (n - 1);   // 0 treble … 1 tenor
+    return 1 + k * (2 * t - 1);             // 1-k … 1+k, mid bells ≈ 1
+  }
 
   function layoutBellsOnCircle(bells, cx, cy, radius, theta0) {
-
-    theta0 = theta0 != null ? theta0 : -Math.PI / 2;
     var n = bells.length;
-
     if (!n) return [];
+    theta0 = theta0 != null ? theta0 : (Math.PI / n);
     var step = (2 * Math.PI) / n;
     return bells.map(function (bell, i) {
       var angle = theta0 + i * step;
@@ -50,20 +57,15 @@
     opts = opts || {};
     var el = typeof container === "string" ? document.querySelector(container) : container;
     if (!el) return null;
-
-    var bells = opts.bells && opts.bells.length ? opts.bells.slice() : [1,2,3,4,5,6,7,8];
+    var bells = opts.bells && opts.bells.length ? opts.bells.slice() : [1, 2, 3, 4, 5, 6, 7, 8];
+    var n = bells.length;
     var w = opts.width || el.clientWidth || 400;
     var h = opts.height || el.clientHeight || 400;
     var cx = w / 2, cy = h / 2;
     var radius = opts.radius != null ? opts.radius : Math.min(w, h) * 0.35;
     var padR = opts.padR != null ? opts.padR : Math.min(w, h) * 0.11;
-    var mouthR = padR * 0.9;
-     // In layoutBellsOnCircle call inside draw():
-     // Centre the gap between last and first on the top → 1 and 8 flank the top
-
-    var n = bells.length;
-
-    var theta0 = opts.theta0 != null ? opts.theta0 : (-Math.PI / 2 - Math.PI / n);
+    var baseMouth = padR * 0.9;
+    var theta0 = opts.theta0 != null ? opts.theta0 : (Math.PI / n);
     var nodes = layoutBellsOnCircle(bells, cx, cy, radius, theta0);
 
     el.innerHTML = "";
@@ -75,17 +77,24 @@
     svg.setAttribute("class", "bell-band-svg");
 
     var defs = document.createElementNS(NS, "defs");
-    var clip = document.createElementNS(NS, "clipPath");
-    clip.setAttribute("id", "bell-mouth-clip");
-    var clipC = document.createElementNS(NS, "circle");
-    clipC.setAttribute("cx", "0");
-    clipC.setAttribute("cy", "0");
-    clipC.setAttribute("r", String(mouthR));
-    clip.appendChild(clipC);
-    defs.appendChild(clip);
     svg.appendChild(defs);
 
+    var mouthByBell = {};
+
     nodes.forEach(function (d) {
+      var mouthR = baseMouth * sizeScale(d.bell, n, opts.sizeSpread);
+      mouthByBell[d.bell] = mouthR;
+
+      var clipId = "bell-mouth-clip-" + d.bell;
+      var clip = document.createElementNS(NS, "clipPath");
+      clip.setAttribute("id", clipId);
+      var clipC = document.createElementNS(NS, "circle");
+      clipC.setAttribute("cx", "0");
+      clipC.setAttribute("cy", "0");
+      clipC.setAttribute("r", String(mouthR));
+      clip.appendChild(clipC);
+      defs.appendChild(clip);
+
       var g = document.createElementNS(NS, "g");
       g.setAttribute("class", "bell-pad");
       g.setAttribute("data-bell", String(d.bell));
@@ -97,7 +106,7 @@
       fill.setAttribute("fill", "#f5f5f5");
 
       var clipped = document.createElementNS(NS, "g");
-      clipped.setAttribute("clip-path", "url(#bell-mouth-clip)");
+      clipped.setAttribute("clip-path", "url(#" + clipId + ")");
       var off = clapperOffset("c", mouthR);
       var clap = document.createElementNS(NS, "circle");
       clap.setAttribute("class", "bell-clapper");
@@ -105,21 +114,18 @@
       clap.setAttribute("cx", String(off.cx));
       clap.setAttribute("cy", String(off.cy));
       clap.setAttribute("r", String(mouthR * 0.4));
-      clap.setAttribute("fill", colourFor(d.bell, n));
+      clap.setAttribute("fill", colourFor(d.bell));
       clipped.appendChild(clap);
 
       var ring = document.createElementNS(NS, "circle");
-      var col = colourFor(d.bell, n);
-
       ring.setAttribute("r", String(mouthR));
       ring.setAttribute("fill", "none");
-      ring.setAttribute("stroke", col);
-      ring.setAttribute("stroke-width","3"); //   String(Math.max(2, mouthR * 0.18)));
+      ring.setAttribute("stroke", colourFor(d.bell));
+      ring.setAttribute("stroke-width", String(Math.max(2, mouthR * 0.12)));
 
       g.appendChild(fill);
       g.appendChild(clipped);
       g.appendChild(ring);
-
       if (opts.onPadClick) {
         g.addEventListener("click", function (ev) {
           opts.onPadClick(d.bell, d, ev);
@@ -129,7 +135,7 @@
     });
 
     el.appendChild(svg);
-    el.__bellBand = { mouthR: mouthR, bells: bells };
+    el.__bellBand = { bells: bells, mouthByBell: mouthByBell };
     return { svg: svg, nodes: nodes };
   }
 
@@ -154,29 +160,27 @@
   }
 
   function strike(host, bell, opts) {
-     opts = opts || {};
-     var el = typeof host === "string" ? document.querySelector(host) : host;
-     if (!el) return;
-     var circle = el.querySelector('.bell-pad[data-bell="' + bell + '"] .bell-clapper');
-     if (!circle) return;
-     var mouthR = (el.__bellBand && el.__bellBand.mouthR) || 20;
-     var ms = opts.duration || 120;
-
-     // rl → c → lu → c → rl (diagonal through centre)
-     function go(a, b, next) {
-        animateClapper(circle, mouthR, a, b, ms, next);
-     }
-     go("rl", "c", function () {
-       go("c", "lu", function () {
-         go("lu", "c", function () {
-           go("c", "rl", function () {
-             circle.setAttribute("data-pos", "rl");
-             if (opts.onDone) opts.onDone(bell);
-           });
-         });
-       });
-     });
-   }
+    opts = opts || {};
+    var el = typeof host === "string" ? document.querySelector(host) : host;
+    if (!el) return;
+    var circle = el.querySelector('.bell-pad[data-bell="' + bell + '"] .bell-clapper');
+    if (!circle) return;
+    var mouthR = (el.__bellBand && el.__bellBand.mouthByBell && el.__bellBand.mouthByBell[bell]) || 20;
+    var ms = opts.duration || 120;
+    function go(a, b, next) {
+      animateClapper(circle, mouthR, a, b, ms, next);
+    }
+    go("rl", "c", function () {
+      go("c", "lu", function () {
+        go("lu", "c", function () {
+          go("c", "rl", function () {
+            circle.setAttribute("data-pos", "rl");
+            if (opts.onDone) opts.onDone(bell);
+          });
+        });
+      });
+    });
+  }
 
   global.BellBand = {
     draw: draw,
