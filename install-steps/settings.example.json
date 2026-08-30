@@ -11,6 +11,9 @@
     "sandgps2.local",
     "sandgps3.local"
   ],
+  "clients": {
+     "kiosk_ws": "ws://192.168.0.198/ws"
+  },
   "ethernet": {
     "dhcp_timeout_sec": 15,
     "fallback_ip": "192.168.99.2",
