@@ -411,6 +411,40 @@ text {
   font-weight: bold;
 }
 
+.frontpage_table_display tr.frontpage_tr_display:last-of-type td.changebody,
+.frontpage_table_display tr.frontpage_tr_display:last-of-type td.pattern_counter {
+  padding-top: 0.35em;
+}
+
+/* Pattern digits stay high; swap text sits toward the next row */
+.frontpage_table_display td.changebody,
+.frontpage_table_display td.pattern_counter {
+  vertical-align: top;
+}
+
+.frontpage_table_display td.swap,
+.frontpage_table_display td.highlight {
+  vertical-align: bottom;
+  padding-top: 0;
+}
+
+/* First pattern row after the title — black box on the pair that moves */
+.frontpage_table_display tr:nth-child(2)
+  span.largecharfrom:not(.shadow),
+.frontpage_table_display tr:nth-child(2)
+  span.largecharround:not(.shadow),
+.frontpage_table_display tr:nth-child(2)
+  span.swapchar {
+  box-shadow: none;
+  outline: none;
+  -webkit-text-stroke: 1px #000;
+  /* fallback if stroke is ignored */
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+}
 
 .swap {
   text-align: center;
