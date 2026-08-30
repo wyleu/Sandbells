@@ -107,26 +107,57 @@
       fill.setAttribute("r", String(mouthR));
       fill.setAttribute("fill", "#f5f5f5");
 
-      var clipped = document.createElementNS(NS, "g");
-      clipped.setAttribute("clip-path", "url(#" + clipId + ")");
+      var clipG = document.createElementNS(NS, "g");
+      clipG.setAttribute("class", "bell-clapper-g");
+      clipG.setAttribute("clip-path", "url(#" + clipId + ")");
+
       var clap = document.createElementNS(NS, "circle");
       clap.setAttribute("class", "bell-clapper");
       clap.setAttribute("cx", "0");
       clap.setAttribute("cy", "0");
       clap.setAttribute("r", String(mouthR * 0.4));
       clap.setAttribute("fill", colourFor(d.bell));
-      clipped.appendChild(clap);
 
-      var ring = document.createElementNS(NS, "circle");
-      ring.setAttribute("r", String(mouthR));
+      var hiAng = 210 * Math.PI / 180;
+      var hiR = mouthR * 0.4;
+      var hi = document.createElementNS(NS, "circle");
+      hi.setAttribute("class", "bell-highlight");
+      hi.setAttribute("cx", String(hiR * Math.cos(hiAng) * 0.45));
+      hi.setAttribute("cy", String(hiR * Math.sin(hiAng) * 0.45));
+      hi.setAttribute("r", String(Math.max(1.1, mouthR * 0.07)));
+      hi.setAttribute("fill", "#ffffff");
+      hi.setAttribute("pointer-events", "none");
+
+      clipG.appendChild(clap);
+      clipG.appendChild(hi);
+
+
+      var gap0 = (opts.ringGapStartDeg != null ? opts.ringGapStartDeg : 0) * Math.PI / 180;
+      var gap1 = (opts.ringGapEndDeg != null ? opts.ringGapEndDeg : 60) * Math.PI / 180;
+      var x3 = mouthR * Math.cos(gap0);
+      var y3 = mouthR * Math.sin(gap0);
+      var x5 = mouthR * Math.cos(gap1);
+      var y5 = mouthR * Math.sin(gap1);
+
+      var ring = document.createElementNS(NS, "path");
+      ring.setAttribute(
+        "d",
+        "M " + x5 + " " + y5 +
+        " A " + mouthR + " " + mouthR + " 0 1 1 " + x3 + " " + y3
+      );
       ring.setAttribute("fill", "none");
       ring.setAttribute("stroke", colourFor(d.bell));
       ring.setAttribute("stroke-width", String(Math.max(2, mouthR * 0.12)));
+      ring.setAttribute("stroke-linecap", "round");
+
 
       var num = document.createElementNS(NS, "text");
+      var numAng = ((opts.numDeg != null ? opts.numDeg : 30) * Math.PI) / 180;
+      var numR = mouthR * (opts.numR != null ? opts.numR : 1.05);
+
       num.setAttribute("class", "bell-num");
-      num.setAttribute("x", String(mouthR * 0.92));
-      num.setAttribute("y", String(mouthR * 0.92));
+      num.setAttribute("x", String(numR * Math.cos(numAng)));
+      num.setAttribute("y", String(numR * Math.sin(numAng)));
       num.setAttribute("text-anchor", "middle");
       num.setAttribute("dominant-baseline", "middle");
       num.setAttribute("fill", "#000");
@@ -137,9 +168,10 @@
       num.textContent = String(d.bell);
 
       g.appendChild(fill);
-      g.appendChild(clipped);
+      g.appendChild(clipG)
       g.appendChild(ring);
       g.appendChild(num);
+
       if (opts.onPadClick) {
         g.addEventListener("click", function (ev) { opts.onPadClick(d.bell, d, ev); });
       }
@@ -154,12 +186,11 @@
   function setTape(host, bell, u, amp) {
     var el = typeof host === "string" ? document.querySelector(host) : host;
     if (!el) return;
-    var circle = el.querySelector('.bell-pad[data-bell="' + bell + '"] .bell-clapper');
-    if (!circle) return;
+    var gClap = el.querySelector('.bell-pad[data-bell="' + bell + '"] .bell-clapper-g');
+    if (!gClap) return;
     var mouthR = (el.__bellBand && el.__bellBand.mouthByBell && el.__bellBand.mouthByBell[bell]) || 20;
     var off = tapeOffset(tapeT(u), amp, mouthR);
-    circle.setAttribute("cx", String(off.cx));
-    circle.setAttribute("cy", String(off.cy));
+    gClap.setAttribute("transform", "translate(" + off.cx + "," + off.cy + ")");
     if (el.__bellBand) {
       el.__bellBand.tape[bell] = { u: u, amp: amp };
     }
