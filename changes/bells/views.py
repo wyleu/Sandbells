@@ -35,7 +35,7 @@ from bells.functions import (
 
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
 
-def home(request, number = 8 ):
+def home(request, number=6):
     # Render the iframe container
     context = {}
 
@@ -107,12 +107,14 @@ def random_display(request, number=None, seed_name="Rounds"):
     # ... existing pick number / patterns / sample seed, A, B ...
 
     number, seed, random_a, random_b = pick_random_leg_patterns(number, seed_name)
+
     ctx = compose_directed_legs(
-        [(seed, random_a), (random_a, random_b)],
+        [(seed, random_a), (random_a, random_b), (random_b, seed)],
         number,
         from_pattern=seed,
         to_pattern=random_a,
     )
+
     return render(request, "bells/display.html", ctx)
 
 def farm_status(request, index=0):
@@ -183,7 +185,7 @@ def bell_band(request, number=8):
     return render(request, "bells/bell_band.html", context)
 
 
-def display(request, number=8, to_name="", from_name="Rounds"):
+def display(request, number=6, to_name="", from_name="Rounds"):
     # iframe contents — directed legs; Rounds uses rounds_from_patterns(target)
     try:
         from_pat = Pattern.objects.get(name__iexact=from_name, number=number, enable=True)

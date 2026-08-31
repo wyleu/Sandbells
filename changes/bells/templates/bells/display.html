@@ -5,23 +5,17 @@
 
 {% block fullscreen %} 
 <div class="frontpage">
-  <div class="frontpage_container">
 
-    {% if legs %}
-      {% for leg in legs %}
-        <div>
-          {% include "bells/frontpage_display.html" with leg=leg from_pattern=leg.from_pattern to_pattern=leg.to_pattern%}
-        </div>
-      {% endfor %}
-    {% else %}
-      {# fallback while some paths still only pass result_block #}
-      {% for res in result_block %}
-        <div>
-          {% include "bells/frontpage_display.html" %}
-        </div>
-      {% endfor %}
-    {% endif %}
-  </div>
+<div class="frontpage_container three-pattern">
+  {% if legs %}
+    {% for leg in legs %}
+      <div class="pattern-slot slot-{{ forloop.counter }}">
+        {% include "bells/frontpage_display.html" with leg=leg from_pattern=leg.from_pattern to_pattern=leg.to_pattern %}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+
 {# drumkit moved to #bell-circle on home.html #}
 
 </div>
