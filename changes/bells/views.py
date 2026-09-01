@@ -76,6 +76,7 @@ def home(request, number=6):
         'to_patterns': to_patterns,
         'count': len(to_patterns),
         }
+    context["display"] = display_settings()
 
     return render(request, 'bells/home.html', context)
 
