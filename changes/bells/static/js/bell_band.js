@@ -146,7 +146,7 @@
         " A " + mouthR + " " + mouthR + " 0 1 1 " + x3 + " " + y3
       );
       ring.setAttribute("fill", "none");
-      ring.setAttribute("stroke", colourFor(d.bell));
+      ring.setAttribute("stroke", "#5a5a5a");
       ring.setAttribute("stroke-width", String(Math.max(2, mouthR * 0.12)));
       ring.setAttribute("stroke-linecap", "round");
 
