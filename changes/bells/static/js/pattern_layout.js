@@ -1,6 +1,14 @@
 (function () {
   var UNEVEN = 1.35; // "considerably larger"
 
+  var cfg = { random_bells: 6, random_windows: 3, pattern_position_mode: "centre" };
+  try {
+    var el = document.getElementById("sandbells-display");
+    if (el) Object.assign(cfg, JSON.parse(el.textContent));
+  } catch (e) {}
+  var PATTERN_POSITION_MODE = cfg.pattern_position_mode;
+
+
   function layout() {
     var root = document.querySelector(".frontpage_container.three-pattern");
     if (!root) return;

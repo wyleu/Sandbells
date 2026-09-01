@@ -6,7 +6,7 @@
 {% block fullscreen %} 
 <div class="frontpage">
 
-<div class="frontpage_container three-pattern">
+<div class="frontpage_container{% if legs|length >= 3 %} three-pattern{% endif %}">
   {% if legs %}
     {% for leg in legs %}
       <div class="pattern-slot slot-{{ forloop.counter }}">
@@ -22,12 +22,12 @@
 {% endblock fullscreen%}
 
 {% block scripts %}
+{{ display|json_script:"sandbells-display" }}
 <script src="{% static 'js/jquery.min.js' %}?v={{ git_hash }}"></script>
 <script src="{% static 'js/d3.v3.min.js' %}?v={{ git_hash }}"></script>
-
-
 <script src="{% static 'js/howler.min.js' %}?v={{ git_hash }}"></script>
 <script src="{% static 'js/apps.js' %}?v={{ git_hash }}"></script>
 <script src="{% static 'js/clock_analogue.js' %}?v={{ git_hash }}"></script>
 <script src="{% static 'js/pagesize.js' %}?v={{ git_hash }}"></script>
+<script src="{% static 'js/pattern_layout.js' %}?v={{ git_hash }}"></script>
 {% endblock scripts %}

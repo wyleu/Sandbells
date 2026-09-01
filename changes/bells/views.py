@@ -32,13 +32,13 @@ from bells.functions import (
     NotFound,
     rounds_from_patterns,
 )
-
+from bells.app_settings import display_settings
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
 
 def home(request, number=6):
     # Render the iframe container
     context = {}
-
+    context["display"] = display_settings()
 
         # Render menu 
     numbers = set(
@@ -107,13 +107,14 @@ def random_display(request, number=None, seed_name="Rounds"):
     # ... existing pick number / patterns / sample seed, A, B ...
 
     number, seed, random_a, random_b = pick_random_leg_patterns(number, seed_name)
-
-    ctx = compose_directed_legs(
-        [(seed, random_a), (random_a, random_b), (random_b, seed)],
-        number,
-        from_pattern=seed,
-        to_pattern=random_a,
-    )
+    d = display_settings()
+    nwin = d["random_windows"]
+    if nwin >= 3:
+        pairs = [(seed, random_a), (random_a, random_b), (random_b, seed)]
+    else:
+        pairs = [(seed, random_a), (random_a, seed)]
+    ctx = compose_directed_legs(pairs, number, from_pattern=seed, to_pattern=random_a)
+    ctx["display"] = d
 
     return render(request, "bells/display.html", ctx)
 
