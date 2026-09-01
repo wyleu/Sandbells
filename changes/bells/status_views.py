@@ -305,3 +305,9 @@ def system_status(request):
             "settings_path": d.get("_settings_path", ""),
         }
     )
+def layout_test(request, number, a="Rounds", b="Exploding Titums", c="Kings"):
+    number = int(number)
+    pairs = [(a, b), (b, c), (c, a)]
+    ctx = compose_directed_legs(pairs, number, from_pattern=a, to_pattern=b)
+    ctx["display"] = display_settings()
+    return render(request, "bells/display.html", ctx)

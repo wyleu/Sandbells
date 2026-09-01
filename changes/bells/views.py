@@ -119,6 +119,16 @@ def random_display(request, number=None, seed_name="Rounds"):
 
     return render(request, "bells/display.html", ctx)
 
+def layout_test(request, number=8, a="Rounds", b="Exp-ing Titums", c="Kings"):
+    number = int(number)
+    pa = Pattern.objects.get(name__iexact=a, number=number, enable=True)
+    pb = Pattern.objects.get(name__iexact=b, number=number, enable=True)
+    pc = Pattern.objects.get(name__iexact=c, number=number, enable=True)
+    pairs = [(pa, pb), (pb, pc), (pc, pa)]
+    ctx = compose_directed_legs(pairs, number, from_pattern=pa, to_pattern=pb)
+    ctx["display"] = display_settings()
+    return render(request, "bells/display.html", ctx)
+
 def farm_status(request, index=0):
     instances = load_farm_instances()
     if not instances:
