@@ -8,6 +8,8 @@ from pathlib import Path
 from django.conf import settings
 from django.http import JsonResponse
 
+from bells.app_settings import display_settings
+
 SETTINGS_PATH = Path("/etc/sandbells/settings.json")
 
 
@@ -114,6 +116,7 @@ def system_status(request):
     fallback_prefix = int(eth_cfg.get("fallback_prefix") or 24)
     status_cfg = cfg.get("status") or {}
     poll_hint_sec = int(status_cfg.get("poll_hint_sec") or 5)
+
 
     try:
         ips = _run(["hostname", "-I"]).split()
@@ -257,6 +260,8 @@ def system_status(request):
 
     time_label = time_source if time_locked else "NO LOCK"
 
+    d = display_settings()
+
     return JsonResponse(
         {
             "hostname": hostname,
@@ -294,5 +299,9 @@ def system_status(request):
             "cpu": cpu_pct,
             "load1": load1,
             "throttled": throttled,
+            "random_bells": d["random_bells"],
+            "random_windows": d["random_windows"],
+            "pattern_mode": d["pattern_position_mode"],
+            "settings_path": d.get("_settings_path", ""),
         }
     )
