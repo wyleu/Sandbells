@@ -42,48 +42,16 @@ load_networks() {
   done < <(jq -r '.networks[]? | "\(.ssid // "")\t\(.psk // "")"' "$SETTINGS" 2>/dev/null)
 }
 
-have_local_net() {
-  local h
-  for h in "${TIME_HOSTS[@]}"; do
-    ping -c 1 -W 1 "$h" >/dev/null 2>&1 && return 0
-  done
-  ip -4 -br addr show eth0  2>/dev/null | grep -q 'UP' && return 0
-  ip -4 -br addr show wlan0 2>/dev/null | grep -q 'UP' && return 0
-  return 1
-}
-
-load_time_hosts
-load_networks
-
-if have_local_net; then
-  log "local net OK — no action"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# installed copy:
+# SCRIPT_DIR=/usr/local/lib/sandbells   # if you install it there
+source "$SCRIPT_DIR/sandbells-wifi.sh"
+LOGTAG="sandbells-net"
+if have_time_net; then
+  log "time host reachable — no action"
   exit 0
 fi
-
-log "no local net — trying configured WiFi networks"
-if [ "${#NETWORKS[@]}" -eq 0 ]; then
-  log "no networks configured — nothing to try"
-  exit 1
-fi
-
-for entry in "${NETWORKS[@]}"; do
-  ssid="${entry%%:*}"
-  pass="${entry#*:}"
-  # trim possible trailing comma from old-style entries
-  ssid="${ssid%,}"
-  pass="${pass%,}"
-  log "try SSID: $ssid"
-  if nmcli device wifi connect "$ssid" password "$pass" ifname wlan0 2>/dev/null; then
-    sleep 3
-    if have_local_net; then
-      log "connected via $ssid"
-      exit 0
-    fi
-    log "associated $ssid but local ping still failed"
-  else
-    log "failed: $ssid"
-  fi
-done
-
+log "no time host — trying WiFi"
+try_connect && exit 0
 log "no network succeeded"
 exit 1
