@@ -6,10 +6,14 @@
     console.log(width, height);
 
 function processChangePress(bellstring){
-        d3.select("#ishow")
-        .attr('src', bellstring);
-    };
-
+    var frame = document.getElementById("ishow");
+    if (!frame) return;
+    if (frame.getAttribute("src") === bellstring) {
+        if (frame.contentWindow) frame.contentWindow.location.reload();
+    } else {
+        d3.select("#ishow").attr("src", bellstring);
+    }
+}
 
 function processNumberPress(num) {
     num = String(num);

@@ -21,5 +21,10 @@
   },
   "status": {
     "poll_hint_sec": 3
+  },
+  "display": {
+    "random_bells": 6,
+    "random_windows": 3,
+    "pattern_position_mode": "centre"
   }
 }

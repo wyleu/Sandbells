@@ -69,4 +69,6 @@ urlpatterns = [
     path('', views.home, name='root_home'),
     path("api/system-status/", status_views.system_status, name="system_status"),
     path("api/farm/device-status/",views.farm_device_status,name="farm_device_status"),
+    path("layout-test/<int:number>/<str:a>/<str:b>/<str:c>/", views.layout_test, name="layout_test"),
+    path("layout-test/<int:number>/", views.layout_test, name="layout_test_default"),
 ]
