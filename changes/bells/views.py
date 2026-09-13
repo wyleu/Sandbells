@@ -25,6 +25,7 @@ from django.template import loader
 
 
 from bells.models import Bell, Tower, Pattern
+
 from bells.functions import (
     db_process,
     ZeroLengthChange, 
@@ -34,6 +35,7 @@ from bells.functions import (
 )
 from bells.app_settings import display_settings
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
+from bells.status_schema import wrap_document
 
 def home(request, number=6):
     # Render the iframe container
@@ -167,7 +169,7 @@ def farm_device_status(request):
         try:
             with urlopen(url, timeout=5) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-            return JsonResponse(data)
+            return JsonResponse(wrap_document(data))
         except Exception as e:
             last_err = e
     return JsonResponse({"error": str(last_err)}, status=502)
