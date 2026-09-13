@@ -9,7 +9,7 @@ from django.conf import settings
 from django.http import JsonResponse
 
 from bells.app_settings import display_settings
-
+from bells.status_schema import wrap_document
 SETTINGS_PATH = Path("/etc/sandbells/settings.json")
 
 
@@ -262,49 +262,49 @@ def system_status(request):
 
     d = display_settings()
 
-    return JsonResponse(
-        {
-            "hostname": hostname,
-            "hostname_local": hostname_local,
-            "ip": ip,
-            "ip_list": ip_list,
-            "wifi_state": wifi_state,
-            "wifi_ssid": wifi_ssid,
-            "wifi_ip": wifi_ip,
-            "wifi_cidr": wifi_cidr,
-            "wifi_method": wifi_method,
-            "wired_state": wired_state,
-            "wired_ip": wired_ip,
-            "wired_cidr": wired_cidr,
-            "wired_method": wired_method,
-            "fallback_ip": fallback_ip,
-            "fallback_prefix": fallback_prefix,
-            "using_fallback": using_fallback,
-            "git_branch": git_branch,
-            "git_hash": git_hash,
-            "arch": platform.machine(),
-            "pi_model": pi_model,
-            "memory": memory,
-            "temp": temp_c,
-            "fan": fan_pct,
-            "debug": settings.DEBUG,
-            "nginx": svc("nginx"),
-            "gunicorn": svc("gunicorn"),
-            "kiosk": svc("sandbells-kiosk"),
-            "time_source": time_source,
-            "time_locked": time_locked,
-            "time_label": time_label,
-            "status_tick": int(time.time()),
-            "poll_hint_sec": poll_hint_sec,
-            "cpu": cpu_pct,
-            "load1": load1,
-            "throttled": throttled,
-            "random_bells": d["random_bells"],
-            "random_windows": d["random_windows"],
-            "pattern_mode": d["pattern_position_mode"],
-            "settings_path": d.get("_settings_path", ""),
-        }
-    )
+    payload = {
+        "hostname": hostname,
+        "hostname_local": hostname_local,
+        "ip": ip,
+        "ip_list": ip_list,
+        "wifi_state": wifi_state,
+        "wifi_ssid": wifi_ssid,
+        "wifi_ip": wifi_ip,
+        "wifi_cidr": wifi_cidr,
+        "wifi_method": wifi_method,
+        "wired_state": wired_state,
+        "wired_ip": wired_ip,
+        "wired_cidr": wired_cidr,
+        "wired_method": wired_method,
+        "fallback_ip": fallback_ip,
+        "fallback_prefix": fallback_prefix,
+        "using_fallback": using_fallback,
+        "git_branch": git_branch,
+        "git_hash": git_hash,
+        "arch": platform.machine(),
+        "pi_model": pi_model,
+        "memory": memory,
+        "temp": temp_c,
+        "fan": fan_pct,
+        "debug": settings.DEBUG,
+        "nginx": svc("nginx"),
+        "gunicorn": svc("gunicorn"),
+        "kiosk": svc("sandbells-kiosk"),
+        "time_source": time_source,
+        "time_locked": time_locked,
+        "time_label": time_label,
+        "status_tick": int(time.time()),
+        "poll_hint_sec": poll_hint_sec,
+        "cpu": cpu_pct,
+        "load1": load1,
+        "throttled": throttled,
+        "random_bells": d["random_bells"],
+        "random_windows": d["random_windows"],
+        "pattern_mode": d["pattern_position_mode"],
+        "settings_path": d.get("_settings_path", ""),
+    }
+    return JsonResponse(wrap_document(payload))
+
 def layout_test(request, number, a="Rounds", b="Exploding Titums", c="Kings"):
     number = int(number)
     pairs = [(a, b), (b, c), (c, a)]
