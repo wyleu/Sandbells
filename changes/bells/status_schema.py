@@ -2,12 +2,14 @@
 
 Wrap today's flat Sandbells / Sandsense payloads so the farm page can
 render sections without knowing device-specific keys.
+
+Flat keys (time_label, wifi_ssid, …) are also copied onto the Sandbells
+document so the kiosk overlay in system_info.js keeps working.
 """
 from __future__ import annotations
 
 import time
 from typing import Any
-
 
 SCHEMA = "sand.status/v1"
 LEVELS = ("ok", "warn", "error", "unknown")
@@ -132,7 +134,7 @@ def from_sandbells_flat(d: dict) -> dict:
     if using_fallback:
         summary = "fallback IP · " + str(summary)
 
-    return {
+    doc = {
         "schema": SCHEMA,
         "id": d.get("hostname") or "sandbells",
         "name": d.get("hostname") or "sandbells",
@@ -152,6 +154,10 @@ def from_sandbells_flat(d: dict) -> dict:
         ],
         "legacy": d,
     }
+    for k, v in d.items():
+        if k not in doc:
+            doc[k] = v
+    return doc
 
 
 def from_sandsense_flat(d: dict) -> dict:
@@ -223,3 +229,4 @@ def _svc_level(state: Any) -> str:
 def _join(*parts: Any) -> str:
     bits = [str(p) for p in parts if p not in (None, "", "—")]
     return "  ".join(bits) if bits else "—"
+
