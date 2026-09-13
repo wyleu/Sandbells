@@ -7,53 +7,37 @@
   <link rel="stylesheet" href="{% static 'css/farm_status.css' %}">
 </head>
 <body>
-  <header>
-     <a href="/" target="_top" id="link-home" class="branding">Sandbells</a>
-     <script>
-       (function () {
-          var a = document.getElementById("link-home");
-          var back = sessionStorage.getItem("sandbellsReturn");
-          if (a && back) a.setAttribute("href", back);
-       })();
-     </script>
+  <header id="farm-header">
+    <a href="/" target="_top" id="link-home" class="branding">Sandbells</a>
+    <script>
+      (function () {
+        var a = document.getElementById("link-home");
+        var back = sessionStorage.getItem("sandbellsReturn");
+        if (a && back) a.setAttribute("href", back);
+      })();
+    </script>
     <a href="{% url 'farm_status_index' prev %}">← Prev</a>
     <strong>{{ index|add:1 }} / {{ count }}</strong>
     <a href="{% url 'farm_status_index' next %}">Next →</a>
-    <span>{{ inst.kind }} · {{ inst.family }} · {{ inst.name }}</span>
+    <span id="farm-ident">{{ inst.family }} · {{ inst.name }}</span>
+    <span id="farm-level" class="level level-unknown">…</span>
+    <span id="farm-summary"></span>
   </header>
 
-  {% if inst.kind == "host" %}
-    <pre id="st-json">Loading…</pre>
+  <main id="farm-main">
+    <p id="farm-wait">Loading {{ inst.name }}…</p>
+  </main>
 
-  {% elif inst.family == "sandsense" %}
-    <section class="farm-sandsense">
-      <h2>{{ inst.name }}</h2>
-      <div id="ss-orb" class="orb orb-green"></div>
-      <dl id="ss-meta">
-        <dt>IP</dt><dd id="ss-ip">—</dd>
-        <dt>WiFi</dt><dd id="ss-ssid">—</dd>
-        <dt>Temp</dt><dd id="ss-temp">—</dd>
-        <dt>PLL</dt><dd id="ss-pll">—</dd>
-        <dt>Ticks (period)</dt><dd id="ss-ticks">—</dd>
-        <dt>ADC avg</dt><dd id="ss-adc">—</dd>
-        <dt>Last message</dt><dd id="ss-last">—</dd>
-      </dl>
-      <pre id="ss-lines">Loading…</pre>
-    </section>
-
-  {% else %}
-    <p>Pico / remote stub: {{ inst.id }} (live data later)</p>
-  {% endif %}
-
-    <script src="{% static 'js/farm_status.js' %}"></script>
-    <script>
-      FarmStatus.start({
-        kind: "{{ inst.kind }}",
-        family: "{{ inst.family }}",
-        statusUrl: "{{ inst.status_url|default:'' }}",
-        wsUrl: "ws://192.168.0.154/ws",   // ← put the real Pico IP or .local name here
-        interval: 3000
-      });
-    </script>
+  <script src="{% static 'js/farm_status.js' %}"></script>
+  <script>
+    FarmStatus.start({
+      kind: "{{ inst.kind }}",
+      family: "{{ inst.family }}",
+      name: "{{ inst.name }}",
+      statusUrl: "{{ inst.status_url|default:'' }}",
+      wsUrl: "{{ inst.ws_url|default:'' }}",
+      interval: {{ inst.poll_hint_sec|default:5 }}000
+    });
+  </script>
 </body>
 </html>

@@ -1,61 +1,106 @@
-/* farm_status.css – Farm Status detail page */
+/* farm_status.css – one device, full kiosk frame */
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
 
 body {
   font-family: system-ui, sans-serif;
-  margin: 1rem;
   background: #111;
   color: #eee;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-header {
+header#farm-header {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem 1rem;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  flex: 0 0 auto;
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid #333;
+  font-size: 1.05rem;
 }
 
-a {
-  color: #8af;
+#farm-summary {
+  opacity: 0.85;
+  flex: 1 1 12rem;
 }
 
-#st-json,
-#ss-lines {
-  white-space: pre-wrap;
-  border: 1px solid #333;
-  padding: 1rem;
-  border-radius: 8px;
-  max-height: 24rem;
-  overflow: auto;
-}
+a { color: #8af; }
 
-dl {
+#farm-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.6rem 0.8rem 0.8rem;
   display: grid;
-  grid-template-columns: 10rem 1fr;
-  gap: 0.25rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.6rem;
+  overflow: hidden;
 }
 
-dt {
+.farm-section {
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #181818;
+}
+
+.farm-section h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.farm-section dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 0.2rem 0.7rem;
+  align-content: start;
+  overflow: hidden;
+}
+
+.farm-section dt {
+  opacity: 0.65;
+}
+
+.farm-section dd {
+  margin: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.level {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.level-ok, .val-ok { color: #7d7; }
+.level-warn, .val-warn { color: #ec6; }
+.level-error, .val-error { color: #f66; }
+.level-unknown, .val-unknown { color: #aaa; }
+
+.level-ok { background: #173; }
+.level-warn { background: #542; }
+.level-error { background: #511; }
+.level-unknown { background: #333; }
+
+#farm-wait {
+  grid-column: 1 / -1;
+  margin: 1rem;
   opacity: 0.7;
-}
-
-/* sandsense orb */
-.orb {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
-  margin: 1rem 0;
-  transition: background 0.15s, transform 0.15s;
-}
-
-.orb-red {
-  background: #c22;
-}
-
-.orb-green {
-  background: #2a4;
-}
-
-.orb-flash {
-  transform: scale(1.15);
 }
