@@ -1,6 +1,7 @@
 /**
  * farm_status.js — one device page, one poll (optional one WS).
  * Renders sand.status/v1 sections into the full viewport.
+ * Items with "color" draw a circular lamp; WS ticks flip Encoder LEDs.
  */
 (function () {
   "use strict";
@@ -19,9 +20,13 @@
   function render(doc) {
     var main = $("farm-main");
     if (!main) return;
-    $("farm-ident") && ($("farm-ident").textContent =
-      (doc.family || "") + " · " + (doc.name || doc.id || ""));
-    $("farm-summary") && ($("farm-summary").textContent = doc.summary || "");
+    if ($("farm-ident")) {
+      $("farm-ident").textContent =
+        (doc.family || "") + " · " + (doc.name || doc.id || "");
+    }
+    if ($("farm-summary")) {
+      $("farm-summary").textContent = doc.summary || "";
+    }
     setLevel($("farm-level"), doc.level);
 
     var sections = doc.sections || [];
@@ -42,9 +47,27 @@
         var dt = document.createElement("dt");
         dt.textContent = it.label || it.key || "";
         var dd = document.createElement("dd");
-        dd.textContent = it.value || "—";
-        if (it.level) dd.className = "val-" + it.level;
-        if (it.hint) dd.title = it.hint;
+        if (it.color) {
+          var sw = document.createElement("span");
+          sw.className = "swatch";
+          sw.style.background = it.color;
+          sw.setAttribute("data-key", it.key || "leds");
+          sw.setAttribute("data-color", it.color);
+          if (it.color_alt) {
+            sw.setAttribute("data-color-alt", it.color_alt);
+          }
+          sw.setAttribute("data-now", "main");
+          sw.title = it.value || "";
+          dd.appendChild(sw);
+        } else {
+          dd.textContent = it.value || "—";
+        }
+        if (it.level) {
+          dd.className = "val-" + it.level;
+        }
+        if (it.hint && !it.color) {
+          dd.title = it.hint;
+        }
         dl.appendChild(dt);
         dl.appendChild(dd);
       });
@@ -55,7 +78,10 @@
 
   function renderError(msg) {
     var main = $("farm-main");
-    if (main) main.innerHTML = "<p id='farm-wait'>" + msg + "</p>";
+    if (main) {
+      main.innerHTML = "<p id='farm-wait'></p>";
+      main.firstChild.textContent = msg;
+    }
     setLevel($("farm-level"), "error");
   }
 
@@ -103,6 +129,17 @@
     });
   }
 
+  function flipLedSwatch() {
+    var sw = document.querySelector('.swatch[data-key="leds"]');
+    if (!sw) return;
+    var a = sw.getAttribute("data-color");
+    var b = sw.getAttribute("data-color-alt");
+    if (!a || !b) return;
+    var useAlt = sw.getAttribute("data-now") !== "alt";
+    sw.style.background = useAlt ? b : a;
+    sw.setAttribute("data-now", useAlt ? "alt" : "main");
+  }
+
   function startWs(cfg) {
     if (!cfg.wsUrl) return null;
     var ws = null;
@@ -110,10 +147,12 @@
 
     function connect() {
       if (document.visibilityState === "hidden") return;
-      try { if (ws) ws.close(); } catch (e) {}
+      try {
+        if (ws) ws.close();
+      } catch (e) {}
       ws = new WebSocket(cfg.wsUrl);
       ws.onmessage = function () {
-        /* live tick only while this page is open; next HTTP poll refreshes rows */
+        flipLedSwatch();
       };
       ws.onclose = function () {
         if (document.visibilityState === "hidden") return;
@@ -124,7 +163,9 @@
 
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "hidden" && ws) {
-        try { ws.close(); } catch (e) {}
+        try {
+          ws.close();
+        } catch (e) {}
         ws = null;
       } else if (document.visibilityState === "visible") {
         delay = 2000;
@@ -143,3 +184,4 @@
     },
   };
 })();
+

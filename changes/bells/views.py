@@ -404,28 +404,42 @@ def timedatetest(request):
     return render(request, 'bells/timedatetest.html')
 
 def load_farm_instances():
-    """Temporary static list until farm registry exists."""
+    from pathlib import Path
+    import json
+
+    path = Path("/etc/sandbells/settings.json")
+    try:
+        cfg = json.loads(path.read_text()) if path.is_file() else {}
+    except Exception:
+        cfg = {}
+
+    devices = (cfg.get("status") or {}).get("devices") or []
+    out = []
+    for raw in devices:
+        if not isinstance(raw, dict):
+            continue
+        inst = dict(raw)
+        inst.setdefault("id", inst.get("name") or "device")
+        inst.setdefault("name", inst["id"])
+        inst.setdefault("kind", "host")
+        inst.setdefault("family", "sandbells")
+        inst.setdefault("role", "")
+        inst.setdefault("status_url", "")
+        inst.setdefault("ws_url", "")
+        inst.setdefault("poll_hint_sec", (cfg.get("status") or {}).get("poll_hint_sec") or 5)
+        out.append(inst)
+    if out:
+        return out
+
     return [
         {
-            "id": "sandbells2",
+            "id": "sandbells",
             "kind": "host",
             "family": "sandbells",
-            "name": "sandbells2",
+            "name": "sandbells",
             "role": "kiosk",
-        },
-        {
-            "id": "sandsense-clock",
-            "kind": "pico",
-            "family": "sandsense",
-            "name": "sandsense-clock",
-            "role": "escapement",
-            "status_url": "http://192.168.0.154/status",
-        },
-        {
-            "id": "sandswing-bench",
-            "kind": "pico",
-            "family": "sandswing",
-            "name": "sandswing-bench",
-            "role": "swing",
-        },
+            "status_url": "http://127.0.0.1/api/system-status/",
+            "ws_url": "",
+            "poll_hint_sec": 5,
+        }
     ]
