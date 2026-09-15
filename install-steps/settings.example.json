@@ -5,26 +5,50 @@
   ],
   "time_hosts": [
     "10.42.0.1",
-    "sandmon.local", 
+    "sandmon.local",
     "sandgps.local",
     "sandgps1.local",
     "sandgps2.local",
     "sandgps3.local"
   ],
-  "clients": {
-     "kiosk_ws": "ws://192.168.0.198/ws"
-  },
   "ethernet": {
     "dhcp_timeout_sec": 15,
     "fallback_ip": "192.168.99.2",
     "fallback_prefix": 24
   },
-  "status": {
-    "poll_hint_sec": 3
-  },
   "display": {
     "random_bells": 6,
     "random_windows": 3,
     "pattern_position_mode": "centre"
+  },
+  "status": {
+    "poll_hint_sec": 5,
+    "devices": [
+      {
+        "id": "sandbells",
+        "name": "sandbells",
+        "kind": "host",
+        "family": "sandbells",
+        "role": "kiosk",
+        "status_url": "http://127.0.0.1/api/system-status/"
+      },
+      {
+        "id": "sandbells2",
+        "name": "sandbells2",
+        "kind": "host",
+        "family": "sandbells",
+        "role": "kiosk",
+        "status_url": "http://sandbells2.local/api/system-status/"
+      },
+      {
+        "id": "sandsense-clock",
+        "name": "sandsense-clock",
+        "kind": "pico",
+        "family": "sandsense",
+        "role": "sense",
+        "status_url": "http://SANDSENSE_IP/status",
+        "ws_url": "ws://SANDSENSE_IP/ws"
+      }
+    ]
   }
 }
