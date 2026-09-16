@@ -16,6 +16,9 @@ SELECT_DST="/usr/local/sbin/sandbells-network-select.sh"
 UNIT_DST="/etc/systemd/system/sandbells-network-select.service"
 TIMER_DST="/etc/systemd/system/sandbells-network-select.timer"
 
+WIFI_SRC="$SCRIPT_DIR/sandbells-wifi.sh"
+WIFI_DST="/usr/local/sbin/sandbells-wifi.sh"
+
 pause() {
     if [ "$QUICK_MODE" = true ]; then
         sleep 1.5
@@ -42,6 +45,15 @@ done
 
 sudo install -m 755 "$SELECT_SRC" "$SELECT_DST"
 echo "  installed $SELECT_DST"
+
+
+if [ ! -f "$WIFI_SRC" ]; then
+    echo "ERROR: missing $WIFI_SRC"
+    exit 1
+fi
+sudo install -m 644 "$WIFI_SRC" "$WIFI_DST"
+echo "  installed $WIFI_DST"
+
 
 sudo install -m 644 "$UNIT_SRC" "$UNIT_DST"
 sudo install -m 644 "$TIMER_SRC" "$TIMER_DST"
