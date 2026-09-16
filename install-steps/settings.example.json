@@ -1,7 +1,8 @@
 {
   "networks": [
     { "ssid": "Sandbells", "psk": "CHANGE_ME" },
-    { "ssid": "sandbells", "psk": "CHANGE_ME" }
+    { "ssid": "sandbells", "psk": "CHANGE_ME" },
+    { "ssid": "Other", "psk": "CHANGE_ME" }
   ],
   "time_hosts": [
     "10.42.0.1",
@@ -11,6 +12,9 @@
     "sandgps2.local",
     "sandgps3.local"
   ],
+  "clients": {
+    "kiosk_ws": "ws://192.168.0.198/ws"
+  },
   "ethernet": {
     "dhcp_timeout_sec": 15,
     "fallback_ip": "192.168.99.2",
@@ -46,8 +50,8 @@
         "kind": "pico",
         "family": "sandsense",
         "role": "sense",
-        "status_url": "http://SANDSENSE_IP/status",
-        "ws_url": "ws://SANDSENSE_IP/ws"
+        "status_url": "http://sandsense.local/status",
+        "ws_url": "ws://sandsense.local/ws"
       }
     ]
   }
