@@ -17,20 +17,12 @@ echo "Setting WiFi country to GB..."
 sudo raspi-config nonint do_wifi_country GB
 
 # Try networks from settings.json if available, otherwise fall back
+source "$SCRIPT_DIR/sandbells-wifi.sh"
 load_networks
-
-if [ ${#NETWORKS[@]} -gt 0 ]; then
-    echo "Trying networks from settings.json..."
-    for entry in "${NETWORKS[@]}"; do
-        ssid="${entry%%:*}"
-        pass="${entry#*:}"
-        echo "  Attempting SSID: $ssid"
-        sudo raspi-config nonint do_wifi_ssid_passphrase "$ssid" "$pass" && break
-    done
-else
-    echo "No networks in settings — trying default..."
-    sudo raspi-config nonint do_wifi_ssid_passphrase sandbells Sandbells || true
+if [ "${#NETWORKS[@]}" -eq 0 ]; then
+  prompt_add_network || true
 fi
+ensure_nm_profiles || true
+try_connect || true
 
 echo "WiFi step completed"
-pause
