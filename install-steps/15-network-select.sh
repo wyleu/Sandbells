@@ -44,8 +44,9 @@ for f in "$SELECT_SRC" "$UNIT_SRC" "$TIMER_SRC"; do
 done
 
 sudo install -m 755 "$SELECT_SRC" "$SELECT_DST"
-echo "  installed $SELECT_DST"
+sudo install -m 644 "$WIFI_SRC" "$WIFI_DST"
 
+echo "  installed $SELECT_DST"
 
 if [ ! -f "$WIFI_SRC" ]; then
     echo "ERROR: missing $WIFI_SRC"
