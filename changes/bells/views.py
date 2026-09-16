@@ -163,16 +163,12 @@ def farm_device_status(request):
     allowed = {inst.get("status_url") for inst in load_farm_instances() if inst.get("status_url")}
     if url not in allowed:
         return JsonResponse({"error": "url not in farm registry", "got": url}, status=400)
-
-    last_err = None
-    for _ in range(2):
-        try:
-            with urlopen(url, timeout=5) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-            return JsonResponse(wrap_document(data))
-        except Exception as e:
-            last_err = e
-    return JsonResponse({"error": str(last_err)}, status=502)
+    try:
+        with urlopen(url, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return JsonResponse(wrap_document(data))
+    except Exception as e:
+        return JsonResponse({"error": str(e), "stale": True}, status=504)
 
 def bell_band(request, number=8):
     """

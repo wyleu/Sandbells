@@ -36,7 +36,7 @@
       name: "{{ inst.name }}",
       statusUrl: "{{ inst.status_url|default:'' }}",
       wsUrl: "{{ inst.ws_url|default:'' }}",
-      interval: {{ inst.poll_hint_sec|default:5 }}000
+      interval: {{ inst.poll_hint_sec|default:15 }}000
     });
   </script>
 </body>
