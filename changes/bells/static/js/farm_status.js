@@ -2,6 +2,7 @@
  * farm_status.js — one device page, one poll (optional one WS).
  * Renders sand.status/v1 sections into the full viewport.
  * Items with "color" draw a circular lamp; WS ticks flip Encoder LEDs.
+ * A failed poll keeps the last good document and only marks the header stale.
  */
 (function () {
   "use strict";
@@ -93,11 +94,19 @@
   }
 
   function startPoll(cfg) {
-    var interval = cfg.interval || 5000;
+    var interval = cfg.interval || 15000;
     if (interval < 3000) interval = 3000;
-    if (interval > 15000) interval = 15000;
+    if (interval > 30000) interval = 30000;
     var url = statusFetchUrl(cfg);
     var timer = null;
+    var lastDoc = null;
+
+    function setStale(msg) {
+      setLevel($("farm-level"), "warn");
+      if ($("farm-summary")) {
+        $("farm-summary").textContent = msg || "stale";
+      }
+    }
 
     function tick() {
       if (document.visibilityState === "hidden") return;
@@ -108,10 +117,15 @@
         })
         .then(function (data) {
           if (data && data.error) throw new Error(data.error);
+          lastDoc = data;
           render(data);
         })
         .catch(function (e) {
-          renderError("Offline: " + e);
+          if (lastDoc) {
+            setStale("Offline: " + e.message);
+            return;
+          }
+          renderError("Offline: " + e.message);
         });
     }
 
@@ -184,4 +198,3 @@
     },
   };
 })();
-
