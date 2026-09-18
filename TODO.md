@@ -1,6 +1,7 @@
 # Sandbells TODO List
 
 ## Current Priorities (Kiosk Recovery)
+Farm device sandsense: status/ws must be 192.168.0.154 until Avahi works on sandbells2. .local → nginx 504 on /api/farm/device-status/.
 
 - [x] Restore working luakit kiosk on Pi
 - [x] Self-starting on boot (systemd)          ← step 14 + sandbells-kiosk.service
