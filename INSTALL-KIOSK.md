@@ -45,6 +45,9 @@ After reboot you should see the Sandbells interface full-screen on the HDMI moni
 | 12   | `12-django-venv.sh`       | Create `Bellvirtenv`, `pip install -r requirements.txt`, migrate, `collectstatic` → `/var/www/sandbells/static` |
 | 13   | `13-gunicorn-nginx.sh`    | Install Nginx + Gunicorn socket/service, drop production nginx.conf     |
 | 14   | `14-kiosk-systemd.sh`     | Install `sandbells-kiosk.service`, disable blanking (xset + lightdm + boot config), enable on `graphical.target` |
+| 07   | `07-time.sh` (added)      | Also installs `fake-hwclock` (no RTC) and saves the time once chrony is synchronised |
+| 17   | `17-observability.sh`     | Persistent journal capped at 50M (`/etc/systemd/journald.conf.d/sandbells.conf`); `sandbells-thermal.timer` logs temp, throttling, load, memory every minute (`journalctl -t sandbells-thermal`) |
+| 18   | `18-ingest.sh`            | Checks websocket-client + migrations, installs and enables `sandbells-ingest.service` |
 
 `master_install.sh` automatically runs every `install-steps/NN-*.sh` in order, so the new steps are picked up with no further changes.
 

@@ -60,6 +60,31 @@ timeout 8 chronyc sources -v 2>/dev/null || timeout 8 chronyc sources 2>/dev/nul
 echo "Clock status:"
 chronyc tracking 2>/dev/null | grep -E "Stratum|Reference|System time|Leap" || true
 
+# ------------------------------------------------------------------
+# fake-hwclock: the Pi has no RTC.  Without it a reboot starts at the
+# image/kernel date (seen: 16 Jul 2026) until a time server answers.
+# Restores the last saved time at boot; saves hourly and at shutdown.
+# ------------------------------------------------------------------
+echo ""
+echo "fake-hwclock (no RTC on the Pi)..."
+if package_installed fake-hwclock; then
+    echo "  already installed: fake-hwclock"
+else
+    sudo apt-get install --no-install-recommends -y fake-hwclock || {
+        echo "Warning: fake-hwclock install failed — continuing"
+    }
+fi
+if command -v fake-hwclock >/dev/null 2>&1; then
+    sudo systemctl enable fake-hwclock.service 2>/dev/null || true
+    # Only save a time chrony trusts, never the stale boot date
+    if chronyc tracking 2>/dev/null | grep -q "Leap status *: Normal"; then
+        sudo fake-hwclock save force
+        echo "  saved $(cat /etc/fake-hwclock.data 2>/dev/null) UTC to /etc/fake-hwclock.data"
+    else
+        echo "  chrony not synchronised yet — not saving (hourly cron/shutdown will)"
+    fi
+fi
+
 echo ""
 systemctl is-enabled sandbells-time-select.service || true
 systemctl is-active sandbells-time-select.service || true

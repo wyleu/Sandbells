@@ -1,0 +1,8 @@
+[Unit]
+Description=Sandbells thermal/health line to the journal (temp, throttling, load, memory)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sandbells-thermal.sh
+SyslogIdentifier=sandbells-thermal
+Nice=10
