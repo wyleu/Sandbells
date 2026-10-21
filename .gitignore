@@ -11,3 +11,4 @@ luakit.log
 *.bak
 *~.bak
 **/*.bak
+changes/logs/

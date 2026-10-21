@@ -25,8 +25,20 @@ SECRET_KEY = 'django-insecure-010iq-lcn9(8y@qh(05*no(_-ntnk-w&j*h^@uj1a1g6-0e81f
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
-LOG_DIR = Path("/var/log/django")
-LOG_DIR.mkdir(parents=True, exist_ok=True)   # safe even if already exists
+# File logging goes to /var/log/django if this user can write there, else
+# changes/logs/.  Never crash at import (manage.py as another user, tests).
+def _writable_dir(*candidates):
+    for d in candidates:
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            continue
+        log = d / "app.log"
+        if os.access(d, os.W_OK) and (not log.exists() or os.access(log, os.W_OK)):
+            return d
+    return None
+
+LOG_DIR = _writable_dir(Path("/var/log/django"), BASE_DIR / "logs")
 
 LOGGING = {
     'version': 1,
@@ -52,7 +64,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': '/var/log/django/app.log',
+            'filename': str(LOG_DIR / 'app.log') if LOG_DIR else os.devnull,
             'formatter': 'verbose',
         },
     },
@@ -139,6 +151,7 @@ ALLOWED_HOSTS = [
 
 INSTALLED_APPS = [
     'bells.apps.BellsConfig',
+    'events.apps.EventsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
