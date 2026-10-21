@@ -1,0 +1,29 @@
+[Unit]
+Description=Sandbells event ingest (sand.event/v1 from the concentrator /ws)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sandbells
+Group=sandbells
+WorkingDirectory=/home/sandbells/Code/Sandbells/changes
+Environment=PYTHONUNBUFFERED=1
+
+# URL: --url, else settings.json status.devices[] family "sandswing" ws_url,
+# else ws://192.168.0.81/ws.  Takes one of the Pico's /ws client slots.
+ExecStart=/home/sandbells/Code/Sandbells/Bellvirtenv/bin/python manage.py ingest_events
+
+# SIGTERM -> flush buffered events, then exit
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Restart=always
+RestartSec=10
+
+# Pi 3 friendly scheduling (as gunicorn.service)
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

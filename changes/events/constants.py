@@ -99,3 +99,22 @@ SQLITE_VENDOR = "sqlite"
 SQLITE_JOURNAL_MODE = "WAL"     # readers do not block the ingest writer
 SQLITE_SYNCHRONOUS = "NORMAL"   # safe with WAL, far fewer fsyncs
 SQLITE_BUSY_TIMEOUT_MS = 5000   # wait for a lock instead of failing at once
+
+# ---- ingest: WebSocket client (wsclient.py, backoff.py) ------------------
+# By IP: sandbells2 cannot resolve .local names.
+WS_DEFAULT_URL = "ws://192.168.0.81/ws"
+WS_CONNECT_TIMEOUT_S = 5.0
+WS_RECV_TIMEOUT_S = 1.0         # idle wake-up: store.poll(), summary, stop check
+BACKOFF_INITIAL_S = 1.0
+BACKOFF_FACTOR = 2.0
+BACKOFF_MAX_S = 30.0
+
+# ---- ingest: logging (ingest.py) -----------------------------------------
+LOGGER_NAME = "events.ingest"
+SUMMARY_INTERVAL_S = 60.0       # one INFO summary line per this
+REJECT_LOG_INTERVAL_S = 60.0    # at most one WARNING per reject reason per this
+
+# ---- ingest: URL from the existing Sandbells settings.json (config.py) -----
+SANDBELLS_SETTINGS_PATH = "/etc/sandbells/settings.json"
+SANDBELLS_SETTINGS_ENV = "SANDBELLS_SETTINGS"   # same override as the scripts
+CONCENTRATOR_FAMILY = "sandswing"   # status.devices[].family to ingest from
