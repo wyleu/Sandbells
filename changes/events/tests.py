@@ -324,6 +324,28 @@ class GapTests(SimpleTestCase):
         obs = GapTracker().observe("sw", "b1", 10)
         self.assertEqual((obs.kind, obs.missing), (C.GAP_FIRST, (1, 9)))
 
+    def test_seed_resumes_after_stored_seq(self):
+        g = GapTracker()
+        self.assertFalse(g.knows("sw", "b1"))
+        self.assertTrue(g.seed("sw", "b1", 21))
+        self.assertTrue(g.knows("sw", "b1"))
+        obs = g.observe("sw", "b1", 22)
+        self.assertEqual((obs.kind, obs.missing), (C.GAP_OK, None))
+        self.assertEqual(g.missing_total, 0)
+
+    def test_seed_then_gap_and_resend(self):
+        g = GapTracker()
+        g.seed("sw", "b1", 21)
+        self.assertEqual(g.observe("sw", "b1", 21).kind, C.GAP_DUPLICATE)
+        self.assertEqual(g.observe("sw", "b1", 5).kind, C.GAP_OUT_OF_ORDER)
+        self.assertEqual(g.observe("sw", "b1", 25).missing, (22, 24))
+
+    def test_seed_ignored_when_already_tracking(self):
+        g = GapTracker()
+        g.observe("sw", "b1", 30)
+        self.assertFalse(g.seed("sw", "b1", 10))
+        self.assertEqual(g.observe("sw", "b1", 31).kind, C.GAP_OK)
+
     def test_sources_independent(self):
         g = GapTracker()
         g.observe("sw", "b1", 1)

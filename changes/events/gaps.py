@@ -4,6 +4,8 @@ Pure Python, no DB.  Each src has a current boot_id; seq counts up from
 SEQ_FIRST within a boot.  A new boot_id is a reset, not a gap.
 
     tracker = GapTracker()
+    if not tracker.knows(src, boot_id):          # e.g. after a restart
+        tracker.seed(src, boot_id, last_stored_seq)
     obs = tracker.observe(p.src, p.boot_id, p.seq)
     if obs.missing: log(obs)          # (first_missing, last_missing)
 """
@@ -37,6 +39,20 @@ class GapTracker:
         self._last = {}           # (src, boot_id) -> highest seq seen
         self.counts = {}          # kind -> number of observations
         self.missing_total = 0
+
+    def knows(self, src, boot_id):
+        return (src, boot_id) in self._last
+
+    def seed(self, src, boot_id, last_seq):
+        """Resume a boot already partly stored (e.g. by an earlier run):
+        the next seq is judged against last_seq, not as a first sighting.
+        Ignored if this (src, boot_id) is already being tracked."""
+        key = (src, boot_id)
+        if key in self._last:
+            return False
+        self._last[key] = last_seq
+        self._boot.setdefault(src, boot_id)
+        return True
 
     def observe(self, src, boot_id, seq):
         obs = self._classify(src, boot_id, seq)

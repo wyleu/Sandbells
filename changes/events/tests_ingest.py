@@ -17,6 +17,7 @@ from . import wsclient
 from .backoff import Backoff
 from .config import resolve_url, url_from_settings
 from .ingest import Ingest
+from .parse import parse
 from .management.commands import ingest_events as cmd
 from .models import Event
 from .store import EventStore
@@ -170,6 +171,54 @@ class FrameTests(TestCase):
                 self.assertEqual(ing.flush(), 0)
         self.assertEqual(len(ing.store), 1)
         self.assertEqual(ing.flush(), 1)
+
+
+class ResumeTests(TestCase):
+    BOOT = "216a0e79"
+
+    def store_rows(self, seqs, boot_id=BOOT):
+        Event.objects.bulk_create(
+            [Event.from_parsed(parse(raw(seq=s, boot_id=boot_id)), host="x")
+             for s in seqs])
+
+    def test_resume_after_stored_max_no_missed_start(self):
+        self.store_rows(range(3, 22))                  # earlier manual run
+        ing, _ = make_ingest()
+        with self.assertLogs(C.LOGGER_NAME, "INFO") as cm:
+            obs = ing.handle_frame(raw(seq=22, boot_id=self.BOOT))
+        self.assertEqual((obs.kind, obs.missing), (C.GAP_OK, None))
+        self.assertIn("resume sandswing/%s after seq 21 (stored)" % self.BOOT,
+                      cm.output[0])
+        self.assertEqual(ing.tracker.missing_total, 0)
+
+    def test_resume_then_real_gap(self):
+        self.store_rows([1, 2, 3])
+        ing, _ = make_ingest()
+        obs = ing.handle_frame(raw(seq=6, boot_id=self.BOOT))
+        self.assertEqual((obs.kind, obs.missing), (C.GAP_GAP, (4, 5)))
+
+    def test_nothing_stored_reports_missed_start(self):
+        self.store_rows([1, 2], boot_id="otherboot")    # other boot ignored
+        ing, _ = make_ingest()
+        obs = ing.handle_frame(raw(seq=22, boot_id=self.BOOT))
+        self.assertEqual((obs.kind, obs.missing), (C.GAP_FIRST, (1, 21)))
+
+    def test_one_lookup_per_boot(self):
+        self.store_rows([1])
+        ing, _ = make_ingest()
+        with self.assertNumQueries(1):
+            for s in (2, 3, 4):
+                ing.handle_frame(raw(seq=s, boot_id=self.BOOT))
+
+    def test_lookup_error_falls_back_unseeded(self):
+        def broken(src, boot_id):
+            raise RuntimeError("locked")
+        clock = FakeClock()
+        ing = Ingest(EventStore(clock=clock, host="x"), clock=clock,
+                     last_stored=broken)
+        with self.assertLogs(C.LOGGER_NAME, "WARNING"):
+            obs = ing.handle_frame(raw(seq=5, boot_id=self.BOOT))
+        self.assertEqual(obs.kind, C.GAP_FIRST)
 
 
 class ClientLoopTests(TestCase):

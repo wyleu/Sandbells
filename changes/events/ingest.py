@@ -3,6 +3,11 @@
 No network here: wsclient.py feeds frames in and calls idle() when the
 socket is quiet.  Logging is a periodic summary, plus a WARNING for each
 gap and at most one WARNING per reject reason per REJECT_LOG_INTERVAL_S.
+
+The first frame of each (src, boot_id) seeds the GapTracker from the DB
+(max stored seq, one query on the UNIQUE(src, boot_id, seq) index), so a
+restart does not report already-stored seqs as missed.  Events still in
+the store's buffer are known to the in-process tracker already.
 """
 
 import logging
@@ -12,14 +17,24 @@ from . import constants as C
 from .gaps import GapTracker
 from .parse import ParseError, parse
 
+
+def stored_max_seq(src, boot_id):
+    """Highest seq in the DB for this boot, or None."""
+    from django.db.models import Max
+    from .models import Event
+    return (Event.objects.filter(src=src, boot_id=boot_id)
+            .aggregate(m=Max("seq"))["m"])
+
 log = logging.getLogger(C.LOGGER_NAME)
 
 
 class Ingest:
     def __init__(self, store, tracker=None, clock=time.monotonic,
                  summary_interval_s=C.SUMMARY_INTERVAL_S,
-                 reject_log_interval_s=C.REJECT_LOG_INTERVAL_S):
+                 reject_log_interval_s=C.REJECT_LOG_INTERVAL_S,
+                 last_stored=stored_max_seq):
         self.store = store
+        self.last_stored = last_stored
         self.tracker = tracker or GapTracker()
         self.clock = clock
         self.summary_interval_s = float(summary_interval_s)
@@ -37,6 +52,7 @@ class Ingest:
         except ParseError as e:
             self._reject(e)
             return None
+        self._seed_from_db(p.src, p.boot_id)
         obs = self.tracker.observe(p.src, p.boot_id, p.seq)
         if obs.kind == C.GAP_GAP:
             log.warning("gap %s/%s: missing seq %d-%d (%d)", p.src, p.boot_id,
@@ -74,6 +90,17 @@ class Ingest:
                    c.get(C.GAP_GAP, 0), self.tracker.missing_total,
                    c.get(C.GAP_DUPLICATE, 0), c.get(C.GAP_OUT_OF_ORDER, 0),
                    c.get(C.GAP_RESET, 0), s["dropped"]))
+
+    def _seed_from_db(self, src, boot_id):
+        if self.tracker.knows(src, boot_id):
+            return
+        try:
+            last = self.last_stored(src, boot_id)
+        except Exception as e:
+            log.warning("resume lookup %s/%s failed: %s", src, boot_id, e)
+            return
+        if last is not None and self.tracker.seed(src, boot_id, last):
+            log.info("resume %s/%s after seq %d (stored)", src, boot_id, last)
 
     def _reject(self, err):
         self.rejects[err.reason] = self.rejects.get(err.reason, 0) + 1
