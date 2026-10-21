@@ -15,6 +15,15 @@ from .backoff import Backoff
 log = logging.getLogger(C.LOGGER_NAME)
 
 
+def library_available():
+    """True if websocket-client can be imported."""
+    try:
+        __import__(C.WS_LIBRARY_MODULE)
+    except ImportError:
+        return False
+    return True
+
+
 def default_connect(url, timeout):
     import websocket                      # pip: websocket-client
     return websocket.create_connection(url, timeout=timeout)

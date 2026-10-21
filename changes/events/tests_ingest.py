@@ -4,12 +4,13 @@ import json
 import logging
 import signal
 import socket
+import sys
 import tempfile
 import threading
 from pathlib import Path
 from unittest import mock
 
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import SimpleTestCase, TestCase
 
 from . import constants as C
@@ -311,6 +312,8 @@ class ConfigTests(SimpleTestCase):
 class CommandTests(SimpleTestCase):
     def run_cmd(self, *args):
         with mock.patch.object(cmd.wsclient, "run") as run, \
+                mock.patch.object(cmd.wsclient, "library_available",
+                                  return_value=True), \
                 mock.patch.object(cmd, "EventStore"), \
                 mock.patch.object(cmd, "setup_logging",
                                   return_value=logging.getLogger(C.LOGGER_NAME)):
@@ -347,6 +350,20 @@ class CommandTests(SimpleTestCase):
             log.handlers = saved_handlers
             log.setLevel(saved_level)
             log.propagate = False
+
+    def test_missing_library_fails_fast(self):
+        with mock.patch.object(cmd.wsclient, "library_available",
+                               return_value=False), \
+                mock.patch.object(cmd.wsclient, "run") as run:
+            with self.assertRaises(CommandError) as cm:
+                call_command("ingest_events", "--url", SANDSWING_URL)
+        run.assert_not_called()
+        self.assertEqual(cm.exception.returncode, C.EXIT_CONFIG_ERROR)
+        self.assertIn("pip install " + C.WS_LIBRARY_PIP, str(cm.exception))
+
+    def test_library_available_detects_missing_module(self):
+        with mock.patch.dict(sys.modules, {C.WS_LIBRARY_MODULE: None}):
+            self.assertFalse(wsclient.library_available())
 
     def test_handler_sets_stop(self):
         stop = threading.Event()

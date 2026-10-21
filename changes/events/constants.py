@@ -118,3 +118,8 @@ REJECT_LOG_INTERVAL_S = 60.0    # at most one WARNING per reject reason per this
 SANDBELLS_SETTINGS_PATH = "/etc/sandbells/settings.json"
 SANDBELLS_SETTINGS_ENV = "SANDBELLS_SETTINGS"   # same override as the scripts
 CONCENTRATOR_FAMILY = "sandswing"   # status.devices[].family to ingest from
+
+# ---- ingest: fail fast on a missing dependency ---------------------------
+WS_LIBRARY_MODULE = "websocket"
+WS_LIBRARY_PIP = "websocket-client==1.8.0"
+EXIT_CONFIG_ERROR = 78          # sysexits EX_CONFIG; the unit's RestartPreventExitStatus

@@ -19,6 +19,9 @@ KillSignal=SIGTERM
 TimeoutStopSec=15
 Restart=always
 RestartSec=10
+# 78 = EX_CONFIG (events.constants.EXIT_CONFIG_ERROR): e.g. websocket-client
+# not installed.  Do not restart-loop; fix, then systemctl restart.
+RestartPreventExitStatus=78
 
 # Pi 3 friendly scheduling (as gunicorn.service)
 Nice=10

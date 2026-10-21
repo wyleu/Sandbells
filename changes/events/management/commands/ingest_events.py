@@ -4,6 +4,8 @@
     python manage.py ingest_events --url ws://192.168.0.81/ws -v 2
 
 SIGTERM / SIGINT stop the loop; the buffer is flushed before exit.
+Exits with EXIT_CONFIG_ERROR (no restart loop under systemd) if the
+websocket-client library is missing.
 """
 
 import logging
@@ -11,7 +13,7 @@ import signal
 import sys
 import threading
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from events import constants as C
 from events import wsclient
@@ -68,6 +70,12 @@ class Command(BaseCommand):
                  % (C.CONCENTRATOR_FAMILY, C.WS_DEFAULT_URL))
 
     def handle(self, *args, **opts):
+        if not wsclient.library_available():
+            raise CommandError(
+                "Python package websocket-client is not installed (module "
+                "'%s'). Install it in this venv:  pip install %s"
+                % (C.WS_LIBRARY_MODULE, C.WS_LIBRARY_PIP),
+                returncode=C.EXIT_CONFIG_ERROR)
         log = setup_logging(opts.get("verbosity", 1))
         url, source = resolve_url(opts.get("url"))
         log.info("ingest from %s (%s)", url, source)
