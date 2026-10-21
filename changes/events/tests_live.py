@@ -1,8 +1,11 @@
 """Live list on the sandswing farm page: /events/api/since contract, panel."""
 
 import json
+import shutil
+import subprocess
+from pathlib import Path
 from datetime import datetime, timezone
-from unittest import mock
+from unittest import mock, skipUnless
 
 from django.db import connection
 from django.test import SimpleTestCase, TestCase
@@ -147,3 +150,33 @@ class FarmPagePanelTests(TestCase):
         self.assertNotContains(r, "live-events")
         self.assertNotContains(r, "with-live")
         self.assertContains(r, "FarmStatus.start(")
+
+
+NODE = shutil.which("node")
+JS_TESTS = Path(__file__).resolve().parent / "js_tests"
+NODE_TIMEOUT_S = 60
+
+
+@mock.patch("bells.views.load_farm_instances", return_value=FARM)
+class FarmPageClockTests(TestCase):
+    def test_clock_in_live_panel_only(self, _):
+        r = self.client.get(reverse("farm_status_index", args=[0]))
+        self.assertContains(r, 'id="live-clock" data-tz="%s"' % C.DISPLAY_TZ_NAME)
+        for el in ('id="clock-hms"', 'id="clock-zone"', 'id="clock-segs"', 'id="clock-next"'):
+            self.assertContains(r, el)
+        self.assertContains(r, "clock.js -- UK wall clock")      # script inlined
+        self.assertContains(r, "delayToNextSecond")
+        body = r.content.decode()
+        panel = body.index('id="live-events"')
+        self.assertLess(panel, body.index('id="live-clock"'))
+        self.assertLess(body.index('id="live-clock"'), body.index('id="live-table"'))
+        r = self.client.get(reverse("farm_status_index", args=[1]))
+        self.assertNotContains(r, "live-clock")
+
+
+@skipUnless(NODE, "node not installed")
+class ClockJsTests(SimpleTestCase):
+    def test_node_unit_tests(self):
+        p = subprocess.run([NODE, "--test", str(JS_TESTS)], capture_output=True,
+                           text=True, timeout=NODE_TIMEOUT_S)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)

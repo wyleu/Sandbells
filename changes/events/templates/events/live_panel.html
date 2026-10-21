@@ -29,6 +29,25 @@
   #live-table .q.dim, #live-table td.dim { opacity: 0.45; color: #aaa; }
   #live-table tr.new td { background: #223; }
   #live-table tr td { transition: background 1.5s; }
+  /* Clock: top right of the panel, red, readable from the ringing chamber. */
+  .live-top { display: flex; justify-content: space-between; align-items: flex-start;
+              gap: 0.5rem 1.5rem; }
+  #live-clock { margin-left: auto; text-align: right; color: #f33; padding: 0.1rem 0.5rem;
+                border: 3px solid transparent; border-radius: 8px; }
+  #live-clock.mark { border-color: #f33; background: #2a0b0b; }
+  #live-clock.minute { background: #4a0f0f; }
+  #clock-hms { font-size: 5rem; font-weight: 700; line-height: 1;
+               font-variant-numeric: tabular-nums; }
+  #clock-zone { font-size: 1.1rem; opacity: 0.7; margin-left: 0.4rem; }
+  .clock-q { display: flex; justify-content: flex-end; align-items: center; gap: 0.3rem;
+             margin-top: 0.3rem; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+  #clock-segs { display: flex; gap: 0.3rem; }
+  .clock-seg { display: inline-block; width: 2.2rem; height: 0.7rem;
+               border: 1px solid #733; border-radius: 2px; }
+  .clock-seg.done { background: #622; }
+  .clock-seg.now { background: #f33; }
+  #clock-next { margin-left: 0.6rem; color: #e88; }
+  #live-clock.soon #clock-next, #live-clock.mark #clock-next { color: #f33; font-weight: 700; }
 </style>
 <aside id="live-events"
        data-url="{{ since_url }}" data-type="{{ type }}" data-first="{{ first_load }}"
@@ -36,7 +55,13 @@
        data-retry-max="{{ retry_max_ms }}" data-fails-warn="{{ fails_warn }}"
        data-idle="{{ idle_ms }}" data-ring-gap="{{ ring_gap_ms }}"
        data-timeout="{{ timeout_ms }}" data-tz="{{ tz }}">
-  <h2>Strokes · live</h2>
+  <div class="live-top">
+    <h2>Strokes · live</h2>
+    <div id="live-clock" data-tz="{{ tz }}">
+      <div><span id="clock-hms">--:--:--</span><small id="clock-zone"></small></div>
+      <div class="clock-q"><span id="clock-segs"></span><span id="clock-next"></span></div>
+    </div>
+  </div>
   <div class="live-head">
     <div class="live-big"><span id="live-ring-count">—</span><small id="live-ring-label">strokes this ring</small></div>
     <div class="live-big"><span id="live-since">—</span><small>since last stroke</small></div>
@@ -48,4 +73,5 @@
 </aside>
 <script>
 {% include "events/live_list.js" %}
+{% include "events/clock.js" %}
 </script>
