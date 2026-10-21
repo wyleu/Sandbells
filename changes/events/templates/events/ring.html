@@ -1,0 +1,25 @@
+{% extends "events/base.html" %}
+{% block title %}Ring {{ day_label }} {{ ring.start_hms }}{% endblock %}
+{% block crumbs %}<a href="{% url 'events:days' %}?date={{ day_iso }}">{{ day_label }}</a>{% endblock %}
+{% block main %}
+<h1>{{ day_label }} · {{ ring.start_hms }}–{{ ring.end_hms }} · {{ ring.duration }}</h1>
+<p>
+  {% for b in ring.bell_rows %}{{ b.name }}: {{ b.strokes }}{% if b.heads %} <span class="heads">(two heads: {{ b.heads|join:", " }})</span>{% endif %}{% if not forloop.last %} · {% endif %}{% endfor %}
+  · strokes {{ ring.strokes }}
+  · <span class="{% if ring.seq_missing %}warn{% else %}muted{% endif %}">missing {{ ring.seq_missing }}</span>
+</p>
+{% if truncated %}<p class="warn">First {{ max_rows }} strokes shown.</p>{% endif %}
+<table>
+  <tr><th>Time</th><th class="num">Bell</th><th class="num">ch</th>
+      <th class="num">Interval (ms, same ch)</th><th class="num muted">seq</th></tr>
+  {% for s in rows %}
+  <tr>
+    <td>{{ s.time }}</td>
+    <td class="num">{{ s.bell|default:"—" }}</td>
+    <td class="num">{{ s.ch }}</td>
+    <td class="num">{{ s.interval_ms|default_if_none:"" }}</td>
+    <td class="num muted">{{ s.seq }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -143,3 +143,7 @@ LIVE_LIMIT_MAX = 500
 DAYS_DEFAULT = 7                    # /days/ without from/to: last 7 local days
 DAYS_MAX = 31                       # longest /days/ span (Pi 3: keep it light)
 DATE_FORMAT = "%Y-%m-%d"
+RING_TABLE_MAX_ROWS = 5000          # ring page: strokes listed (Luakit, Pi 3)
+DAY_LABEL_FORMAT = "%a %d %b %Y"    # "Thu 22 Oct 2026"
+SECONDS_PER_MINUTE = 60
+SECONDS_PER_HOUR = 3600

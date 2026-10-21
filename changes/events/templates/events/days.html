@@ -1,0 +1,57 @@
+{% extends "events/base.html" %}
+{% block title %}Rings · {{ chosen_label }}{% endblock %}
+{% block main %}
+<style>
+  .cols { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+  .daylist { flex: 0 0 auto; }
+  .daylist td { padding: 0.25rem 0.6rem; }
+  .daylist tr.on td { background: #223; }
+  .rings { flex: 1 1 30rem; }
+</style>
+<div class="cols">
+  <section class="daylist">
+    <h1>Days</h1>
+    {% if days %}
+    <table>
+      {% for d in days %}
+      <tr{% if d.iso == chosen_iso %} class="on"{% endif %}>
+        <td><a href="?date={{ d.iso }}">{{ d.label }}</a></td>
+        <td class="num muted" title="stroke events (all heads)">{{ d.strokes }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="muted">No strokes in the last 31 days.</p>
+    {% endif %}
+  </section>
+
+  <section class="rings">
+    <h1>{{ chosen_label }}</h1>
+    {% if rings %}
+    <table>
+      <tr><th>Start</th><th>End</th><th class="num">Length</th><th>Bells</th>
+          <th class="num">Strokes</th><th class="num">Missing</th><th></th></tr>
+      {% for r in rings %}
+      <tr>
+        <td>{{ r.start_hms }}</td>
+        <td>{{ r.end_hms }}</td>
+        <td class="num">{{ r.duration }}</td>
+        <td>
+          {% for b in r.bell_rows %}
+          <div>{{ b.name }}{% if b.heads %} <span class="heads">· two heads: {{ b.heads|join:", " }}</span>{% endif %}</div>
+          {% endfor %}
+        </td>
+        <td class="num">{{ r.strokes }}</td>
+        <td class="num{% if r.seq_missing %} warn{% endif %}">{{ r.seq_missing }}</td>
+        <td><a href="{% url 'events:ring' r.src r.boot_id r.first_seq %}">strokes →</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="muted">A ring ends after a pause of more than {{ ring_gap_min }} minutes.
+      With two heads on one bell, the bell's strokes are the higher head count.</p>
+    {% else %}
+    <p class="muted">No rings on this day.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -6,8 +6,9 @@ windows, the UNIQUE(src, boot_id, seq) index for ring tails and coverage.
 
 from . import constants as C
 from . import localtime as LT
+from .mapping import ch_label
 from .models import Event
-from .rings import Stroke, group_rings
+from .rings import Ring, Stroke, group_rings, summarise
 
 STROKE_FIELDS = ("src", "boot_id", "seq", "ch", "tick_ms")
 TAIL_CHUNK = 500
@@ -72,3 +73,44 @@ def events_after(src, after_id, limit):
     if after_id is None:
         return list(reversed(qs.order_by("-id")[:limit]))
     return list(qs.filter(id__gt=after_id).order_by("id")[:limit])
+
+
+def ring_json(ring, mapper):
+    """summarise() plus local-time labels and coverage from the DB."""
+    d = summarise(ring, mapper, ch_label, events_in_span(ring))
+    d.update(start_local=LT.local_iso(d["start_ms"]),
+             end_local=LT.local_iso(d["end_ms"]),
+             start_hms=LT.local_hms(d["start_ms"]),
+             end_hms=LT.local_hms(d["end_ms"]),
+             duration=LT.format_duration(d["duration_s"]),
+             first_seq=ring.first.seq)
+    return d
+
+
+def stroke_days(src, start_ms, end_ms):
+    """{local date: stroke events} for strokes in [start_ms, end_ms)."""
+    out = {}
+    for s in strokes_between(src, start_ms, end_ms):
+        day = LT.local_date(s.at_ms)
+        out[day] = out.get(day, 0) + 1
+    return out
+
+
+def ring_from(src, boot_id, first_seq, gap_ms=C.RING_GAP_MS):
+    """The ring that starts at this stroke, or None if there is no stroke
+    with that seq.  Followed by seq until a pause longer than gap_ms."""
+    rows = (_strokes(src).filter(boot_id=boot_id, seq__gte=first_seq)
+            .order_by("seq").values_list(*STROKE_FIELDS, "utc_ms", "received_at"))
+    ring = None
+    for row in rows.iterator(chunk_size=TAIL_CHUNK):
+        utc, received = row[-2], row[-1]
+        s = Stroke(*row[:-2], utc if utc is not None else LT.dt_to_ms(received))
+        if ring is None:
+            if s.seq != first_seq:
+                return None
+            ring = Ring(s)
+        elif ring.continues(s, gap_ms):
+            ring.strokes.append(s)
+        else:
+            break
+    return ring

@@ -13,8 +13,7 @@ from . import constants as C
 from . import localtime as LT
 from .mapping import ChannelMapper, ch_label
 from .models import receiving_host
-from .queries import events_after, events_in_span, rings_starting_between
-from .rings import summarise
+from .queries import events_after, ring_json, rings_starting_between
 
 HTTP_BAD_REQUEST = 400
 
@@ -58,15 +57,6 @@ def since(request):
                          "events": [_event_json(e, mapper) for e in rows]})
 
 
-def _ring_json(ring, mapper):
-    d = summarise(ring, mapper, ch_label, events_in_span(ring))
-    d.update(start_local=LT.local_iso(d["start_ms"]),
-             end_local=LT.local_iso(d["end_ms"]),
-             start_hms=LT.local_hms(d["start_ms"]),
-             end_hms=LT.local_hms(d["end_ms"]))
-    return d
-
-
 def days(request):
     try:
         today = LT.local_date(int(time.time() * C.MS_PER_S))
@@ -84,7 +74,7 @@ def days(request):
     by_day = {}
     for ring in rings_starting_between(src, start_ms, end_ms):
         day = LT.local_date(ring.first.at_ms)
-        by_day.setdefault(day, []).append(_ring_json(ring, mapper))
+        by_day.setdefault(day, []).append(ring_json(ring, mapper))
     out = []
     for day in sorted(by_day):
         rings = sorted(by_day[day], key=lambda r: r["start_ms"] or 0)

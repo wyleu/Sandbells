@@ -55,3 +55,23 @@ def local_iso(ms):
 
 def local_hms(ms):
     return None if ms is None else ms_to_local(ms).strftime("%H:%M:%S")
+
+
+def local_hms_ms(ms):
+    """'16:30:35.250' or None."""
+    if ms is None:
+        return None
+    t = ms_to_local(ms)
+    return "%s.%03d" % (t.strftime("%H:%M:%S"), t.microsecond // 1000)
+
+
+def day_label(day):
+    return day.strftime(C.DAY_LABEL_FORMAT)
+
+
+def format_duration(seconds):
+    """34:29 or 1:02:05 (h:mm:ss when an hour or more)."""
+    total = int(round(seconds))
+    h, rest = divmod(total, C.SECONDS_PER_HOUR)
+    m, s = divmod(rest, C.SECONDS_PER_MINUTE)
+    return "%d:%02d:%02d" % (h, m, s) if h else "%d:%02d" % (m, s)
