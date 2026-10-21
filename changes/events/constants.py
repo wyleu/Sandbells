@@ -147,3 +147,16 @@ RING_TABLE_MAX_ROWS = 5000          # ring page: strokes listed (Luakit, Pi 3)
 DAY_LABEL_FORMAT = "%a %d %b %Y"    # "Thu 22 Oct 2026"
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
+
+# ---- live list (farm page 3) ----------------------------------------------
+TIME_OK_ACC = ACC_MS                        # marker bright only for ms ...
+TIME_OK_SYNC = (SYNC_SYNCED, SYNC_HELD)     # ... and a locked mapping
+LIVE_PREV_SEQ_SPAN = 1000      # look back this many seqs for a ch's last stroke
+LIVE_FIRST_LOAD = 20           # strokes shown when the panel opens
+LIVE_DOM_ROWS = 50             # rows kept in the page
+LIVE_POLL_MS = 1000
+LIVE_RETRY_MAX_MS = 5000       # quiet back-off ceiling on errors
+LIVE_FAILS_WARN = 5            # failed polls in a row before the warning
+LIVE_IDLE_NOTE_MS = 2 * MS_PER_MINUTE
+LIVE_FETCH_TIMEOUT_MS = 4000
+BELL_LABEL = "Bell %d"

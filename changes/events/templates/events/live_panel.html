@@ -1,0 +1,51 @@
+<style>
+  /* Live stroke list: right of the farm sections, sized for HDMI at a distance. */
+  body.with-live { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+                   grid-template-rows: auto minmax(0, 1fr); }
+  body.with-live header#farm-header { grid-column: 1 / -1; }
+  @media (max-width: 60rem) {
+    body.with-live { grid-template-columns: minmax(0, 1fr);
+                     grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.4fr); }
+  }
+  #live-events { min-height: 0; overflow: hidden; margin: 0.6rem 0.8rem 0.8rem 0;
+                 border: 1px solid #333; border-radius: 8px; background: #181818;
+                 padding: 0.55rem 0.8rem; display: flex; flex-direction: column; }
+  #live-events h2 { margin: 0 0 0.3rem; font-size: 1rem; font-weight: 600;
+                    letter-spacing: 0.02em; text-transform: uppercase; opacity: 0.75; }
+  .live-head { display: flex; flex-wrap: wrap; gap: 0.2rem 2rem; align-items: baseline; }
+  .live-big { font-size: 2.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .live-big small { font-size: 1rem; font-weight: normal; opacity: 0.65; margin-left: 0.3rem; }
+  #live-heads { font-size: 1.3rem; opacity: 0.85; flex-basis: 100%; }
+  #live-idle { font-size: 1.4rem; color: #ec6; flex-basis: 100%; }
+  #live-warn { font-size: 1.4rem; color: #f66; background: #511; border-radius: 6px;
+               padding: 0.2rem 0.5rem; flex-basis: 100%; }
+  #live-table { border-collapse: collapse; margin-top: 0.4rem; width: 100%;
+                font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+  #live-table td { padding: 0.15rem 0.5rem 0.15rem 0; border-bottom: 1px solid #2a2a2a;
+                   white-space: nowrap; }
+  #live-table td.iv { text-align: right; font-weight: 600; }
+  #live-table .ch { font-size: 1.1rem; opacity: 0.7; margin-left: 0.4rem; }
+  #live-table .q { font-size: 0.9rem; color: #7d7; }
+  #live-table .q.dim, #live-table td.dim { opacity: 0.45; color: #aaa; }
+  #live-table tr.new td { background: #223; }
+  #live-table tr td { transition: background 1.5s; }
+</style>
+<aside id="live-events"
+       data-url="{{ since_url }}" data-type="{{ type }}" data-first="{{ first_load }}"
+       data-batch="{{ batch }}" data-rows="{{ dom_rows }}" data-poll="{{ poll_ms }}"
+       data-retry-max="{{ retry_max_ms }}" data-fails-warn="{{ fails_warn }}"
+       data-idle="{{ idle_ms }}" data-ring-gap="{{ ring_gap_ms }}"
+       data-timeout="{{ timeout_ms }}" data-tz="{{ tz }}">
+  <h2>Strokes · live</h2>
+  <div class="live-head">
+    <div class="live-big"><span id="live-ring-count">—</span><small id="live-ring-label">strokes this ring</small></div>
+    <div class="live-big"><span id="live-since">—</span><small>since last stroke</small></div>
+    <div id="live-heads"></div>
+    <div id="live-idle" hidden></div>
+    <div id="live-warn" hidden></div>
+  </div>
+  <table id="live-table"><tbody id="live-rows"></tbody></table>
+</aside>
+<script>
+{% include "events/live_list.js" %}
+</script>

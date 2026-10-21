@@ -1,4 +1,4 @@
-{% load static %}
+{% load static events_live %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +6,7 @@
   <title>Farm · {{ inst.name }}</title>
   <link rel="stylesheet" href="{% static 'css/farm_status.css' %}">
 </head>
-<body>
+<body{% if live_events %} class="with-live"{% endif %}>
   <header id="farm-header">
     <a href="/" target="_top" id="link-home" class="branding">Sandbells</a>
     <script>
@@ -27,6 +27,7 @@
   <main id="farm-main">
     <p id="farm-wait">Loading {{ inst.name }}…</p>
   </main>
+  {% if live_events %}{% live_panel %}{% endif %}
 
   <script src="{% static 'js/farm_status.js' %}"></script>
   <script>

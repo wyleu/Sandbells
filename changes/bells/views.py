@@ -36,6 +36,7 @@ from bells.functions import (
 from bells.app_settings import display_settings
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
 from bells.status_schema import wrap_document
+from events.constants import CONCENTRATOR_FAMILY as EVENTS_CONCENTRATOR_FAMILY
 
 def home(request, number=6):
     # Render the iframe container
@@ -144,6 +145,7 @@ def farm_status(request, index=0):
         "prev": (index - 1) % len(instances),
         "next": (index + 1) % len(instances),
         "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
+        "live_events": inst.get("family") == EVENTS_CONCENTRATOR_FAMILY,
     })
 
 def swing_display(request, n: int):
