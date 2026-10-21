@@ -40,6 +40,7 @@ class Ingest:
         self.summary_interval_s = float(summary_interval_s)
         self.reject_log_interval_s = float(reject_log_interval_s)
         self.frames = 0
+        self.ignored = 0              # frames of IGNORED_SCHEMAS (not stored)
         self.rejects = {}             # reason -> count
         self._reject_logged_at = {}   # reason -> clock() of last WARNING
         self._summary_at = clock()
@@ -50,6 +51,9 @@ class Ingest:
         try:
             p = parse(text)
         except ParseError as e:
+            if e.reason == C.R_IGNORED:          # e.g. sand.panel/v1 mimic frames
+                self.ignored += 1
+                return None
             self._reject(e)
             return None
         self._seed_from_db(p.src, p.boot_id)
@@ -83,9 +87,10 @@ class Ingest:
 
     def summary(self):
         c, s = self.tracker.counts, self.store.stats
-        return ("frames %d, accepted %d, submitted %d, buffered %d, rejected %d %s, "
+        return ("frames %d, ignored %d, accepted %d, submitted %d, buffered %d, "
+                "rejected %d %s, "
                 "gaps %d (missing %d), dup %d, late %d, resets %d, dropped %d"
-                % (self.frames, s["added"], s["written"], len(self.store),
+                % (self.frames, self.ignored, s["added"], s["written"], len(self.store),
                    sum(self.rejects.values()), self.rejects or "",
                    c.get(C.GAP_GAP, 0), self.tracker.missing_total,
                    c.get(C.GAP_DUPLICATE, 0), c.get(C.GAP_OUT_OF_ORDER, 0),

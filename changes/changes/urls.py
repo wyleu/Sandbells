@@ -21,5 +21,6 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('events/', include('events.urls')),
     path('', include('bells.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)  

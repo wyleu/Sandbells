@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Event
+from .models import ChannelMap, Event
 
 
 @admin.register(Event)
@@ -21,3 +21,11 @@ class EventAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(ChannelMap)
+class ChannelMapAdmin(admin.ModelAdmin):
+    """Editable: which bell each device channel senses, from valid_from."""
+    list_display = ("src", "ch", "bell", "valid_from", "note")
+    list_filter = ("src", "bell")
+    ordering = ("src", "ch", "-valid_from")

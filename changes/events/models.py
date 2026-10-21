@@ -10,6 +10,7 @@ import socket
 from datetime import datetime, timedelta, timezone
 
 from django.db import models
+from django.utils import timezone
 
 from . import constants as C
 
@@ -79,3 +80,34 @@ class Event(models.Model):
         if self.utc_ms is None:
             return None
         return UNIX_EPOCH + timedelta(milliseconds=self.utc_ms)
+
+
+class ChannelMap(models.Model):
+    """Which bell a device channel senses, from valid_from on.
+
+    Many channels may map to one bell (e.g. two heads on the tenor), and
+    their strokes stay distinct by ch.  A later row for the same src+ch
+    replaces the earlier one from its valid_from; bell left empty means
+    "unmapped" again.  Unmapped channels show as "ch N"."""
+    src = models.CharField(max_length=C.SRC_MAX_LEN, default=C.DEFAULT_SRC)
+    ch = models.PositiveSmallIntegerField()
+    bell = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="Bell number (1 = treble); empty = unmapped")
+    valid_from = models.DateTimeField(
+        default=timezone.now, help_text="Applies to strokes from this time on")
+    note = models.CharField(max_length=C.NOTE_MAX_LEN, blank=True)
+
+    class Meta:
+        ordering = ["src", "ch", "valid_from"]
+        constraints = [
+            models.UniqueConstraint(fields=["src", "ch", "valid_from"],
+                                    name="chmap_src_ch_from_uniq"),
+        ]
+
+    def __str__(self):
+        target = ("bell %d" % self.bell) if self.bell is not None else "unmapped"
+        return "%s ch %d -> %s" % (self.src, self.ch, target)
+
+    @property
+    def valid_from_ms(self):
+        return int((self.valid_from - UNIX_EPOCH) / timedelta(milliseconds=1))

@@ -5,6 +5,8 @@ models.py hold no magic numbers or strings.
 """
 
 SCHEMA_EVENT_V1 = "sand.event/v1"
+SCHEMA_PANEL_V1 = "sand.panel/v1"   # live LED mimic frames: never stored
+IGNORED_SCHEMAS = (SCHEMA_PANEL_V1,)
 
 # ---- event types ----------------------------------------------------------
 TYPE_STROKE = "stroke"
@@ -62,6 +64,7 @@ BOOT_ID_MAX_LEN = 32
 TYPE_MAX_LEN = 32
 CHOICE_MAX_LEN = 16             # acc / sync / mode
 SRV_MAX_LEN = 45                # longest textual IPv6 address
+NOTE_MAX_LEN = 200
 HOST_MAX_LEN = 64               # receiving Sandbells hostname (DNS label)
 MAX_LEN = {F_SRC: SRC_MAX_LEN, F_ID: DEVICE_ID_MAX_LEN,
            F_BOOT_ID: BOOT_ID_MAX_LEN, F_TYPE: TYPE_MAX_LEN}
@@ -78,11 +81,13 @@ R_MISSING = "missing_field"
 R_BAD_TYPE = "bad_type"          # wrong JSON type for the field
 R_BAD_VALUE = "bad_value"        # right type, value not allowed
 R_TOO_LONG = "too_long"
+R_IGNORED = "ignored"            # known non-event schema: drop silently
 
 # ---- batched store (store.py) --------------------------------------------
 # A peal is a few strokes per second; one commit per batch spares the SD card.
 STORE_FLUSH_COUNT = 64          # flush when this many events are buffered
-STORE_FLUSH_INTERVAL_S = 5.0    # ...or when the oldest has waited this long
+STORE_FLUSH_INTERVAL_S = 1.0    # ...or when the oldest has waited this long
+                                # (live pages poll the DB; WAL+NORMAL: no fsync per commit)
 STORE_MAX_BUFFERED = 5000       # DB stuck: drop oldest beyond this (counted)
 
 # ---- gap tracker (gaps.py) -----------------------------------------------
@@ -123,3 +128,18 @@ CONCENTRATOR_FAMILY = "sandswing"   # status.devices[].family to ingest from
 WS_LIBRARY_MODULE = "websocket"
 WS_LIBRARY_PIP = "websocket-client==1.8.0"
 EXIT_CONFIG_ERROR = 78          # sysexits EX_CONFIG; the unit's RestartPreventExitStatus
+
+# ---- display: local time, rings, pages (localtime.py, rings.py, api.py) --
+DISPLAY_TZ_NAME = "Europe/London"   # all pages show UK local time (BST aware)
+MS_PER_MINUTE = 60 * MS_PER_S
+# Strokes of one device/boot closer together than this are one displayed
+# "ring": a 10-15 min wait between touches stays in the same ring; a
+# separate ring later in the day (or the next service) starts a new one.
+RING_GAP_MS = 30 * MS_PER_MINUTE
+CH_LABEL = "ch %d"                  # unmapped channel shown as "ch N"
+DEFAULT_SRC = "sandswing"
+LIVE_LIMIT_DEFAULT = 50             # events per /since/ response
+LIVE_LIMIT_MAX = 500
+DAYS_DEFAULT = 7                    # /days/ without from/to: last 7 local days
+DAYS_MAX = 31                       # longest /days/ span (Pi 3: keep it light)
+DATE_FORMAT = "%Y-%m-%d"

@@ -145,6 +145,8 @@ def _body_and_ch(doc):
 def parse(raw):
     """raw: str or bytes holding one JSON object.  -> ParsedEvent."""
     doc = _load(raw)
+    if doc.get(C.F_SCHEMA) in C.IGNORED_SCHEMAS:
+        raise ParseError(C.R_IGNORED, C.F_SCHEMA, doc.get(C.F_SCHEMA))
     if doc.get(C.F_SCHEMA) != C.SCHEMA_EVENT_V1:
         raise ParseError(C.R_BAD_SCHEMA, C.F_SCHEMA, repr(doc.get(C.F_SCHEMA)))
 
