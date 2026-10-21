@@ -76,12 +76,23 @@ class RingTests(SimpleTestCase):
         ring = group_rings([st(1, 0, ch=1), st(2, 40, ch=2), st(3, 4000, ch=1),
                             st(4, 4030, ch=2), st(5, 8000, ch=3)])[0]
         d = summarise(ring, mapper, ch_label, events_in_span=5)
-        self.assertEqual(d["bells"], [{"bell": TENOR, "chs": [1, 2], "strokes": 4}])
+        # both heads see every stroke: the bell count is the max, not the sum
+        self.assertEqual(d["bells"], [{"bell": TENOR, "chs": [1, 2],
+                                       "per_ch": {1: 2, 2: 2}, "strokes": 2}])
         self.assertEqual([(c["ch"], c["bell"], c["strokes"]) for c in d["channels"]],
                          [(1, TENOR, 2), (2, TENOR, 2), (3, None, 1)])
         self.assertEqual(d["unmapped_chs"], [3])
         self.assertEqual(d["channels"][2]["label"], "ch 3")
-        self.assertEqual((d["seq_missing"], d["strokes"]), (0, 5))
+        self.assertEqual((d["seq_missing"], d["strokes"], d["events"]), (0, 3, 5))
+
+    def test_bell_count_is_max_of_heads(self):
+        mapper = ChannelMapper([(SRC, 1, TENOR, 0), (SRC, 2, TENOR, 0)])
+        ring = group_rings([st(i, i * 1000, ch=1 if i <= 41 else 2)
+                            for i in range(1, 69)])[0]            # 41 + 27
+        d = summarise(ring, mapper, ch_label, events_in_span=68)
+        self.assertEqual(d["bells"][0]["per_ch"], {1: 41, 2: 27})
+        self.assertEqual((d["bells"][0]["strokes"], d["strokes"], d["events"]),
+                         (41, 41, 68))
 
     def test_summary_missing(self):
         ring = group_rings([st(1, 0), st(10, 100)])[0]
@@ -155,7 +166,9 @@ class DaysApiTests(TestCase):
         add_strokes([(1, t, 1), (2, t + 30, 2), (5, t + 6000, 1), (6, t + 6040, 2)],
                     other_types=[(3, t + 3000)])          # seq 4 lost
         ring = self.get_days(**{"from": "2026-10-22", "to": "2026-10-22"})["days"][0]["rings"][0]
-        self.assertEqual(ring["bells"], [{"bell": TENOR, "chs": [1, 2], "strokes": 4}])
+        self.assertEqual(ring["bells"], [{"bell": TENOR, "chs": [1, 2],
+                                          "per_ch": {"1": 2, "2": 2}, "strokes": 2}])
+        self.assertEqual((ring["strokes"], ring["events"]), (2, 4))
         self.assertEqual(ring["seq_missing"], 1)
         self.assertEqual(ring["key"], "%s/%s/1" % (SRC, BOOT))
 
