@@ -78,3 +78,24 @@ R_MISSING = "missing_field"
 R_BAD_TYPE = "bad_type"          # wrong JSON type for the field
 R_BAD_VALUE = "bad_value"        # right type, value not allowed
 R_TOO_LONG = "too_long"
+
+# ---- batched store (store.py) --------------------------------------------
+# A peal is a few strokes per second; one commit per batch spares the SD card.
+STORE_FLUSH_COUNT = 64          # flush when this many events are buffered
+STORE_FLUSH_INTERVAL_S = 5.0    # ...or when the oldest has waited this long
+STORE_MAX_BUFFERED = 5000       # DB stuck: drop oldest beyond this (counted)
+
+# ---- gap tracker (gaps.py) -----------------------------------------------
+SEQ_FIRST = 1                   # sand_event.Emitter: first seq after boot
+GAP_FIRST = "first"             # first event seen from this src
+GAP_OK = "ok"                   # seq == last + 1
+GAP_GAP = "gap"                 # seq > last + 1: missing range reported
+GAP_DUPLICATE = "duplicate"     # seq == last
+GAP_OUT_OF_ORDER = "out_of_order"   # seq < last (late, or an older resend)
+GAP_RESET = "reset"             # new boot_id for a known src
+
+# ---- SQLite pragmas (db.py) ----------------------------------------------
+SQLITE_VENDOR = "sqlite"
+SQLITE_JOURNAL_MODE = "WAL"     # readers do not block the ingest writer
+SQLITE_SYNCHRONOUS = "NORMAL"   # safe with WAL, far fewer fsyncs
+SQLITE_BUSY_TIMEOUT_MS = 5000   # wait for a lock instead of failing at once

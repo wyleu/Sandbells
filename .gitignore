@@ -12,3 +12,5 @@ luakit.log
 *~.bak
 **/*.bak
 changes/logs/
+*.sqlite3-wal
+*.sqlite3-shm
