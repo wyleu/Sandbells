@@ -154,21 +154,56 @@
     sw.setAttribute("data-now", useAlt ? "alt" : "main");
   }
 
+  /* Link health: every HELLO_MS a small text frame, so the Pico can drop
+   * this socket if the page (or Luakit) goes away without a close; and once
+   * the Pico has sent a sand.panel/v1 heartbeat on this socket, SILENT_MS
+   * with nothing from it means a dead link: close, and onclose reconnects. */
+  var HELLO_MS = 5000;
+  var SILENT_MS = 20000;
+  var HELLO = '{"schema":"sand.hello/v1","type":"heartbeat","src":"sandbells-page"}';
+
   function startWs(cfg) {
     if (!cfg.wsUrl) return null;
     var ws = null;
     var delay = 2000;
+    var timer = null;
+
+    function stopTimer() {
+      if (timer) clearInterval(timer);
+      timer = null;
+    }
 
     function connect() {
       if (document.visibilityState === "hidden") return;
       try {
         if (ws) ws.close();
       } catch (e) {}
-      ws = new WebSocket(cfg.wsUrl);
-      ws.onmessage = function () {
+      stopTimer();
+      var sock = new WebSocket(cfg.wsUrl);
+      var lastRx = Date.now();
+      var heardHb = false;
+      ws = sock;
+      sock.onopen = function () {
+        delay = 2000;
+        timer = setInterval(function () {
+          if (sock.readyState !== 1) return;
+          try { sock.send(HELLO); } catch (e) {}
+          if (heardHb && Date.now() - lastRx > SILENT_MS) {
+            try { sock.close(); } catch (e) {}
+          }
+        }, HELLO_MS);
+      };
+      sock.onmessage = function (ev) {
+        lastRx = Date.now();
+        if (typeof ev.data === "string" && ev.data.indexOf("sand.panel/v1") >= 0) {
+          heardHb = true;        // heartbeat: not a stroke, no LED flip
+          return;
+        }
         flipLedSwatch();
       };
-      ws.onclose = function () {
+      sock.onclose = function () {
+        if (sock !== ws) return;           // an older socket we replaced
+        stopTimer();
         if (document.visibilityState === "hidden") return;
         setTimeout(connect, delay);
         delay = Math.min(delay * 1.5, 15000);
@@ -177,6 +212,7 @@
 
     document.addEventListener("visibilitychange", function () {
       if (document.visibilityState === "hidden" && ws) {
+        stopTimer();
         try {
           ws.close();
         } catch (e) {}

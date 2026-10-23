@@ -32,6 +32,25 @@
   /* Clock: top right of the panel, red, readable from the ringing chamber. */
   .live-top { display: flex; justify-content: space-between; align-items: flex-start;
               gap: 0.5rem 1.5rem; }
+  /* Concentrator link strip: LED mimic + verdict, readable at a distance. */
+  #link-widget { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1rem;
+                 border: 3px solid #333; border-radius: 8px; padding: 0.3rem 0.6rem;
+                 margin: 0.2rem 0 0.4rem; }
+  #link-widget.ok { border-color: #2a6; }
+  #link-widget.stale { border-color: #777; background: #222; }
+  #link-widget.lost { border-color: #f33; background: #2a0b0b; }
+  .lw-leds { display: flex; gap: 0.35rem; }
+  .lw-led { width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #222;
+            border: 1px solid #555; }
+  .lw-led.edge { width: 1.8rem; height: 1.8rem; }
+  #lw-head { font-size: 1.9rem; font-weight: 700; }
+  #link-widget.ok #lw-head { color: #6d6; }
+  #link-widget.stale #lw-head { color: #aaa; }
+  #link-widget.lost #lw-head { color: #f55; }
+  #lw-why, #lw-leds { font-size: 1.1rem; opacity: 0.8; }
+  .lw-lines { flex-basis: 100%; font-size: 1.05rem; opacity: 0.85; }
+  .lw-time.ok { color: #7d7; } .lw-time.warn { color: #ec6; } .lw-time.bad { color: #f66; }
+  #live-table tr.info td { font-size: 1.05rem; color: #9ab; }
   #live-clock { margin-left: auto; text-align: right; color: #f33; padding: 0.1rem 0.5rem;
                 border: 3px solid transparent; border-radius: 8px; }
   #live-clock.mark { border-color: #f33; background: #2a0b0b; }
@@ -62,6 +81,16 @@
       <div class="clock-q"><span id="clock-segs"></span><span id="clock-next"></span></div>
     </div>
   </div>
+  <div id="link-widget" class="lw stale" data-url="{{ link_url }}"
+       data-poll="{{ link_poll_ms }}" data-timeout="{{ timeout_ms }}">
+    <div class="lw-leds" title="concentrator panel LEDs (last heartbeat)">
+      <span class="lw-led edge"></span><span class="lw-led"></span><span class="lw-led"></span>
+      <span class="lw-led"></span><span class="lw-led"></span><span class="lw-led edge"></span>
+    </div>
+    <span id="lw-head">…</span><span id="lw-why"></span><span id="lw-leds"></span>
+    <div class="lw-lines"><span id="lw-detail"></span> <span id="lw-drop"></span></div>
+    <div class="lw-lines"><span id="lw-time" class="lw-time"></span></div>
+  </div>
   <div class="live-head">
     <div class="live-big"><span id="live-ring-count">—</span><small id="live-ring-label">strokes this ring</small></div>
     <div class="live-big"><span id="live-since">—</span><small>since last stroke</small></div>
@@ -74,4 +103,5 @@
 <script>
 {% include "events/live_list.js" %}
 {% include "events/clock.js" %}
+{% include "events/link_widget.js" %}
 </script>

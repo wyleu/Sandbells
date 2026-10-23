@@ -93,9 +93,15 @@ have_time_net() {
   load_time_hosts
   for h in "${TIME_HOSTS[@]}"; do
     [ -n "$h" ] || continue
-    ping -c 1 -W 1 "$h" >/dev/null 2>&1 && return 0
+    # two tries: one lost ping on a busy hotspot must not count as "no
+    # network" (that made try_connect re-associate and cut every link)
+    ping -c 2 -W 2 "$h" >/dev/null 2>&1 && return 0
   done
   return 1
+}
+
+active_ssid() {
+  iwgetid -r 2>/dev/null || nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '$1=="yes"{print $2; exit}'
 }
 
 ensure_radio() {
@@ -145,6 +151,13 @@ try_connect() {
     ssid="${entry%%$'\t'*}"
     psk="${entry#*$'\t'}"
     [ -n "$ssid" ] || continue
+    # never re-up the network we are already on: "nmcli connection up" on
+    # the active profile drops and re-joins it, which cuts the ingest and
+    # page links even though only the time host was quiet
+    if [ "$(active_ssid)" = "$ssid" ]; then
+      log "already on $ssid (time host quiet): not re-associating"
+      continue
+    fi
     log "try SSID: $ssid"
     if nmcli connection up "$ssid" ifname wlan0 2>/dev/null || \
        nmcli device wifi connect "$ssid" password "$psk" ifname wlan0 2>/dev/null; then

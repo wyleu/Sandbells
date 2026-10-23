@@ -19,6 +19,7 @@ from events import constants as C
 from events import wsclient
 from events.config import resolve_url
 from events.ingest import Ingest
+from events.linkstate import LinkState, link_state_path
 from events.store import EventStore
 
 STOP_SIGNALS = (signal.SIGTERM, signal.SIGINT)
@@ -82,7 +83,7 @@ class Command(BaseCommand):
         stop = threading.Event()
         previous = install_signal_handlers(stop)
         try:
-            ingest = Ingest(EventStore())
+            ingest = Ingest(EventStore(), link=LinkState(link_state_path()))
             wsclient.run(url, ingest, stop)
         finally:
             restore_signal_handlers(previous)

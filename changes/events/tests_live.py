@@ -180,3 +180,71 @@ class ClockJsTests(SimpleTestCase):
         p = subprocess.run([NODE, "--test", str(JS_TESTS)], capture_output=True,
                            text=True, timeout=NODE_TIMEOUT_S)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+
+
+@mock.patch("bells.views.load_farm_instances", return_value=FARM)
+class FarmPageLinkWidgetTests(TestCase):
+    def test_widget_in_live_panel_with_all_event_types(self, _):
+        r = self.client.get(reverse("farm_status_index", args=[0]))
+        self.assertContains(r, 'id="link-widget"')
+        self.assertContains(r, 'data-url="%s"' % reverse("events:api_link"))
+        self.assertContains(r, "link_widget.js -- page 3")       # script inlined
+        self.assertContains(r, 'data-type=""')                   # every packet shown
+        self.assertContains(r, "addInfoRow")
+        r = self.client.get(reverse("farm_status_index", args=[1]))
+        self.assertNotContains(r, "link-widget")
+
+
+class LinkApiTests(SimpleTestCase):
+    def get(self, doc=None, age_s=0):
+        import os
+        import tempfile
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "link.json")
+            if doc is not None:
+                with open(path, "w") as f:
+                    json.dump(doc, f)
+                t = time.time() - age_s
+                os.utime(path, (t, t))
+            with mock.patch.dict("os.environ", {C.LINK_STATE_ENV: path}):
+                return self.client.get(reverse("events:api_link")).json()
+
+    def doc(self, state=C.LINK_CONNECTED, hb_ago_ms=2000, **ingest):
+        import time
+        now = int(time.time() * 1000)
+        i = {"state": state, "reconnects": 1, "last_frame_ms": now - 1000,
+             "last_heartbeat_ms": None if hb_ago_ms is None else now - hb_ago_ms}
+        i.update(ingest)
+        return {"ingest": i, "pico": {"type": "heartbeat", "body": {"sync": "stale"}}}
+
+    def test_no_file_is_ingest_down(self):
+        out = self.get(None)
+        self.assertEqual(out["verdict"], "no_ingest")
+        self.assertIn("not running", out["why"])
+
+    def test_old_file_is_ingest_down(self):
+        out = self.get(self.doc(), age_s=C.INGEST_FILE_STALE_MS / 1000 + 5)
+        self.assertEqual(out["verdict"], "no_ingest")
+
+    def test_connected_fresh_heartbeat_ok(self):
+        out = self.get(self.doc())
+        self.assertEqual(out["verdict"], "ok")
+        self.assertEqual(out["pico"]["body"]["sync"], "stale")
+        self.assertEqual(out["ingest"]["reconnects"], 1)
+
+    def test_heartbeat_ageing_goes_stale_then_lost(self):
+        self.assertEqual(self.get(self.doc(hb_ago_ms=C.LINK_STALE_MS + 1000))["verdict"],
+                         "stale")
+        self.assertEqual(self.get(self.doc(hb_ago_ms=C.LINK_LOST_MS + 1000))["verdict"],
+                         "lost")
+
+    def test_ingest_down_is_lost_with_reason(self):
+        out = self.get(self.doc(state=C.LINK_DOWN, last_drop_reason="peer silent 20 s"))
+        self.assertEqual(out["verdict"], "lost")
+        self.assertIn("peer silent 20 s", out["why"])
+
+    def test_old_firmware_connected_without_heartbeats_is_ok(self):
+        out = self.get(self.doc(hb_ago_ms=None))
+        self.assertEqual(out["verdict"], "ok")
+        self.assertIn("older firmware", out["why"])

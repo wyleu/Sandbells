@@ -10,7 +10,10 @@ IGNORED_SCHEMAS = (SCHEMA_PANEL_V1,)
 
 # ---- event types ----------------------------------------------------------
 TYPE_STROKE = "stroke"
-KNOWN_EVENT_TYPES = (TYPE_STROKE,)
+TYPE_LINK = "link"              # sandswing: client connected/dropped, wifi lost/back
+TYPE_INGEST = "ingest"          # this Sandbells' ingest: connected/disconnected/...
+TYPE_HEARTBEAT = "heartbeat"    # sand.panel/v1 frames: shown on page 3, never stored
+KNOWN_EVENT_TYPES = (TYPE_STROKE, TYPE_LINK, TYPE_INGEST)
 
 # ---- stamp vocabularies (from sntp_pico.SntpClock.stamp) -------------------
 SYNC_UNSYNCED = "unsynced"
@@ -113,6 +116,27 @@ WS_RECV_TIMEOUT_S = 1.0         # idle wake-up: store.poll(), summary, stop chec
 BACKOFF_INITIAL_S = 1.0
 BACKOFF_FACTOR = 2.0
 BACKOFF_MAX_S = 30.0
+# Link health (see docs/link-health.md).  The Pico sends a sand.panel/v1
+# heartbeat every 5 s and drops a client that has sent heartbeats but then
+# goes quiet for 20 s; this end does the same the other way round.
+CLIENT_HEARTBEAT_S = 5.0        # our heartbeat text frame to the Pico
+PEER_SILENT_S = 20.0            # no frame this long (after a heartbeat): dead
+SCHEMA_HELLO_V1 = "sand.hello/v1"   # client -> Pico heartbeat (Pico ignores content)
+TCP_KEEPIDLE_S = 10             # kernel keepalive under the app heartbeat
+TCP_KEEPINTVL_S = 5
+TCP_KEEPCNT = 3
+INGEST_SRC = "sandbells"        # src of this side's own "ingest" events
+# Link state file for page 3 (tmpfs; RuntimeDirectory=sandbells-ingest)
+LINK_STATE_PATH = "/run/sandbells-ingest/link.json"
+LINK_STATE_ENV = "SANDBELLS_LINK_STATE"
+LINK_STATE_SCHEMA = "sandbells.link/v1"
+LINK_STATE_MODE = 0o644         # gunicorn (another user) reads it
+LINK_WRITE_MIN_S = 1.0          # frames/heartbeats: at most one write a second
+LINK_WRITE_MAX_S = 5.0          # idle: rewrite so the file age says "ingest alive"
+LINK_STARTING = "starting"
+LINK_CONNECTED = "connected"
+LINK_DOWN = "down"
+LINK_STOPPED = "stopped"
 
 # ---- ingest: logging (ingest.py) -----------------------------------------
 LOGGER_NAME = "events.ingest"
@@ -160,3 +184,9 @@ LIVE_FAILS_WARN = 5            # failed polls in a row before the warning
 LIVE_IDLE_NOTE_MS = 2 * MS_PER_MINUTE
 LIVE_FETCH_TIMEOUT_MS = 4000
 BELL_LABEL = "Bell %d"
+
+# ---- page 3 link widget (link_widget.js, api.link) -------------------------
+LINK_POLL_MS = 2000             # widget poll of /events/api/link/
+LINK_STALE_MS = 15000           # no Pico heartbeat this long: grey (3 missed)
+LINK_LOST_MS = 30000            # ...this long, or ingest down: red LOST
+INGEST_FILE_STALE_MS = 15000    # link file not rewritten: ingest not running

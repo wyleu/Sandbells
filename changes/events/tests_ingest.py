@@ -234,8 +234,11 @@ class ClientLoopTests(TestCase):
         self.assertGreaterEqual(idle.call_count, 1)
         self.assertEqual(ws.timeout, C.WS_RECV_TIMEOUT_S)
         self.assertTrue(ws.closed)
-        self.assertEqual(Event.objects.count(), 3)
+        self.assertEqual(Event.objects.filter(src="sandswing").count(), 3)
         self.assertEqual(stop.delays, [1])       # one reconnect wait
+        whats = list(Event.objects.filter(src=C.INGEST_SRC).order_by("seq")
+                     .values_list("body__what", flat=True))
+        self.assertEqual(whats, ["started", "connected", "disconnected", "stopped"])
 
     def test_connect_failures_back_off(self):
         ing, _ = make_ingest()
@@ -275,8 +278,115 @@ class ClientLoopTests(TestCase):
             wsclient.run(SANDSWING_URL, ing, stop, connect=lambda url, t: ws)
         self.assertTrue(stop.is_set() and ws.closed)
         self.assertEqual(len(ing.store), 0)
-        self.assertEqual(sorted(Event.objects.values_list("seq", flat=True)),
+        self.assertEqual(sorted(Event.objects.filter(src="sandswing")
+                                .values_list("seq", flat=True)),
                          [1, 2])                 # seq 3 never read
+
+
+class SendingWs(FakeWs):
+    """FakeWs that also takes our heartbeat text frames."""
+    def __init__(self, script):
+        FakeWs.__init__(self, script)
+        self.sent = []
+
+    def send(self, text):
+        self.sent.append(text)
+
+
+def panel_hb(seq=1, **body):
+    d = json.loads(raw(seq=seq))
+    d.update(schema=C.SCHEMA_PANEL_V1, type=C.TYPE_HEARTBEAT,
+             body=dict({"panel": [[0, 32, 0]] + [[0, 0, 0]] * 5,
+                        "link": "ws_client", "sync": "stale"}, **body))
+    return json.dumps(d)
+
+
+class LinkHealthTests(TestCase):
+    def test_heartbeats_sent_and_pico_heartbeat_kept_not_stored(self):
+        ing, _ = make_ingest()
+        t = [0.0]
+
+        def tick():
+            t[0] += C.CLIENT_HEARTBEAT_S
+        ws = SendingWs([panel_hb(), tick, raw(seq=1)])
+        stop = StopAfter(waits=1)
+        wsclient.run(SANDSWING_URL, ing, stop, connect=lambda url, tm: ws,
+                     backoff=Backoff(1, 2, 8), clock=lambda: t[0])
+        self.assertGreaterEqual(len(ws.sent), 2)
+        hello = json.loads(ws.sent[0])
+        self.assertEqual((hello["schema"], hello["type"]),
+                         (C.SCHEMA_HELLO_V1, C.TYPE_HEARTBEAT))
+        self.assertEqual(ing.pico_heartbeats, 1)
+        self.assertEqual(ing.link.doc["pico"]["body"]["sync"], "stale")
+        self.assertEqual(Event.objects.filter(src="sandswing").count(), 1)
+        self.assertFalse(Event.objects.filter(type=C.TYPE_HEARTBEAT).exists())
+
+    def test_silent_peer_after_a_heartbeat_is_dropped(self):
+        ing, _ = make_ingest()
+        t = [0.0]
+
+        def later():
+            t[0] += C.PEER_SILENT_S + 1
+        ws = SendingWs([panel_hb(), later, FakeWs.TIMEOUT, raw(seq=9)])
+        n = wsclient.read_frames(ws, ing, StopAfter(waits=99),
+                                 wsclient.timeout_errors(), clock=lambda: t[0])
+        self.assertEqual(n, 1)                    # seq 9 never read: dropped first
+        self.assertIn("peer silent", wsclient.read_frames.reason)
+
+    def test_old_firmware_without_heartbeat_is_never_timed_out(self):
+        ing, _ = make_ingest()
+        t = [0.0]
+
+        def later():
+            t[0] += C.PEER_SILENT_S * 10
+        ws = SendingWs([raw(seq=1), later, FakeWs.TIMEOUT, raw(seq=2)])
+        n = wsclient.read_frames(ws, ing, StopAfter(waits=99),
+                                 wsclient.timeout_errors(), clock=lambda: t[0])
+        self.assertEqual(n, 2)
+        self.assertEqual(wsclient.read_frames.reason, "closed")
+
+    def test_refusal_without_frames_does_not_reset_backoff(self):
+        ing, _ = make_ingest()
+        stop = StopAfter(waits=3)
+        wsclient.run(SANDSWING_URL, ing, stop,
+                     connect=lambda url, tm: FakeWs([]),   # 1013: closes at once
+                     backoff=Backoff(1, 2, 8))
+        self.assertEqual(stop.delays, [1, 2, 4])
+
+    def test_connect_failed_noted_once_per_outage_and_in_link_state(self):
+        ing, _ = make_ingest()
+        stop = StopAfter(waits=4)
+
+        def refuse(url, tm):
+            raise ConnectionRefusedError("refused")
+        wsclient.run(SANDSWING_URL, ing, stop, connect=refuse,
+                     backoff=Backoff(1, 2, 4))
+        ing.flush()
+        whats = list(Event.objects.filter(src=C.INGEST_SRC).order_by("seq")
+                     .values_list("body__what", flat=True))
+        self.assertEqual(whats, ["started", "connect_failed", "stopped"])
+        i = ing.link.doc["ingest"]
+        self.assertEqual((i["connect_failures"], i["state"]), (4, C.LINK_STOPPED))
+
+    def test_link_state_file_written_atomically_and_readable(self):
+        from .linkstate import LinkState, read_link_state
+        with tempfile.TemporaryDirectory() as d:
+            path = str(Path(d) / "link.json")
+            st = LinkState(path)
+            st.connected(SANDSWING_URL)
+            st.heartbeat(json.loads(panel_hb()))
+            st.disconnected("peer silent 20 s")
+            doc, age = read_link_state(path)
+            self.assertEqual(doc["ingest"]["state"], C.LINK_DOWN)
+            self.assertEqual(doc["ingest"]["last_drop_reason"], "peer silent 20 s")
+            self.assertEqual(doc["pico"]["type"], C.TYPE_HEARTBEAT)
+            self.assertLess(age, 5000)
+            self.assertEqual([p.name for p in Path(d).iterdir()], ["link.json"])
+        self.assertEqual(read_link_state("/nonexistent/link.json"), (None, None))
+
+    def test_keepalive_sockopts(self):
+        opts = wsclient.keepalive_sockopts()
+        self.assertIn((socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1), opts)
 
 
 class ConfigTests(SimpleTestCase):

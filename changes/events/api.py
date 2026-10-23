@@ -4,6 +4,8 @@
                                                     live event list
   GET /events/api/days/?from=YYYY-MM-DD&to=YYYY-MM-DD&src=
                                                     rings per local day
+  GET /events/api/link/                             concentrator link state
+                                                    (ingest's LinkState file)
 """
 
 import time
@@ -13,6 +15,7 @@ from django.http import JsonResponse
 from . import constants as C
 from . import localtime as LT
 from .mapping import ChannelMapper, ch_label
+from .linkstate import read_link_state
 from .models import receiving_host
 from .queries import (current_ring, events_after, ring_json,
                       rings_starting_between, stroke_intervals)
@@ -105,3 +108,46 @@ def days(request):
     return JsonResponse({"host": receiving_host(),
                          "from": first.strftime(C.DATE_FORMAT),
                          "to": last.strftime(C.DATE_FORMAT), "days": out})
+
+
+def link(request):
+    """The ingest's live view of the concentrator link, for the page 3
+    widget.  The verdict (ok / stale / lost) is made here so the page
+    shows exactly what the constants say."""
+    now = _now_ms()
+    doc, file_age = read_link_state()
+    out = {"host": receiving_host(), "server_ms": now,
+           "file_age_ms": file_age, "stale_ms": C.LINK_STALE_MS,
+           "lost_ms": C.LINK_LOST_MS}
+    out.update(link_verdict(doc, file_age, now))
+    out["ingest"] = (doc or {}).get("ingest")
+    out["pico"] = (doc or {}).get("pico")
+    return JsonResponse(out)
+
+
+def _age(now, ms):
+    return None if ms is None else max(0, now - ms)
+
+
+def link_verdict(doc, file_age, now):
+    """-> {"verdict": "ok"|"stale"|"lost"|"no_ingest", "why": str,
+    "hb_age_ms", "rx_age_ms"}."""
+    if doc is None or file_age is None or file_age > C.INGEST_FILE_STALE_MS:
+        return {"verdict": "no_ingest", "hb_age_ms": None, "rx_age_ms": None,
+                "why": "ingest not running" if doc is None
+                else "ingest not updating (%d s)" % (file_age // C.MS_PER_S)}
+    i = doc.get("ingest") or {}
+    hb_age = _age(now, i.get("last_heartbeat_ms"))
+    rx_age = _age(now, i.get("last_frame_ms"))
+    base = {"hb_age_ms": hb_age, "rx_age_ms": rx_age}
+    if i.get("state") != C.LINK_CONNECTED:
+        why = i.get("last_drop_reason") or i.get("last_error") or i.get("state")
+        return dict(base, verdict="lost", why="ingest %s: %s" % (i.get("state"), why))
+    if hb_age is None:                   # old firmware: no heartbeats at all
+        return dict(base, verdict="ok", why="connected (no heartbeat from "
+                    "the concentrator: older firmware)")
+    if hb_age > C.LINK_LOST_MS:
+        return dict(base, verdict="lost", why="no heartbeat for %d s" % (hb_age // C.MS_PER_S))
+    if hb_age > C.LINK_STALE_MS:
+        return dict(base, verdict="stale", why="no heartbeat for %d s" % (hb_age // C.MS_PER_S))
+    return dict(base, verdict="ok", why="connected")

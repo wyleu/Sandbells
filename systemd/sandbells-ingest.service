@@ -9,6 +9,10 @@ User=sandbells
 Group=sandbells
 WorkingDirectory=/home/sandbells/Code/Sandbells/changes
 Environment=PYTHONUNBUFFERED=1
+# Live link state for the page 3 widget (gunicorn reads it): tmpfs, made
+# fresh at every start.  events.constants.LINK_STATE_PATH.
+RuntimeDirectory=sandbells-ingest
+RuntimeDirectoryMode=0755
 
 # URL: --url, else settings.json status.devices[] family "sandswing" ws_url,
 # else ws://192.168.0.81/ws.  Takes one of the Pico's /ws client slots.
@@ -18,7 +22,7 @@ ExecStart=/home/sandbells/Code/Sandbells/Bellvirtenv/bin/python manage.py ingest
 KillSignal=SIGTERM
 TimeoutStopSec=15
 Restart=always
-RestartSec=10
+RestartSec=5
 # 78 = EX_CONFIG (events.constants.EXIT_CONFIG_ERROR): e.g. websocket-client
 # not installed.  Do not restart-loop; fix, then systemctl restart.
 RestartPreventExitStatus=78

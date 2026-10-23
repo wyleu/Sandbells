@@ -8,13 +8,23 @@ The first frame of each (src, boot_id) seeds the GapTracker from the DB
 (max stored seq, one query on the UNIQUE(src, boot_id, seq) index), so a
 restart does not report already-stored seqs as missed.  Events still in
 the store's buffer are known to the in-process tracker already.
+
+Link health: sand.panel/v1 heartbeats from the Pico are not stored; they
+update the LinkState (page 3 widget).  note() stores this side's own
+"ingest" events (connected, disconnected, connect_failed, started,
+stopped) in the same table, src INGEST_SRC, with their own boot_id/seq,
+so a link drop leaves a record on both ends.
 """
 
+import json
 import logging
+import os
+import socket
 import time
 
 from . import constants as C
 from .gaps import GapTracker
+from .linkstate import LinkState
 from .parse import ParseError, parse
 
 
@@ -32,8 +42,13 @@ class Ingest:
     def __init__(self, store, tracker=None, clock=time.monotonic,
                  summary_interval_s=C.SUMMARY_INTERVAL_S,
                  reject_log_interval_s=C.REJECT_LOG_INTERVAL_S,
-                 last_stored=stored_max_seq):
+                 last_stored=stored_max_seq, link=None, wall=time.time):
         self.store = store
+        self.link = link if link is not None else LinkState(None)
+        self.wall = wall
+        self.pico_heartbeats = 0      # sand.panel/v1 heartbeats seen (wsclient)
+        self._note_boot = os.urandom(4).hex()
+        self._note_seq = 0
         self.last_stored = last_stored
         self.tracker = tracker or GapTracker()
         self.clock = clock
@@ -53,9 +68,12 @@ class Ingest:
         except ParseError as e:
             if e.reason == C.R_IGNORED:          # e.g. sand.panel/v1 mimic frames
                 self.ignored += 1
+                self._panel_frame(text)
                 return None
             self._reject(e)
+            self.link.frame(False)
             return None
+        self.link.frame(True)
         self._seed_from_db(p.src, p.boot_id)
         obs = self.tracker.observe(p.src, p.boot_id, p.seq)
         if obs.kind == C.GAP_GAP:
@@ -71,6 +89,40 @@ class Ingest:
         """Socket quiet: flush if due, emit the summary if due."""
         self._write(self.store.poll)
         self.maybe_summary()
+        self.link.maybe_write()
+
+    def _panel_frame(self, text):
+        """sand.panel/v1: a heartbeat (LED mimic, link, sync) -> LinkState."""
+        try:
+            doc = json.loads(text)
+        except ValueError:
+            return
+        if isinstance(doc, dict) and doc.get(C.F_TYPE) == C.TYPE_HEARTBEAT:
+            self.pico_heartbeats += 1
+            self.link.heartbeat(doc)
+        else:
+            self.link.frame(False)
+
+    # ---- this side's own events -----------------------------------------
+    def note(self, what, **body):
+        """Store an "ingest" event (sand.event/v1, src INGEST_SRC) and log it."""
+        self._note_seq += 1
+        body = dict(body, what=what)
+        doc = {C.F_SCHEMA: C.SCHEMA_EVENT_V1, C.F_TYPE: C.TYPE_INGEST,
+               C.F_SRC: C.INGEST_SRC,
+               C.F_ID: socket.gethostname().split(".")[0][:C.DEVICE_ID_MAX_LEN],
+               C.F_BOOT_ID: self._note_boot, C.F_SEQ: self._note_seq,
+               C.F_TICK_MS: int(time.monotonic() * C.MS_PER_S),
+               C.F_UTC_MS: int(self.wall() * C.MS_PER_S),   # the Pi's chrony clock
+               C.F_BODY: body}
+        log.info("ingest %s %s", what, body)
+        try:
+            p = parse(json.dumps(doc))
+        except ParseError as e:                   # cannot happen; never raise
+            log.error("ingest note not stored: %s", e)
+            return None
+        self._write(self.store.add, p)
+        return p
 
     def flush(self):
         """Write everything buffered (disconnect, shutdown)."""

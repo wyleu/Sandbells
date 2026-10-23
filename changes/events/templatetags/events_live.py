@@ -12,7 +12,9 @@ register = template.Library()
 def live_panel():
     return {
         "since_url": reverse("events:api_since"),
-        "type": C.TYPE_STROKE,
+        "link_url": reverse("events:api_link"),
+        "link_poll_ms": C.LINK_POLL_MS,
+        "type": "",                     # every stored event: strokes + link/ingest
         "first_load": C.LIVE_FIRST_LOAD,
         "batch": C.LIVE_LIMIT_DEFAULT,
         "dom_rows": C.LIVE_DOM_ROWS,

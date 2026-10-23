@@ -54,7 +54,7 @@ else
 fi
 
 # ------------------------------------------------------------------
-# 2. Migrations (events tables)
+# 2. Migrations (events tables) + static files (farm_status.js heartbeat)
 # ------------------------------------------------------------------
 echo "[2/3] Checking migrations..."
 cd "$CHANGES_DIR" || { echo "ERROR: $CHANGES_DIR missing"; exit 1; }
@@ -63,6 +63,8 @@ if as_app "$VENV_PY" manage.py migrate --check >/dev/null 2>&1; then
 else
   as_app "$VENV_PY" manage.py migrate --noinput || { echo "ERROR: migrate failed"; exit 1; }
 fi
+as_app "$VENV_PY" manage.py collectstatic --noinput >/dev/null \
+  && echo "  static files collected" || echo "  WARNING: collectstatic failed"
 pause
 
 # ------------------------------------------------------------------
@@ -87,6 +89,12 @@ sleep 3
 echo ""
 systemctl is-enabled sandbells-ingest.service || true
 systemctl is-active sandbells-ingest.service || true
+# page 3 link widget reads this (tmpfs, RuntimeDirectory of the unit)
+if [ -f /run/sandbells-ingest/link.json ]; then
+  echo "  link state: /run/sandbells-ingest/link.json"
+else
+  echo "  WARNING: no /run/sandbells-ingest/link.json yet (page 3 shows INGEST DOWN)"
+fi
 journalctl -u sandbells-ingest.service -n 5 --no-pager 2>/dev/null || true
 echo "Ingest step completed"
 echo "  Follow: journalctl -u sandbells-ingest -f"

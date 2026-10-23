@@ -52,6 +52,22 @@
     while (tbody.rows.length > cfg.rows) tbody.deleteRow(tbody.rows.length - 1);
   }
 
+  /* link / ingest events (and any other non-stroke type): one quiet row,
+   * so every stored packet is visible in the list. */
+  function addInfoRow(e, flash) {
+    var tr = document.createElement("tr");
+    tr.className = "info" + (flash ? " new" : "");
+    cell(tr, e.at_hms_ms, "");
+    var b = e.body || {};
+    var what = b.what ? " " + b.what : "";
+    var why = b.reason ? " (" + b.reason + ")" : "";
+    var td = cell(tr, e.src + " · " + e.type + what + why, "");
+    td.colSpan = 3;
+    tbody.insertBefore(tr, tbody.firstChild);
+    if (flash) setTimeout(function () { tr.className = "info"; }, NEW_FLASH_MS);
+    while (tbody.rows.length > cfg.rows) tbody.deleteRow(tbody.rows.length - 1);
+  }
+
   function showRing(r) {
     el("live-ring-count").textContent = r.strokes;
     var parts = [];
@@ -133,7 +149,7 @@
         var evs = data.events || [];
         var flash = lastId !== null;                        // not on first load
         evs.forEach(function (e) {
-          if (e.ch === null) return;
+          if (e.type !== "stroke" || e.ch === null) { addInfoRow(e, flash); return; }
           addRow(e, flash);
           lastAt = e.at_ms;
         });

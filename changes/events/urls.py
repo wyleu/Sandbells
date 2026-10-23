@@ -10,4 +10,5 @@ urlpatterns = [
          name="ring"),
     path("api/since/", api.since, name="api_since"),
     path("api/days/", api.days, name="api_days"),
+    path("api/link/", api.link, name="api_link"),
 ]
