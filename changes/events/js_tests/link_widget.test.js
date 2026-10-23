@@ -44,3 +44,28 @@ test("view: lost greys the LEDs' source and says why", () => {
   assert.equal(v.leds[0], "rgb(0,255,0)");
   assert.equal(v.leds[5], "rgb(255,0,0)");
 });
+
+test("channels: kind under ch 1-4 LEDs, why for fault and trigger", () => {
+  const body = {
+    panel_state: ["ws_client", "trigger", "fault", "empty", "head_new", "heartbeat"],
+    chan: [["trigger", "trigger plug (test switch): Orange-Green/White link, switch open... (r50 0.99, l50 0.83)"],
+           ["fault", "Orange shorted to ground or crossed onto Green/White (15 R)... (l50 0.12 < 0.20)"],
+           ["empty", null], ["head_new", null], ["empty", null], ["fault", "partial loopback (B strap only)"],
+           ["empty", null], ["empty", null]] };
+  const c = lw.channels(body);
+  assert.deepEqual(c.kinds, ["trigger", "FAULT", "empty", "new head"]);
+  assert.equal(c.notes.length, 3);
+  assert.deepEqual(c.notes[1], { cls: "bad",
+    text: "ch 2 FAULT: Orange shorted to ground or crossed onto Green/White (15 R)... (l50 0.12 < 0.20)" });
+  assert.equal(c.notes[0].cls, "trig");
+  assert.match(c.notes[2].text, /^ch 6 FAULT: partial/);
+  const v = lw.view({ verdict: "ok", pico: { body } });
+  assert.deepEqual(v.kinds, c.kinds);
+});
+
+test("channels: older firmware (no chan) falls back to panel_state names", () => {
+  const c = lw.channels({ panel_state: ["ws_client", "loopback", "response", "empty", "fault", "heartbeat"] });
+  assert.deepEqual(c.kinds, ["loopback", "stroke", "empty", "FAULT"]);
+  assert.deepEqual(c.notes, []);
+  assert.deepEqual(lw.channels(null), { kinds: ["", "", "", ""], notes: [] });
+});

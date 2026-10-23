@@ -81,6 +81,15 @@ class ParseGood(SimpleTestCase):
         p = parse(raw(sync="held", mode="ringing"))
         self.assertEqual((p.sync, p.mode), (C.SYNC_HELD, C.MODE_RINGING))
 
+    def test_channel_survey_event_is_known_and_keeps_why(self):
+        why = ["Orange shorted to ground or crossed onto Green/White (15 R) "
+               "in a head cable (l50 0.12 < 0.20)"]
+        p = parse(raw(type="channel", body={"ch": 4, "kind": "fault",
+                                            "prev_kind": "empty", "why": why}))
+        self.assertTrue(p.known_type)
+        self.assertEqual((p.type, p.ch), (C.TYPE_CHANNEL, 4))
+        self.assertEqual(p.body["why"], why)
+
     def test_unknown_type_flagged_not_error(self):
         p = parse(raw(type="clock", body={"note": "x"}))
         self.assertFalse(p.known_type)

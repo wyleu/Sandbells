@@ -191,6 +191,9 @@ class FarmPageLinkWidgetTests(TestCase):
         self.assertContains(r, "link_widget.js -- page 3")       # script inlined
         self.assertContains(r, 'data-type=""')                   # every packet shown
         self.assertContains(r, "addInfoRow")
+        self.assertContains(r, 'class="lw-kind"', count=4)      # ch 1-4 kind words
+        self.assertContains(r, 'id="lw-chans"')                 # fault / trigger why
+        self.assertContains(r, 'e.type === "channel"')          # survey rows in the list
         r = self.client.get(reverse("farm_status_index", args=[1]))
         self.assertNotContains(r, "link-widget")
 

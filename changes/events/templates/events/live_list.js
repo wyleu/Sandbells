@@ -61,6 +61,11 @@
     var b = e.body || {};
     var what = b.what ? " " + b.what : "";
     var why = b.reason ? " (" + b.reason + ")" : "";
+    if (e.type === "channel") {                 // survey: a socket's kind changed
+      what = " ch " + b.ch + " " + b.kind + (b.prev_kind ? " (was " + b.prev_kind + ")" : "");
+      why = b.why && b.why.length ? ": " + b.why.join("; ") : "";
+      if (b.kind === "fault") tr.className += " fault";
+    }
     var td = cell(tr, e.src + " · " + e.type + what + why, "");
     td.colSpan = 3;
     tbody.insertBefore(tr, tbody.firstChild);

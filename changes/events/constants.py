@@ -13,7 +13,8 @@ TYPE_STROKE = "stroke"
 TYPE_LINK = "link"              # sandswing: client connected/dropped, wifi lost/back
 TYPE_INGEST = "ingest"          # this Sandbells' ingest: connected/disconnected/...
 TYPE_HEARTBEAT = "heartbeat"    # sand.panel/v1 frames: shown on page 3, never stored
-KNOWN_EVENT_TYPES = (TYPE_STROKE, TYPE_LINK, TYPE_INGEST)
+TYPE_CHANNEL = "channel"        # sandswing: a socket's survey kind changed (ch, kind, prev_kind, why)
+KNOWN_EVENT_TYPES = (TYPE_STROKE, TYPE_LINK, TYPE_INGEST, TYPE_CHANNEL)
 
 # ---- stamp vocabularies (from sntp_pico.SntpClock.stamp) -------------------
 SYNC_UNSYNCED = "unsynced"

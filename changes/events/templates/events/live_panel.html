@@ -43,6 +43,12 @@
   .lw-led { width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #222;
             border: 1px solid #555; }
   .lw-led.edge { width: 1.8rem; height: 1.8rem; }
+  .lw-cell { display: flex; flex-direction: column; align-items: center; min-width: 3.6rem; }
+  .lw-kind { font-size: 0.95rem; opacity: 0.85; white-space: nowrap; }
+  .lw-kind.bad, .lw-note.bad { color: #f66; font-weight: 700; }
+  .lw-kind.trig, .lw-note.trig { color: #a8f; }
+  #lw-chans { flex-basis: 100%; font-size: 1.1rem; }
+  #live-table tr.info.fault td { color: #f88; }
   #lw-head { font-size: 1.9rem; font-weight: 700; }
   #link-widget.ok #lw-head { color: #6d6; }
   #link-widget.stale #lw-head { color: #aaa; }
@@ -84,12 +90,17 @@
   <div id="link-widget" class="lw stale" data-url="{{ link_url }}"
        data-poll="{{ link_poll_ms }}" data-timeout="{{ timeout_ms }}">
     <div class="lw-leds" title="concentrator panel LEDs (last heartbeat)">
-      <span class="lw-led edge"></span><span class="lw-led"></span><span class="lw-led"></span>
-      <span class="lw-led"></span><span class="lw-led"></span><span class="lw-led edge"></span>
+      <span class="lw-led edge"></span>
+      <span class="lw-cell"><span class="lw-led"></span><small class="lw-kind"></small></span>
+      <span class="lw-cell"><span class="lw-led"></span><small class="lw-kind"></small></span>
+      <span class="lw-cell"><span class="lw-led"></span><small class="lw-kind"></small></span>
+      <span class="lw-cell"><span class="lw-led"></span><small class="lw-kind"></small></span>
+      <span class="lw-led edge"></span>
     </div>
     <span id="lw-head">…</span><span id="lw-why"></span><span id="lw-leds"></span>
     <div class="lw-lines"><span id="lw-detail"></span> <span id="lw-drop"></span></div>
     <div class="lw-lines"><span id="lw-time" class="lw-time"></span></div>
+    <div id="lw-chans" title="survey: why a socket is a fault or a trigger"></div>
   </div>
   <div class="live-head">
     <div class="live-big"><span id="live-ring-count">—</span><small id="live-ring-label">strokes this ring</small></div>

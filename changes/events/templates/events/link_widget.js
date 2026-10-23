@@ -18,6 +18,14 @@
     heartbeat_holdover: "holdover (time server lost)", ringing: "ringing",
     ringing_down: "ringing down", watchdog_reset: "after watchdog reset"
   };
+  /* survey kinds (sandswing socket_classify / panel states) -> short words */
+  var KIND_WORDS = {
+    head_new: "new head", head_old: "old head", loopback: "loopback",
+    trigger: "trigger", empty: "empty", fault: "FAULT", no_board: "no board",
+    unknown: "?", examining: "checking", surveying: "checking", response: "stroke"
+  };
+  var NOTE_KINDS = { fault: "bad", trigger: "trig" };   // why shown for these
+  var PANEL_CHANNELS = 4;                              // LEDs 2-5 = ch 1-4
   var SYNC_WORDS = { synced: "synced", stale: "holdover", held: "held (ringing)",
                      unsynced: "NOT synced" };
 
@@ -60,6 +68,27 @@
     return s === "synced" || s === "held" ? "ok" : s === "stale" ? "warn" : "bad";
   }
 
+  /* ch 1-4 kind words under the LEDs, and a why line for every fault or
+   * trigger channel (body.chan = [[kind, why|null], ...], newer firmware;
+   * older firmware: the panel_state names only). */
+  function channels(body) {
+    var chan = body && body.chan ? body.chan : null;
+    var states = body && body.panel_state ? body.panel_state : [];
+    var kinds = [], notes = [];
+    for (var i = 0; i < PANEL_CHANNELS; i++) {
+      var k = chan && chan[i] ? chan[i][0] : states[i + 1];
+      kinds.push(k ? KIND_WORDS[k] || k : "");
+    }
+    (chan || []).forEach(function (c, i) {
+      if (c && NOTE_KINDS[c[0]]) {
+        notes.push({ cls: NOTE_KINDS[c[0]],
+                     text: "ch " + (i + 1) + " " + (KIND_WORDS[c[0]] || c[0]) +
+                           (c[1] ? ": " + c[1] : "") });
+      }
+    });
+    return { kinds: kinds, notes: notes };
+  }
+
   function view(data) {
     var ing = data.ingest || {};
     var pico = data.pico || null;
@@ -75,6 +104,7 @@
       parts.push("RSSI " + body.wifi.rssi);
     }
     var drop = ing.last_drop_reason || net.last_drop_reason || null;
+    var ch = channels(body);
     return {
       cls: data.verdict === "ok" ? "ok" : data.verdict === "stale" ? "stale" : "lost",
       headline: headline, why: data.why || "",
@@ -82,18 +112,20 @@
       drop: drop ? "last drop: " + drop : "",
       time: timeLine(body), timeCls: syncClass(body),
       leds: (body && body.panel ? body.panel : []).map(cssColour),
-      states: body && body.panel_state ? body.panel_state : []
+      states: body && body.panel_state ? body.panel_state : [],
+      kinds: ch.kinds, notes: ch.notes
     };
   }
 
   var api = { cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
-              syncClass: syncClass };
+              syncClass: syncClass, channels: channels };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
 
   var box = document.getElementById("link-widget");
   if (!box) return;
   var cfg = { url: box.dataset.url, poll: +box.dataset.poll, timeout: +box.dataset.timeout };
   var leds = box.querySelectorAll(".lw-led");
+  var kindEls = box.querySelectorAll(".lw-kind");
   function el(id) { return document.getElementById(id); }
   function text(id, s) { var e = el(id); if (e && e.textContent !== s) e.textContent = s; }
 
@@ -109,6 +141,21 @@
       leds[i].style.background = v.cls === "ok" && v.leds[i] ? v.leds[i] : DARK;
       leds[i].title = LED_NAMES[i] + ": " + (STATE_WORDS[v.states[i]] || v.states[i] || "?");
     }
+    for (var j = 0; j < kindEls.length; j++) {
+      var kw = v.cls === "ok" && v.kinds ? v.kinds[j] || "" : "";
+      if (kindEls[j].textContent !== kw) kindEls[j].textContent = kw;
+      kindEls[j].className = "lw-kind" + (kw === "FAULT" ? " bad" : kw === "trigger" ? " trig" : "");
+    }
+    var notes = el("lw-chans");
+    if (notes) {                               // stale/lost: say nothing old
+      var html = (v.cls === "ok" && v.notes ? v.notes : []).map(function (n) {
+        var d = document.createElement("div");
+        d.className = "lw-note " + n.cls;
+        d.textContent = n.text;
+        return d.outerHTML;
+      }).join("");
+      if (notes.innerHTML !== html) notes.innerHTML = html;
+    }
     var word = v.states[0] ? STATE_WORDS[v.states[0]] || v.states[0] : "";
     var beat = v.states[5] ? STATE_WORDS[v.states[5]] || v.states[5] : "";
     text("lw-leds", word + (beat ? " · " + beat : ""));
@@ -123,7 +170,8 @@
       .catch(function (e) {
         clearTimeout(guard);
         show({ cls: "lost", headline: "?", why: "Sandbells not answering: " + e.message,
-               detail: "", drop: "", time: "", timeCls: "", leds: [], states: [] });
+               detail: "", drop: "", time: "", timeCls: "", leds: [], states: [],
+               kinds: [], notes: [] });
       })
       .then(function () { setTimeout(poll, cfg.poll); });
   }
