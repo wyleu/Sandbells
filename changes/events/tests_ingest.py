@@ -368,6 +368,20 @@ class LinkHealthTests(TestCase):
         i = ing.link.doc["ingest"]
         self.assertEqual((i["connect_failures"], i["state"]), (4, C.LINK_STOPPED))
 
+    def test_long_backoff_keeps_link_file_fresh(self):
+        # 30 s retry waits are sliced so the file never looks like a dead ingest
+        ing, _ = make_ingest()
+        stop = StopAfter(waits=7)
+        writes = []
+        ing.link.write = lambda: writes.append(1)
+
+        def refuse(url, tm):
+            raise ConnectionRefusedError("refused")
+        wsclient.run(SANDSWING_URL, ing, stop, connect=refuse,
+                     backoff=Backoff(30, 2, 30))
+        self.assertEqual(stop.delays, [C.LINK_WRITE_MAX_S] * 7)
+        self.assertGreaterEqual(len(writes), 6)
+
     def test_link_state_file_written_atomically_and_readable(self):
         from .linkstate import LinkState, read_link_state
         with tempfile.TemporaryDirectory() as d:

@@ -132,6 +132,22 @@ def _note(ingest, what, **body):
         fn(what, **body)
 
 
+def _wait(stop, delay, ingest, link):
+    """stop.wait(delay) in slices of at most LINK_WRITE_MAX_S, touching the
+    link file between slices: a 30 s backoff must not let the file age past
+    INGEST_FILE_STALE_MS, or page 3 says INGEST DOWN when the ingest is
+    alive and the Pico is just unreachable (LOST is the truth)."""
+    left = delay
+    while left > 0 and not stop.is_set():
+        step = min(left, C.LINK_WRITE_MAX_S)
+        stop.wait(step)
+        left -= step
+        if left > 0 and not stop.is_set():
+            ingest.idle()
+            if link is not None:
+                link.write()
+
+
 def run(url, ingest, stop, connect=default_connect, backoff=None,
         connect_timeout_s=C.WS_CONNECT_TIMEOUT_S,
         recv_timeout_s=C.WS_RECV_TIMEOUT_S, clock=time.monotonic):
@@ -158,7 +174,7 @@ def run(url, ingest, stop, connect=default_connect, backoff=None,
             if link is not None:
                 link.connect_failed(url, reason)
             ingest.idle()
-            stop.wait(delay)
+            _wait(stop, delay, ingest, link)
             continue
         log.info("connected %s", url)
         _note(ingest, "connected", url=url, failed_tries=fails)
@@ -186,7 +202,7 @@ def run(url, ingest, stop, connect=default_connect, backoff=None,
         if not stop.is_set():
             delay = backoff.next()
             log.info("reconnect in %.0f s", delay)
-            stop.wait(delay)
+            _wait(stop, delay, ingest, link)
     _note(ingest, "stopped")
     if link is not None:
         link.stopped()
