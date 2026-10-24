@@ -27,6 +27,14 @@
   #live-table .ch { font-size: 1.1rem; opacity: 0.7; margin-left: 0.4rem; }
   #live-table .q { font-size: 0.9rem; color: #7d7; }
   #live-table .q.dim, #live-table td.dim { opacity: 0.45; color: #aaa; }
+  /* Beat column: the middle of each stroke row.  A gold mark sits at that
+   * stroke's place against the current beat (centre on the beat, left early,
+   * right late), so a rhythm reads as a vertical graph down the list. */
+  #live-table td.beat { position: relative; width: 38%; padding: 0; }
+  #live-table td.beat::before { content: ""; position: absolute; left: 50%; top: 18%;
+                                bottom: 18%; border-left: 1px dashed #444; }
+  #live-table .beat-mark { position: absolute; top: 12%; bottom: 12%; width: 4px;
+                           margin-left: -2px; border-radius: 2px; background: #fc3; }
   #live-table tr.new td { background: #223; }
   #live-table tr td { transition: background 1.5s; }
   /* Clock: top LEFT of the panel (the middle of the screen), right over the
@@ -121,6 +129,7 @@
   <table id="live-table"><tbody id="live-rows"></tbody></table>
 </aside>
 <script>
+{% include "events/beat.js" %}
 {% include "events/live_list.js" %}
 {% include "events/clock.js" %}
 {% include "events/link_widget.js" %}

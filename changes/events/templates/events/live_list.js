@@ -11,12 +11,14 @@
     poll: +d.poll, retryMax: +d.retryMax, failsWarn: +d.failsWarn,
     idle: +d.idle, ringGap: +d.ringGap, timeout: +d.timeout, tz: d.tz
   };
+  var PERCENT = 100;
   var MS_PER_S = 1000, S_PER_MIN = 60, NEW_FLASH_MS = 2000;
   var tbody = document.getElementById("live-rows");
   var lastId = null;        // null until the first answer
   var lastAt = null;        // at_ms of the newest stroke
   var offset = 0;           // server clock - this clock (ms)
   var fails = 0, lastOk = null, delay = cfg.poll, timer = null;
+  var beat = window.Beat ? window.Beat.createBeat() : null;   // beat.js, inlined first
 
   function el(id) { return document.getElementById(id); }
 
@@ -39,6 +41,15 @@
     ch.className = "ch";
     ch.textContent = "ch" + e.ch;
     who.appendChild(ch);
+    var bt = cell(tr, null, "beat");               // gold mark: early left, late right
+    var hit = beat ? beat.observe(e.src + "/" + e.boot_id + "/" + e.ch, e.interval_ms) : null;
+    if (hit) {
+      var mark = document.createElement("span");
+      mark.className = "beat-mark";
+      mark.style.left = (hit.pos * PERCENT).toFixed(1) + "%";
+      mark.title = "beat " + Math.round(hit.beat) + " ms, this gap " + e.interval_ms + " ms";
+      bt.appendChild(mark);
+    }
     cell(tr, e.interval_ms === null ? "—" : seconds1(e.interval_ms), "iv");
     var q = cell(tr, null, "");
     var m = document.createElement("span");
@@ -67,7 +78,7 @@
       if (b.kind === "fault") tr.className += " fault";
     }
     var td = cell(tr, e.src + " · " + e.type + what + why, "");
-    td.colSpan = 3;
+    td.colSpan = 4;
     tbody.insertBefore(tr, tbody.firstChild);
     if (flash) setTimeout(function () { tr.className = "info"; }, NEW_FLASH_MS);
     while (tbody.rows.length > cfg.rows) tbody.deleteRow(tbody.rows.length - 1);
