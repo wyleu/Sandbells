@@ -185,3 +185,28 @@ If a fetch is Sandsense’s current ad-hoc JSON (`ip`, `ssid`, `temp_c`, `pll_lo
 - Polling the whole farm every few seconds
 - Changing pattern display or `v1.0.0` kiosk behaviour
 - Hard-coded encoder or PLL widgets on Sandbells
+
+## Actions (buttons)
+
+An item may list things the farm page can press:
+
+```json
+{"key": "fan", "label": "Fan", "value": "43%",
+ "actions": [{"id": "nudge_down", "label": "-2%"}]}
+```
+
+The page shows one button per action beside the value. A press is
+`POST /api/farm/action/` with `{"device": "<farm id>", "key": "fan", "action": "nudge_down"}`.
+Sandbells looks the device up in its farm registry and:
+
+- if the device's entry in `/etc/sandbells/settings.json` has an `action_url`, forwards
+  `{"key", "action", "params"}` to it as JSON and returns its reply (`{"ok": true, ...}`),
+  so sandswing, sandmon and sandsense need only one small handler each;
+- otherwise, for this machine's own entry, runs the handler in `bells/actions.py`;
+- anything else is refused.
+
+The page never invents actions: it only draws what the device document lists, and the
+receiving side decides what is allowed. First action: Sandbells fan `nudge_down`, which
+appends `-2` to `/run/sandbells-fan.nudge`; the fan service takes it (never below
+`FAN_MIN`, not at all above `NUDGE_MAX_TEMP`) and holds the new speed until the
+temperature moves.

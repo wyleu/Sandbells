@@ -35,6 +35,7 @@
       kind: "{{ inst.kind }}",
       family: "{{ inst.family }}",
       name: "{{ inst.name }}",
+      id: "{{ inst.id }}",
       statusUrl: "{{ inst.status_url|default:'' }}",
       wsUrl: "{{ inst.ws_url|default:'' }}",
       interval: {{ inst.poll_hint_sec|default:15 }}000

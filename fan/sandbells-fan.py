@@ -36,6 +36,11 @@ SMOOTH_BETA = 0.05    # approach rate toward target when hysteresis allows
 HEAT_UP = 2.0         # °C rise vs last decision before allowing speed-up
 COOL_DN = 3.0         # °C fall vs last decision before allowing speed-down
 
+# --- manual nudge: the web page appends lines like "-2" to this file ---
+NUDGE_FILE = "/run/sandbells-fan.nudge"
+NUDGE_MAX_TEMP = 70.0   # no turning the fan down when this hot
+NUDGE_MAX_STEP = 10.0   # one line may not move more than this
+
 DEBUG = False
 
 scale_m = (SPEED_LOW - SPEED_HIGH) / (TEMP_LOW - TEMP_HIGH)
@@ -73,6 +78,36 @@ def write_pct(speed):
         pass
 
 
+def prepare_nudge_file():
+    """Created here (root) but writable by the web service."""
+    try:
+        with open(NUDGE_FILE, "w"):
+            pass
+        os.chmod(NUDGE_FILE, 0o666)
+    except Exception:
+        pass
+
+
+def take_nudge():
+    """Sum of the percent steps waiting in NUDGE_FILE, which is then emptied."""
+    try:
+        with open(NUDGE_FILE, "r+") as f:
+            text = f.read()
+            if not text:
+                return 0.0
+            f.seek(0)
+            f.truncate()
+    except Exception:
+        return 0.0
+    total = 0.0
+    for line in text.split():
+        try:
+            total += clamp(-NUDGE_MAX_STEP, NUDGE_MAX_STEP, float(line))
+        except ValueError:
+            pass
+    return total
+
+
 GPIO.setmode(GPIO.BOARD)
 GPIO.setwarnings(False)
 GPIO.setup(FAN_PIN, GPIO.OUT)
@@ -87,6 +122,7 @@ try:
     decision_temp = t0 - HEAT_UP - 0.1   # first iteration may increase if still needed
     pwm_fan.start(smooth_speed)
     write_pct(smooth_speed)
+    prepare_nudge_file()
     
     while not monitor.now:
         temp = measure_temp()
@@ -107,6 +143,15 @@ try:
             smooth_speed = smooth_speed - beta * (smooth_speed - target_speed)
             decision_temp = temp
         # else hold       
+
+        # A tap from the web page (e.g. fan resonating at this speed).  The
+        # dead-band is restarted so the new speed holds until the temperature
+        # moves; it will not go below FAN_MIN, nor down at all when hot.
+        nudge = take_nudge()
+        if nudge and (nudge > 0 or temp < NUDGE_MAX_TEMP):
+            smooth_speed += nudge
+            decision_temp = temp
+            print(f"[Fan] nudge {nudge:+.0f}% -> {clamp(FAN_MIN, SPEED_HIGH, smooth_speed):.0f}%")
 
         smooth_speed = clamp(FAN_MIN, SPEED_HIGH, smooth_speed)
         pwm_fan.ChangeDutyCycle(smooth_speed)

@@ -642,3 +642,68 @@ class TestChimeRoundsLeg(TestCase):
         idx_r = html.find('dataring="12345678"')
         snippet_r = html[idx_r : idx_r + 800]
         self.assertIn("largecharround", snippet_r)
+
+
+class TestDeviceActions(TestCase):
+    """Buttons on the farm page: schema -> /api/farm/action/ -> actions.run()."""
+
+    def _hw_fan(self, fan):
+        from bells.status_schema import from_sandbells_flat
+        doc = from_sandbells_flat({"fan": fan, "hostname": "sandbells2"})
+        hw = next(s for s in doc["sections"] if s["id"] == "hardware")
+        return next(i for i in hw["items"] if i["key"] == "fan")
+
+    def test_fan_item_has_nudge_when_fan_reports_percent(self):
+        item = self._hw_fan("43%")
+        self.assertEqual(item["actions"], [{"id": "nudge_down", "label": "-2%"}])
+
+    def test_fan_item_has_no_button_without_a_fan(self):
+        self.assertNotIn("actions", self._hw_fan("—"))
+
+    def test_nudge_appends_to_the_fan_file(self):
+        import tempfile, os
+        from bells import actions
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "nudge")
+            with patch.object(actions, "FAN_NUDGE_FILE", path):
+                r = actions.run({"id": "sandbells2", "family": "sandbells",
+                                 "status_url": "http://127.0.0.1/api/system-status/"},
+                                "fan", "nudge_down")
+            self.assertTrue(r["ok"])
+            self.assertEqual(open(path).read(), "-2\n")
+
+    def test_missing_fan_service_is_a_503(self):
+        from bells import actions
+        with patch.object(actions, "FAN_NUDGE_FILE", "/nonexistent-dir/nudge"):
+            with self.assertRaises(actions.ActionError) as cm:
+                actions.run({"id": "x", "family": "sandbells"}, "fan", "nudge_down")
+        self.assertEqual(cm.exception.status, 503)
+
+    def test_unknown_action_and_other_machines_are_refused(self):
+        from bells import actions
+        with self.assertRaises(actions.ActionError) as cm:
+            actions.run({"id": "x", "family": "sandbells"}, "fan", "max")
+        self.assertEqual(cm.exception.status, 404)
+        with self.assertRaises(actions.ActionError) as cm:
+            actions.run({"id": "other", "family": "sandbells",
+                         "status_url": "http://sandbells.local/api/system-status/"},
+                        "fan", "nudge_down")
+        self.assertEqual(cm.exception.status, 501)
+        with self.assertRaises(actions.ActionError) as cm:
+            actions.run({"id": "pico", "family": "sandswing"}, "fan", "nudge_down")
+        self.assertEqual(cm.exception.status, 501)
+
+    def test_view_routes_to_registered_device_only(self):
+        from bells import actions
+        inst = {"id": "sandbells2", "family": "sandbells", "status_url": ""}
+        c = Client()
+        with patch("bells.views.load_farm_instances", return_value=[inst]), \
+                patch.object(actions, "run", return_value={"ok": True}) as run:
+            r = c.post("/api/farm/action/", data='{"device":"sandbells2","key":"fan","action":"nudge_down"}',
+                       content_type="application/json")
+            self.assertEqual(r.status_code, 200)
+            run.assert_called_once()
+            r = c.post("/api/farm/action/", data='{"device":"nope","key":"fan","action":"nudge_down"}',
+                       content_type="application/json")
+            self.assertEqual(r.status_code, 404)
+        self.assertEqual(c.get("/api/farm/action/").status_code, 405)

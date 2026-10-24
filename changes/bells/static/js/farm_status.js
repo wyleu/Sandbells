@@ -18,6 +18,42 @@
     el.textContent = level;
   }
 
+  var CFG = {};          // the page's config, for button presses
+  var pollNow = null;    // set by startPoll: fetch again now
+
+  function csrfToken() {
+    var m = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+
+  /* An item's "actions" ([{id, label}]) become small buttons beside its value.
+   * A press POSTs {device, key, action}; Sandbells decides who carries it out. */
+  function actionButton(it, act) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "act";
+    b.textContent = act.label || act.id;
+    b.title = (it.label || it.key) + ": " + (act.label || act.id);
+    b.addEventListener("click", function () {
+      b.disabled = true;
+      fetch("/api/farm/action/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+        body: JSON.stringify({ device: CFG.id || "", key: it.key, action: act.id }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          b.textContent = res.ok ? "sent" : "failed";
+          if (!res.ok) b.title = res.error || "";
+        })
+        .catch(function () { b.textContent = "failed"; })
+        .then(function () {
+          setTimeout(function () { if (pollNow) pollNow(); }, 2500);
+        });
+    });
+    return b;
+  }
+
   function render(doc) {
     var main = $("farm-main");
     if (!main) return;
@@ -69,6 +105,10 @@
         if (it.hint && !it.color) {
           dd.title = it.hint;
         }
+        (it.actions || []).forEach(function (act) {
+          dd.appendChild(document.createTextNode(" "));
+          dd.appendChild(actionButton(it, act));
+        });
         dl.appendChild(dt);
         dl.appendChild(dd);
       });
@@ -129,6 +169,7 @@
         });
     }
 
+    pollNow = tick;
     tick();
     timer = setInterval(tick, interval);
 
@@ -229,6 +270,7 @@
   window.FarmStatus = {
     start: function (cfg) {
       cfg = cfg || {};
+      CFG = cfg;
       startPoll(cfg);
       startWs(cfg);
     },

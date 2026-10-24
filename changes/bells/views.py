@@ -17,6 +17,8 @@ from reportlab.graphics.shapes import *
 from django.core import serializers
 from django.core.paginator import Paginator,EmptyPage
 from django.http import HttpResponse
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_POST
 from django.http import Http404
 from django.http import JsonResponse
 from django.http import FileResponse
@@ -132,6 +134,7 @@ def layout_test(request, number=8, a="Rounds", b="Exp-ing Titums", c="Kings"):
     ctx["display"] = display_settings()
     return render(request, "bells/display.html", ctx)
 
+@ensure_csrf_cookie
 def farm_status(request, index=0):
     instances = load_farm_instances()
     if not instances:
@@ -159,6 +162,28 @@ def swing_display(request, n: int):
             "bell_indexes": list(range(n)),  # 0 = treble … n-1 = tenor
         },
     )
+
+@require_POST
+def farm_action(request):
+    """A button on the farm page: JSON {device, key, action} -> actions.run().
+    The device must be in the farm registry; the action must be one the code
+    in bells/actions.py knows (or one the device's own action_url takes)."""
+    from . import actions
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+        device = str(body.get("device") or "")
+        key = str(body.get("key") or "")
+        action = str(body.get("action") or "")
+    except Exception:
+        return JsonResponse({"ok": False, "error": "bad json"}, status=400)
+    inst = next((i for i in load_farm_instances() if i.get("id") == device), None)
+    if inst is None:
+        return JsonResponse({"ok": False, "error": "device not in farm registry"}, status=404)
+    try:
+        return JsonResponse(actions.run(inst, key, action, body.get("params")))
+    except actions.ActionError as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=e.status)
+
 
 def farm_device_status(request):
     url = (request.GET.get("url") or "").strip()

@@ -20,7 +20,8 @@ def _level(value: str | None) -> str:
     return v if v in LEVELS else "unknown"
 
 
-def _item(key: str, label: str, value: Any, level: str | None = None, hint: str | None = None) -> dict:
+def _item(key: str, label: str, value: Any, level: str | None = None, hint: str | None = None,
+          actions: list[dict] | None = None) -> dict:
     item = {
         "key": key,
         "label": label,
@@ -30,6 +31,8 @@ def _item(key: str, label: str, value: Any, level: str | None = None, hint: str 
         item["level"] = _level(level)
     if hint:
         item["hint"] = hint
+    if actions:
+        item["actions"] = actions     # [{"id", "label"}]; see status-v1.md
     return item
 
 
@@ -105,7 +108,7 @@ def from_sandbells_flat(d: dict) -> dict:
         _item("memory", "Memory", d.get("memory")),
         _item("cpu", "CPU", _join(d.get("cpu"), f"load {d.get('load1')}" if d.get("load1") else None)),
         _item("temp", "Temp", d.get("temp")),
-        _item("fan", "Fan", d.get("fan")),
+        _item("fan", "Fan", d.get("fan"), actions=_fan_actions(d.get("fan"))),
         _item(
             "throttled",
             "Throttled",
@@ -213,6 +216,13 @@ def from_sandsense_flat(d: dict) -> dict:
         ],
         "legacy": d,
     }
+
+
+def _fan_actions(fan: Any) -> list[dict] | None:
+    """Only a machine whose fan service reports a percentage has a fan to nudge."""
+    if str(fan or "").endswith("%"):
+        return [{"id": "nudge_down", "label": "-2%"}]
+    return None
 
 
 def _svc_level(state: Any) -> str:

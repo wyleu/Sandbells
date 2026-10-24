@@ -114,3 +114,17 @@ a { color: #8af; }
   box-shadow: 0 0 0 1px #666;
   vertical-align: middle;
 }
+
+button.act {
+  font: inherit;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.6rem;
+  min-width: 3rem;
+  background: #2a2a2a;
+  color: #eee;
+  border: 1px solid #666;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button.act:hover { background: #3a3a3a; }
+button.act:disabled { opacity: 0.6; cursor: default; }
