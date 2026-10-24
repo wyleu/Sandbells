@@ -122,6 +122,7 @@ BACKOFF_MAX_S = 30.0
 # goes quiet for 20 s; this end does the same the other way round.
 CLIENT_HEARTBEAT_S = 5.0        # our heartbeat text frame to the Pico
 PEER_SILENT_S = 20.0            # no frame this long (after a heartbeat): dead
+FIRST_FRAME_S = 60.0            # connected but not one frame this long: dead (Pico heartbeats every 5 s)
 SCHEMA_HELLO_V1 = "sand.hello/v1"   # client -> Pico heartbeat (Pico ignores content)
 TCP_KEEPIDLE_S = 10             # kernel keepalive under the app heartbeat
 TCP_KEEPINTVL_S = 5

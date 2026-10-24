@@ -12,6 +12,8 @@ Link health (docs/link-health.md):
   * once the Pico has sent a sand.panel/v1 heartbeat on this connection,
     PEER_SILENT_S without any frame means the link is dead (half-open):
     close and reconnect instead of waiting for ever;
+  * a connection that never delivers even one frame within FIRST_FRAME_S
+    is dead too (a wedged Pico can accept TCP and then say nothing);
   * TCP keepalive underneath, for the kernel's own view;
   * backoff only resets after a connection that delivered a frame, so a
     Pico refusing us (1013, max clients) is retried with growing delays;
@@ -82,7 +84,7 @@ def read_frames(ws, ingest, stop, timeouts, clock=time.monotonic):
     send = getattr(ws, "send", None)          # fakes in tests may not send
     hb_at = None
     hb_seq = 0
-    last_rx = clock()
+    started = last_rx = clock()
     peer_hb0 = getattr(ingest, "pico_heartbeats", 0)
     while not stop.is_set():
         now = clock()
@@ -104,6 +106,10 @@ def read_frames(ws, ingest, stop, timeouts, clock=time.monotonic):
             heard = getattr(ingest, "pico_heartbeats", 0) > peer_hb0
             if heard and clock() - last_rx > C.PEER_SILENT_S:
                 read_frames.reason = "peer silent %d s" % C.PEER_SILENT_S
+                log.warning("disconnected: %s", read_frames.reason)
+                return n
+            if n == 0 and clock() - started > C.FIRST_FRAME_S:
+                read_frames.reason = "no data %d s" % C.FIRST_FRAME_S
                 log.warning("disconnected: %s", read_frames.reason)
                 return n
             continue

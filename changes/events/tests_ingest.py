@@ -333,6 +333,18 @@ class LinkHealthTests(TestCase):
         self.assertEqual(n, 1)                    # seq 9 never read: dropped first
         self.assertIn("peer silent", wsclient.read_frames.reason)
 
+    def test_connection_that_never_sends_a_frame_is_dropped(self):
+        ing, _ = make_ingest()
+        t = [0.0]
+
+        def later():
+            t[0] += C.FIRST_FRAME_S + 1
+        ws = SendingWs([FakeWs.TIMEOUT, later, FakeWs.TIMEOUT, raw(seq=9)])
+        n = wsclient.read_frames(ws, ing, StopAfter(waits=99),
+                                 wsclient.timeout_errors(), clock=lambda: t[0])
+        self.assertEqual(n, 0)
+        self.assertIn("no data", wsclient.read_frames.reason)
+
     def test_old_firmware_without_heartbeat_is_never_timed_out(self):
         ing, _ = make_ingest()
         t = [0.0]
