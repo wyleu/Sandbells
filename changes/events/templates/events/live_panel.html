@@ -29,9 +29,18 @@
   #live-table .q.dim, #live-table td.dim { opacity: 0.45; color: #aaa; }
   #live-table tr.new td { background: #223; }
   #live-table tr td { transition: background 1.5s; }
-  /* Clock: top right of the panel, red, readable from the ringing chamber. */
-  .live-top { display: flex; justify-content: space-between; align-items: flex-start;
-              gap: 0.5rem 1.5rem; }
+  /* Clock: top LEFT of the panel (the middle of the screen), right over the
+   * time column of the list so one glance up and down compares them.  Its
+   * colour is the link state: green connected, grey stale, red lost. */
+  #live-events { --clk: #f33; --clk-bg: #2a0b0b; --clk-bg2: #4a0f0f;
+                 --clk-line: #733; --clk-done: #622; --clk-next: #e88; }
+  #live-events[data-link="ok"] { --clk: #5c5; --clk-bg: #0d200d; --clk-bg2: #143a14;
+                 --clk-line: #363; --clk-done: #262; --clk-next: #8c8; }
+  #live-events[data-link="stale"] { --clk: #aaa; --clk-bg: #222; --clk-bg2: #333;
+                 --clk-line: #555; --clk-done: #444; --clk-next: #999; }
+  .live-top { display: flex; flex-direction: row-reverse; justify-content: space-between;
+              align-items: flex-start; gap: 0.5rem 1.5rem; }
+  .live-top h2 { margin: 0 0 0 auto; }
   /* Concentrator link strip: LED mimic + verdict, readable at a distance. */
   #link-widget { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1rem;
                  border: 3px solid #333; border-radius: 8px; padding: 0.3rem 0.6rem;
@@ -57,24 +66,24 @@
   .lw-lines { flex-basis: 100%; font-size: 1.05rem; opacity: 0.85; }
   .lw-time.ok { color: #7d7; } .lw-time.warn { color: #ec6; } .lw-time.bad { color: #f66; }
   #live-table tr.info td { font-size: 1.05rem; color: #9ab; }
-  #live-clock { margin-left: auto; text-align: right; color: #f33; padding: 0.1rem 0.5rem;
-                border: 3px solid transparent; border-radius: 8px; }
-  #live-clock.mark { border-color: #f33; background: #2a0b0b; }
-  #live-clock.minute { background: #4a0f0f; }
+  #live-clock { margin-left: calc(-0.5rem - 3px); text-align: left; color: var(--clk);
+                padding: 0.1rem 0.5rem; border: 3px solid transparent; border-radius: 8px; }
+  #live-clock.mark { border-color: var(--clk); background: var(--clk-bg); }
+  #live-clock.minute { background: var(--clk-bg2); }
   #clock-hms { font-size: 5rem; font-weight: 700; line-height: 1;
                font-variant-numeric: tabular-nums; }
   #clock-zone { font-size: 1.1rem; opacity: 0.7; margin-left: 0.4rem; }
-  .clock-q { display: flex; justify-content: flex-end; align-items: center; gap: 0.3rem;
+  .clock-q { display: flex; justify-content: flex-start; align-items: center; gap: 0.3rem;
              margin-top: 0.3rem; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
   #clock-segs { display: flex; gap: 0.3rem; }
   .clock-seg { display: inline-block; width: 2.2rem; height: 0.7rem;
-               border: 1px solid #733; border-radius: 2px; }
-  .clock-seg.done { background: #622; }
-  .clock-seg.now { background: #f33; }
-  #clock-next { margin-left: 0.6rem; color: #e88; }
-  #live-clock.soon #clock-next, #live-clock.mark #clock-next { color: #f33; font-weight: 700; }
+               border: 1px solid var(--clk-line); border-radius: 2px; }
+  .clock-seg.done { background: var(--clk-done); }
+  .clock-seg.now { background: var(--clk); }
+  #clock-next { margin-left: 0.6rem; color: var(--clk-next); }
+  #live-clock.soon #clock-next, #live-clock.mark #clock-next { color: var(--clk); font-weight: 700; }
 </style>
-<aside id="live-events"
+<aside id="live-events" data-link="stale"
        data-url="{{ since_url }}" data-type="{{ type }}" data-first="{{ first_load }}"
        data-batch="{{ batch }}" data-rows="{{ dom_rows }}" data-poll="{{ poll_ms }}"
        data-retry-max="{{ retry_max_ms }}" data-fails-warn="{{ fails_warn }}"

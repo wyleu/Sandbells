@@ -131,6 +131,8 @@
 
   function show(v) {
     box.className = "lw " + v.cls;
+    var panel = document.getElementById("live-events");
+    if (panel) panel.setAttribute("data-link", v.cls);   // the clock takes its colour from this
     text("lw-head", v.headline);
     text("lw-why", v.why);
     text("lw-detail", v.detail);
