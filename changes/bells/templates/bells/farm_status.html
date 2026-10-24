@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>Farm · {{ inst.name }}</title>
-  <link rel="stylesheet" href="{% static 'css/farm_status.css' %}">
+  <link rel="stylesheet" href="{% static 'css/farm_status.css' %}?v={{ git_hash }}">
 </head>
 <body{% if live_events %} class="with-live"{% endif %}>
   <header id="farm-header">
@@ -29,7 +29,7 @@
   </main>
   {% if live_events %}{% live_panel %}{% endif %}
 
-  <script src="{% static 'js/farm_status.js' %}"></script>
+  <script src="{% static 'js/farm_status.js' %}?v={{ git_hash }}"></script>
   <script>
     FarmStatus.start({
       kind: "{{ inst.kind }}",
