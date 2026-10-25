@@ -251,3 +251,21 @@ class LinkApiTests(SimpleTestCase):
         out = self.get(self.doc(hb_ago_ms=None))
         self.assertEqual(out["verdict"], "ok")
         self.assertIn("older firmware", out["why"])
+
+
+@mock.patch("bells.views.load_farm_instances", return_value=FARM)
+class MenuAndMiniClockTests(TestCase):
+    def test_every_farm_page_has_days_button_and_small_clock(self, _):
+        for i in (0, 1):
+            r = self.client.get(reverse("farm_status_index", args=[i]))
+            self.assertContains(r, 'class="navbtn" href="%s"' % reverse("events:days"))
+            self.assertContains(r, 'id="mini-clock"')
+        # the big page-3 clock stays its own thing
+        self.assertNotContains(self.client.get(reverse("farm_status_index", args=[1])),
+                               "live-clock")
+
+    def test_events_pages_have_menu_buttons_and_small_clock(self, _):
+        r = self.client.get(reverse("events:days"))
+        self.assertContains(r, 'href="%s"' % reverse("farm_status_index", args=[0]))
+        self.assertContains(r, 'id="mini-clock"')
+        self.assertNotContains(r, "clock-hms")

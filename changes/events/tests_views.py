@@ -107,6 +107,15 @@ class RingPageTests(TestCase):
         self.assertContains(r, "two heads: ch 1: 3, ch 2: 2")
         self.assertContains(r, "?date=2026-10-22")
 
+    def test_rows_carry_gaps_for_the_gold_beat_mark(self):
+        add_strokes([(1, THU, 1), (2, THU + 2000, 1), (3, THU + 4000, 1)])
+        r = self.get()
+        self.assertContains(r, 'class="beat"', count=3)
+        self.assertContains(r, 'data-ch="1" data-gap=""')
+        self.assertContains(r, 'data-ch="1" data-gap="2000"')
+        self.assertContains(r, "createBeat")              # beat.js inlined
+        self.assertContains(r, 'class="navbtn on"')
+
     def test_unmapped_bell_shown_as_dash(self):
         add_strokes([(7, THU, 4)])
         r = self.get(seq=7)

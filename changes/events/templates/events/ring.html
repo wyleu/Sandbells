@@ -9,17 +9,48 @@
   · <span class="{% if ring.seq_missing %}warn{% else %}muted{% endif %}">missing {{ ring.seq_missing }}</span>
 </p>
 {% if truncated %}<p class="warn">First {{ max_rows }} strokes shown.</p>{% endif %}
-<table>
+<style>
+  /* Same gold beat mark as the live list: centre on the beat, left early,
+   * right late, so a rhythm reads as a vertical graph down the table. */
+  td.beat { position: relative; width: 30%; padding: 0; }
+  td.beat::before { content: ""; position: absolute; left: 50%; top: 18%; bottom: 18%;
+                    border-left: 1px dashed #444; }
+  .beat-mark { position: absolute; top: 12%; bottom: 12%; width: 4px; margin-left: -2px;
+               border-radius: 2px; background: #fc3; }
+</style>
+<table id="ring-table">
   <tr><th>Time</th><th class="num">Bell</th><th class="num">ch</th>
+      <th class="beat-h">Beat</th>
       <th class="num">Interval (ms, same ch)</th><th class="num muted">seq</th></tr>
   {% for s in rows %}
-  <tr>
+  <tr data-ch="{{ s.ch }}" data-gap="{{ s.interval_ms|default_if_none:'' }}">
     <td>{{ s.time }}</td>
     <td class="num">{{ s.bell|default:"—" }}</td>
     <td class="num">{{ s.ch }}</td>
+    <td class="beat"></td>
     <td class="num">{{ s.interval_ms|default_if_none:"" }}</td>
     <td class="num muted">{{ s.seq }}</td>
   </tr>
   {% endfor %}
 </table>
+<script>
+{% include "events/beat.js" %}
+(function () {
+  "use strict";
+  var PERCENT = 100;
+  var beat = window.Beat.createBeat();
+  var rows = document.querySelectorAll("#ring-table tr[data-ch]");
+  for (var i = 0; i < rows.length; i++) {            // oldest first, as they rang
+    var tr = rows[i], gap = tr.getAttribute("data-gap");
+    var ms = gap === "" ? null : +gap;
+    var hit = beat.observe(tr.getAttribute("data-ch"), ms);
+    if (!hit) continue;
+    var mark = document.createElement("span");
+    mark.className = "beat-mark";
+    mark.style.left = (hit.pos * PERCENT).toFixed(1) + "%";
+    mark.title = "beat " + Math.round(hit.beat) + " ms, this gap " + ms + " ms";
+    tr.querySelector("td.beat").appendChild(mark);
+  }
+})();
+</script>
 {% endblock %}

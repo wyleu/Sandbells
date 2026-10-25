@@ -25,6 +25,21 @@ header#farm-header {
   font-size: 1.05rem;
 }
 
+a.navbtn {
+  border: 1px solid #446;
+  border-radius: 6px;
+  padding: 0.05rem 0.6rem;
+  background: #1a1a24;
+  text-decoration: none;
+}
+
+a.navbtn:hover { background: #26263a; }
+
+.mini-clock { font-variant-numeric: tabular-nums; }
+
+/* page 3 already has the big clock in its live panel */
+body.with-live .mini-clock { display: none; }
+
 #farm-summary {
   opacity: 0.85;
   flex: 1 1 12rem;

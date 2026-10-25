@@ -1,0 +1,23 @@
+{# Small UK wall clock for a page's top line: plain text, same size as the line.
+   Included by the events header and the farm status header.  Never the big
+   page-3 clock (clock.js); that one stays in the live panel. #}
+<span id="mini-clock" class="mini-clock" title="UK time">--:--:--</span>
+<script>
+(function () {
+  "use strict";
+  var MS_PER_S = 1000, TICK_MARGIN_MS = 15;
+  var node = document.getElementById("mini-clock");
+  if (!node) return;
+  var fmt = null;
+  try {
+    fmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hourCycle: "h23",
+                                             hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch (err) { /* no Intl zone support: the browser's own time */ }
+  function tick() {
+    var now = new Date();
+    node.textContent = fmt ? fmt.format(now) : now.toTimeString().slice(0, 8);
+    setTimeout(tick, MS_PER_S - (now.getTime() % MS_PER_S) + TICK_MARGIN_MS);
+  }
+  tick();
+})();
+</script>

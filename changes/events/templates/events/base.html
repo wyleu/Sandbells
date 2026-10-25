@@ -13,6 +13,11 @@
     header { display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap;
              padding: 0.45rem 0.8rem; border-bottom: 1px solid #333; }
     header .host { margin-left: auto; opacity: 0.6; font-size: 0.85rem; }
+    a.navbtn { border: 1px solid #446; border-radius: 6px; padding: 0.05rem 0.6rem;
+               background: #1a1a24; }
+    a.navbtn:hover { background: #26263a; text-decoration: none; }
+    a.navbtn.on { border-color: #fc3; }
+    .mini-clock { font-variant-numeric: tabular-nums; }
     main { padding: 0.6rem 0.8rem 1.2rem; }
     h1 { font-size: 1.3rem; margin: 0.2rem 0 0.6rem; }
     table { border-collapse: collapse; }
@@ -28,9 +33,11 @@
 <body>
   <header>
     <a href="/" target="_top">Sandbells</a>
-    <a href="{% url 'events:days' %}">Rings by day</a>
+    <a class="navbtn" href="{% url 'farm_status_index' 0 %}">Status pages</a>
+    <a class="navbtn on" href="{% url 'events:days' %}">Rings by day</a>
     {% block crumbs %}{% endblock %}
     <span class="host">{{ host }}</span>
+    {% include "events/mini_clock.html" %}
   </header>
   <main>{% block main %}{% endblock %}</main>
 </body>
