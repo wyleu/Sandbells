@@ -255,17 +255,24 @@ class LinkApiTests(SimpleTestCase):
 
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)
 class MenuAndMiniClockTests(TestCase):
-    def test_every_farm_page_has_days_button_and_small_clock(self, _):
+    def test_every_farm_page_has_a_button_per_device_days_and_small_clock(self, _):
         for i in (0, 1):
             r = self.client.get(reverse("farm_status_index", args=[i]))
-            self.assertContains(r, 'class="navbtn" href="%s"' % reverse("events:days"))
+            for j in range(len(FARM)):
+                self.assertContains(r, 'href="%s"' % reverse("farm_status_index", args=[j]))
+            self.assertContains(r, 'class="navbtn days" href="%s"' % reverse("events:days"))
             self.assertContains(r, 'id="mini-clock"')
+            self.assertNotContains(r, "{#")                 # no template comment leaks
+            self.assertContains(r, 'class="navbtn on"', count=1)   # where you are
         # the big page-3 clock stays its own thing
         self.assertNotContains(self.client.get(reverse("farm_status_index", args=[1])),
                                "live-clock")
 
     def test_events_pages_have_menu_buttons_and_small_clock(self, _):
         r = self.client.get(reverse("events:days"))
-        self.assertContains(r, 'href="%s"' % reverse("farm_status_index", args=[0]))
+        for j in range(len(FARM)):
+            self.assertContains(r, 'href="%s"' % reverse("farm_status_index", args=[j]))
+        self.assertContains(r, 'class="navbtn days on"')
         self.assertContains(r, 'id="mini-clock"')
+        self.assertNotContains(r, "{#")
         self.assertNotContains(r, "clock-hms")

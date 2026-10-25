@@ -1,0 +1,12 @@
+<a href="/" target="_top" id="link-home" class="navbtn brand">&#128276; Sandbells</a>
+<script>
+  (function () {
+    var a = document.getElementById("link-home");
+    var back = sessionStorage.getItem("sandbellsReturn");
+    if (a && back) a.setAttribute("href", back);
+  })();
+</script>
+<nav class="topnav" aria-label="status pages">
+  {% for d in devices %}<a class="navbtn{% if d.on %} on{% endif %}" href="{% url 'farm_status_index' d.index %}">{{ d.name }}</a>{% endfor %}
+  <a class="navbtn days{% if days_on %} on{% endif %}" href="{{ days_url }}">Rings by day</a>
+</nav>

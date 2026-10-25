@@ -114,7 +114,7 @@ class RingPageTests(TestCase):
         self.assertContains(r, 'data-ch="1" data-gap=""')
         self.assertContains(r, 'data-ch="1" data-gap="2000"')
         self.assertContains(r, "createBeat")              # beat.js inlined
-        self.assertContains(r, 'class="navbtn on"')
+        self.assertContains(r, 'class="navbtn days on"')
 
     def test_unmapped_bell_shown_as_dash(self):
         add_strokes([(7, THU, 4)])
