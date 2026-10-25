@@ -204,7 +204,11 @@
   var HELLO = '{"schema":"sand.hello/v1","type":"heartbeat","src":"sandbells-page"}';
 
   function startWs(cfg) {
-    if (!cfg.wsUrl) return null;
+    // wsUrls: every address of the device (home, tower); a socket that never
+    // opens moves on to the next, and the one that worked is tried first.
+    var urls = (cfg.wsUrls && cfg.wsUrls.length) ? cfg.wsUrls : (cfg.wsUrl ? [cfg.wsUrl] : []);
+    if (!urls.length) return null;
+    var which = 0;
     var ws = null;
     var delay = 2000;
     var timer = null;
@@ -220,11 +224,13 @@
         if (ws) ws.close();
       } catch (e) {}
       stopTimer();
-      var sock = new WebSocket(cfg.wsUrl);
+      var sock = new WebSocket(urls[which]);
       var lastRx = Date.now();
       var heardHb = false;
+      var opened = false;
       ws = sock;
       sock.onopen = function () {
+        opened = true;
         delay = 2000;
         timer = setInterval(function () {
           if (sock.readyState !== 1) return;
@@ -246,6 +252,12 @@
         if (sock !== ws) return;           // an older socket we replaced
         stopTimer();
         if (document.visibilityState === "hidden") return;
+        if (!opened && urls.length > 1) {   // never connected: try the next address
+          which = (which + 1) % urls.length;
+          setTimeout(connect, which ? 0 : delay);
+          if (!which) delay = Math.min(delay * 1.5, 15000);
+          return;
+        }
         setTimeout(connect, delay);
         delay = Math.min(delay * 1.5, 15000);
       };

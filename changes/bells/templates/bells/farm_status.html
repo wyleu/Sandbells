@@ -38,6 +38,7 @@
       id: "{{ inst.id }}",
       statusUrl: "{{ inst.status_url|default:'' }}",
       wsUrl: "{{ inst.ws_url|default:'' }}",
+      wsUrls: {{ ws_urls_json }},
       interval: {{ inst.poll_hint_sec|default:15 }}000
     });
   </script>

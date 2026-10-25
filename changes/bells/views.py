@@ -3,6 +3,7 @@ import datetime
 import socket
 import subprocess
 import json
+from django.utils.safestring import mark_safe
 import random
 import socket
 
@@ -149,6 +150,7 @@ def farm_status(request, index=0):
         "next": (index + 1) % len(instances),
         "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
         "live_events": inst.get("family") == EVENTS_CONCENTRATOR_FAMILY,
+        "ws_urls_json": mark_safe(json.dumps(device_urls(inst, "ws")).replace("</", "<\\/")),
     })
 
 def swing_display(request, n: int):
@@ -185,17 +187,41 @@ def farm_action(request):
         return JsonResponse({"ok": False, "error": str(e)}, status=e.status)
 
 
+def device_urls(inst, kind):
+    """Every address of a registry entry, the main one first: status_url then
+    alt_status_urls, or ws_url then alt_ws_urls (e.g. home and tower)."""
+    out = []
+    for u in [inst.get(kind + "_url")] + list(inst.get("alt_" + kind + "_urls") or []):
+        if u and str(u) not in out:
+            out.append(str(u))
+    return out
+
+
+_LAST_GOOD = {}          # device id -> the status url that answered last
+STATUS_TRY_TIMEOUT_S = 3
+
+
 def farm_device_status(request):
     url = (request.GET.get("url") or "").strip()
-    allowed = {inst.get("status_url") for inst in load_farm_instances() if inst.get("status_url")}
-    if url not in allowed:
+    owner = next((i for i in load_farm_instances()
+                  if url and url in device_urls(i, "status")), None)
+    if owner is None:
         return JsonResponse({"error": "url not in farm registry", "got": url}, status=400)
-    try:
-        with urlopen(url, timeout=8) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        return JsonResponse(wrap_document(data))
-    except Exception as e:
-        return JsonResponse({"error": str(e), "stale": True}, status=504)
+    urls = device_urls(owner, "status")
+    good = _LAST_GOOD.get(owner["id"])
+    if good in urls:                       # the address that worked last goes first
+        urls.remove(good)
+        urls.insert(0, good)
+    err = "no answer"
+    for u in urls:
+        try:
+            with urlopen(u, timeout=8 if len(urls) == 1 else STATUS_TRY_TIMEOUT_S) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            _LAST_GOOD[owner["id"]] = u
+            return JsonResponse(wrap_document(data))
+        except Exception as e:
+            err = str(e)
+    return JsonResponse({"error": err, "stale": True}, status=504)
 
 def bell_band(request, number=8):
     """

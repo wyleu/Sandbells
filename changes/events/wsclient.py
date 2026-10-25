@@ -163,8 +163,13 @@ def run(url, ingest, stop, connect=default_connect, backoff=None,
     link = getattr(ingest, "link", None)
     failing = False                       # one "connect_failed" event per outage
     fails = 0
-    _note(ingest, "started", url=url)
+    # url is one address or a list (home, tower): after a failed connect the
+    # next address is tried; after a good session the same one is tried first.
+    urls = [url] if isinstance(url, str) else list(url)
+    which = 0
+    _note(ingest, "started", url=urls[0])
     while not stop.is_set():
+        url = urls[which]
         ws = None
         try:
             ws = connect(url, connect_timeout_s)
@@ -180,6 +185,10 @@ def run(url, ingest, stop, connect=default_connect, backoff=None,
             if link is not None:
                 link.connect_failed(url, reason)
             ingest.idle()
+            if len(urls) > 1:
+                which = (which + 1) % len(urls)
+                if which:                 # another address to try: no need to wait yet
+                    delay = 0.0
             _wait(stop, delay, ingest, link)
             continue
         log.info("connected %s", url)

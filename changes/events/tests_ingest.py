@@ -16,7 +16,7 @@ from django.test import SimpleTestCase, TestCase
 from . import constants as C
 from . import wsclient
 from .backoff import Backoff
-from .config import resolve_url, url_from_settings
+from .config import resolve_url, resolve_urls, url_from_settings, urls_from_settings
 from .ingest import Ingest
 from .parse import parse
 from .management.commands import ingest_events as cmd
@@ -443,6 +443,58 @@ class ConfigTests(SimpleTestCase):
             bad.write_text("{")
             self.assertEqual(resolve_url(None, path=bad)[1], "default")
         self.assertEqual(resolve_url(None, path="/nonexistent")[1], "default")
+
+
+class AltAddressTests(SimpleTestCase):
+    """One registry entry, two addresses (home, tower): no rejigging."""
+    HOME, TOWER = "ws://192.168.0.81/ws", "ws://10.42.0.81/ws"
+
+    def test_alt_urls_follow_the_main_one_without_repeats(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "s.json"
+            p.write_text(json.dumps({"status": {"devices": [
+                {"family": "sandswing", "ws_url": self.HOME,
+                 "alt_ws_urls": [self.TOWER, self.HOME, ""]}]}}))
+            self.assertEqual(urls_from_settings(p), [self.HOME, self.TOWER])
+            self.assertEqual(resolve_urls(None, path=p),
+                             ([self.HOME, self.TOWER], "settings"))
+            self.assertEqual(resolve_url(None, path=p), (self.HOME, "settings"))
+
+    def test_run_moves_to_the_other_address_at_once_and_sticks_to_the_good_one(self):
+        ing, _ = make_ingest()
+        stop = StopAfter(waits=2)
+        tried = []
+        script = {self.HOME: ConnectionRefusedError("home not here"),
+                  self.TOWER: [FakeWs([raw(seq=1)]), FakeWs([raw(seq=2)])]}
+
+        def connect(url, t):
+            tried.append(url)
+            r = script[url]
+            if isinstance(r, Exception):
+                raise r
+            return r.pop(0)
+
+        with self.assertLogs(C.LOGGER_NAME, "INFO"):
+            wsclient.run([self.HOME, self.TOWER], ing, stop, connect=connect,
+                         backoff=Backoff(1, 2, 8))
+        # home refused, tower answered straight away (no wait), then the
+        # session ended and tower was tried first again
+        self.assertEqual(tried[:3], [self.HOME, self.TOWER, self.TOWER])
+        self.assertEqual(stop.delays[0], 1)       # only the wait after a good session
+
+    def test_both_refusing_waits_once_per_round(self):
+        ing, _ = make_ingest()
+        stop = StopAfter(waits=2)
+
+        def refuse(url, t):
+            raise ConnectionRefusedError("no")
+
+        with self.assertLogs(C.LOGGER_NAME, "WARNING"):
+            wsclient.run([self.HOME, self.TOWER], ing, stop, connect=refuse,
+                         backoff=Backoff(1, 2, 4))
+        # the home refusal waits nothing (tower is next); the tower refusal ends
+        # the round and waits the growing backoff
+        self.assertEqual(stop.delays, [2, 4])
 
 
 class CommandTests(SimpleTestCase):

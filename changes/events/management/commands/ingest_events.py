@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from events import constants as C
 from events import wsclient
-from events.config import resolve_url
+from events.config import resolve_urls
 from events.ingest import Ingest
 from events.linkstate import LinkState, link_state_path
 from events.store import EventStore
@@ -78,8 +78,9 @@ class Command(BaseCommand):
                 % (C.WS_LIBRARY_MODULE, C.WS_LIBRARY_PIP),
                 returncode=C.EXIT_CONFIG_ERROR)
         log = setup_logging(opts.get("verbosity", 1))
-        url, source = resolve_url(opts.get("url"))
-        log.info("ingest from %s (%s)", url, source)
+        urls, source = resolve_urls(opts.get("url"))
+        log.info("ingest from %s (%s)", " or ".join(urls), source)
+        url = urls if len(urls) > 1 else urls[0]      # a list only when there is a choice
         stop = threading.Event()
         previous = install_signal_handlers(stop)
         try:
