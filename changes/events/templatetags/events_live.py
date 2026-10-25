@@ -34,7 +34,13 @@ def top_menu(current=None):
     line: Sandbells, one button per farm device, Rings by day.  current is the
     farm page index, or "days" on the events pages."""
     from bells.views import load_farm_instances      # here: bells imports events
+    instances = load_farm_instances()
     devices = [{"index": i, "name": d["name"], "on": current == i}
-               for i, d in enumerate(load_farm_instances())]
+               for i, d in enumerate(instances)]
+    conc = next((i for i, d in enumerate(instances)
+                 if d.get("family") == C.CONCENTRATOR_FAMILY), None)
     return {"devices": devices, "days_on": current == "days",
-            "days_url": reverse("events:days")}
+            "days_url": reverse("events:days"),
+            # the Alignment page, for the first concentrator (none: no button)
+            "align_url": "" if conc is None else reverse("farm_align_index", args=[conc]),
+            "align_on": current == "align"}
