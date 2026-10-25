@@ -73,6 +73,8 @@ urlpatterns = [
     path("control/<str:name>/", controls.control_action, name="control_action"),
     path("api/farm/action/", views.farm_action, name="farm_action"),
     path("api/farm/device-status/",views.farm_device_status,name="farm_device_status"),
+    path("farm/align/", views.farm_align, name="farm_align"),
+    path("farm/align/<int:index>/", views.farm_align, name="farm_align_index"),
     path("layout-test/<int:number>/<str:a>/<str:b>/<str:c>/", views.layout_test, name="layout_test"),
     path("layout-test/<int:number>/", views.layout_test, name="layout_test_default"),
 ]

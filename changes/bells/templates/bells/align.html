@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Alignment{% if inst %} · {{ inst.name }}{% endif %}</title>
+  <link rel="stylesheet" href="{% static 'css/align.css' %}?v={{ git_hash }}">
+</head>
+<body>
+  <header id="align-header">
+    <a href="/" target="_top" id="link-home" class="navbtn brand">&#128276; Sandbells</a>
+    <script>
+      (function () {
+        var a = document.getElementById("link-home");
+        var back = sessionStorage.getItem("sandbellsReturn");
+        if (a && back) a.setAttribute("href", back);
+      })();
+    </script>
+    {% if inst %}<a class="navbtn" href="{% url 'farm_status_index' farm_index %}">{{ inst.name }}</a>{% endif %}
+    <a class="navbtn on" href="{% url 'farm_align' %}">Alignment</a>
+    <span id="align-ident">{% if inst %}{{ inst.family }} · {{ inst.name }}{% endif %}</span>
+    <span id="align-link" class="pill pill-wait">connecting…</span>
+    <span id="align-tower" class="pill pill-wait"></span>
+  </header>
+
+  <p id="align-note">Live adjustments only: they are <strong>not saved</strong> to settings.json,
+    and a reboot returns the head to its saved values.</p>
+
+  <main id="align-main">
+    {% if inst %}
+    <p id="align-wait">Asking {{ inst.name }} which heads are fitted…</p>
+    {% else %}
+    <p id="align-wait">No sandswing concentrator in the farm registry, so there is nothing to align.</p>
+    {% endif %}
+  </main>
+
+  {% if cfg %}
+  {{ cfg|json_script:"align-cfg" }}
+  <script src="{% static 'js/align.js' %}?v={{ git_hash }}"></script>
+  <script>
+    Align.start(JSON.parse(document.getElementById("align-cfg").textContent));
+  </script>
+  {% endif %}
+</body>
+</html>

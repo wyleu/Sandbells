@@ -511,3 +511,20 @@ def load_farm_instances():
             "poll_hint_sec": 5,
         }
     ]
+
+
+def farm_align(request, index=None):
+    """The Alignment page for one concentrator: a card per active head with a
+    rolling comparator trace, live readouts and live nudges.  The browser
+    talks to the Pico's /ws directly; nothing here is stored or sent on."""
+    from bells import align
+    instances = load_farm_instances()
+    i, inst = align.pick(instances, index)
+    if index is not None and inst is None:
+        raise Http404("not a concentrator in the farm registry")
+    return render(request, "bells/align.html", {
+        "inst": inst,
+        "index": i,
+        "cfg": align.page_config(inst) if inst else None,
+        "farm_index": i if i is not None else 0,
+    })

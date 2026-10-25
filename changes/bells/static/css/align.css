@@ -1,0 +1,159 @@
+/* align.css -- the Alignment page.  Warm and homely like the farm pages:
+   green (clear / ok), purple (beam broken), a little gold.  The alarm colour
+   is kept for "not coming" and is not used here. */
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #1a1610;
+  color: #f1e3c2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+a { color: #ffd978; }
+
+header#align-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 0.45rem 0.8rem;
+  background: linear-gradient(#251f16, #1a1610);
+  border-bottom: 1px solid #54462a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  font-size: 1.05rem;
+}
+
+a.navbtn {
+  display: inline-block;
+  border: 1px solid #6b5a35;
+  border-radius: 999px;
+  padding: 0.12rem 0.85rem;
+  background: #2c2519;
+  color: #f1e3c2;
+  text-decoration: none;
+  line-height: 1.35;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.08);
+}
+a.navbtn:hover { background: #3b3223; border-color: #a58a4a; }
+a.navbtn.brand { font-weight: 600; color: #ffd978; }
+a.navbtn.on { border-color: #fc3; background: #40341a; color: #fff3cf; box-shadow: 0 0 0 1px #fc3 inset; }
+
+#align-ident { opacity: 0.8; margin-left: 0.4rem; }
+
+.pill {
+  display: inline-block;
+  padding: 0.05rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  border: 1px solid #54462a;
+  background: #2c2519;
+}
+.pill:empty { display: none; }
+.pill-wait { color: #d9c9a0; }
+.pill-ok { color: #9be39b; background: #1b3a22; border-color: #2f6b3d; }
+.pill-busy { color: #ffd978; background: #40341a; border-color: #8a7330; }
+
+#align-note {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.95rem;
+  color: #ffd978;
+  background: #221c12;
+  border-bottom: 1px solid #3b3223;
+}
+
+#align-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.6rem 0.8rem 0.8rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
+  grid-auto-rows: min-content;
+  gap: 0.7rem;
+  overflow-y: auto;
+  align-content: start;
+}
+
+#align-wait { grid-column: 1 / -1; margin: 1rem; opacity: 0.75; }
+
+.card {
+  border: 1px solid #54462a;
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem 0.7rem;
+  background: #251f16;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.06);
+}
+.card.watching { border-color: #fc3; box-shadow: 0 0 0 1px #fc3 inset; }
+
+.card h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.card h2 .kind { font-weight: normal; opacity: 0.7; font-size: 0.9rem; }
+.card h2 .watch {
+  margin-left: auto;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.05rem 0.7rem;
+  color: #f1e3c2;
+  background: #2c2519;
+  border: 1px solid #6b5a35;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.card.watching h2 .watch { border-color: #fc3; color: #fff3cf; background: #40341a; }
+
+canvas.scope {
+  display: block;
+  width: 100%;
+  height: 5.2rem;
+  background: #17130c;
+  border: 1px solid #3b3223;
+  border-radius: 8px;
+}
+.card.off canvas.scope { opacity: 0.35; }
+
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem 0.6rem;
+  margin: 0.5rem 0 0.4rem;
+}
+.readouts div { min-width: 0; }
+.readouts .lab { display: block; font-size: 0.75rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.03em; }
+.readouts .val { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.readouts .sub { display: block; font-size: 0.75rem; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.card.off .readouts .val, .readouts .stale { opacity: 0.55; }
+
+.nudges { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; align-items: center; }
+.pair { display: flex; align-items: center; gap: 0.35rem; }
+.pair .name { font-size: 0.9rem; opacity: 0.8; min-width: 5.2rem; }
+
+button.nudge {
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  min-width: 3rem;
+  padding: 0.35rem 0.7rem;
+  color: #f1e3c2;
+  background: #2c2519;
+  border: 1px solid #6b5a35;
+  border-radius: 10px;
+  cursor: pointer;
+}
+button.nudge:hover { background: #3b3223; border-color: #a58a4a; }
+button.nudge:active { background: #40341a; border-color: #fc3; }
+button.nudge:disabled { opacity: 0.4; cursor: default; }
+
+.msg { margin-top: 0.45rem; min-height: 1.2em; font-size: 0.9rem; color: #9be39b; }
+.msg.refused { color: #ffd978; }
