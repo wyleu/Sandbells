@@ -1,0 +1,180 @@
+{% load static events_live %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sandtest rig</title>
+  <link rel="stylesheet" href="{% static 'css/sandtest.css' %}?v={{ git_hash }}">
+  {% include "events/menu_style.html" %}
+</head>
+<body>
+  <header id="st-header" class="topbar">
+    {% top_menu current="sandtest" %}
+    <span id="st-host" class="pill" title="Where Sandbells sends the commands: SANDTEST_HOST, or sandtest.host in settings.json ({{ host_source }})">rig <strong id="st-host-name">{{ host }}</strong>{% if token_set %} · token set{% endif %}</span>
+    <span class="right">{% include "events/mini_clock.html" %}</span>
+  </header>
+
+  <div id="st-stopbar">
+    <button type="button" id="st-stop" class="stop" title="Stop the pattern, release every output and halt the mirror">STOP</button>
+    <span id="st-conn" class="pill pill-wait">waiting for the rig…</span>
+    <span id="st-stopmsg" class="stopmsg" aria-live="assertive"></span>
+  </div>
+
+  {% if config_error %}<p id="st-config-error" class="note warn">{{ config_error }}</p>{% endif %}
+
+  <main id="sandtest-root" data-status-url="{% url 'sandtest:status' %}" data-cmd-url="{% url 'sandtest:cmd' %}"
+        data-poll-ms="{{ poll_ms }}" data-timeout-ms="{{ timeout_ms }}">
+
+    <section class="card" id="st-card-rig">
+      <h2>Rig</h2>
+      <dl class="kv">
+        <dt>version</dt><dd id="st-version">–</dd>
+        <dt>player</dt><dd id="st-player-state">–</dd>
+        <dt>presses sent</dt><dd id="st-presses">–</dd>
+        <dt>pressed now</dt><dd id="st-pressed">–</dd>
+        <dt>worst lateness (ms)</dt><dd id="st-late">–</dd>
+        <dt>loop max (ms)</dt><dd id="st-loop">–</dd>
+        <dt>memory free (kB)</dt><dd id="st-mem">–</dd>
+      </dl>
+    </section>
+
+    <section class="card" id="st-card-mirror">
+      <h2>Mirror</h2>
+      <dl class="kv">
+        <dt>motion</dt><dd id="st-mode">–</dd>
+        <dt>shaft angle</dt><dd id="st-angle">–</dd>
+        <dt>beam angle</dt><dd id="st-beam" title="the beam turns twice as far as the shaft">–</dd>
+        <dt>face</dt><dd id="st-face">–</dd>
+        <dt>speed</dt><dd id="st-speed">–</dd>
+        <dt>target</dt><dd id="st-target">–</dd>
+        <dt>limits</dt><dd id="st-limits">–</dd>
+        <dt>head window</dt><dd id="st-window"><span class="flag flag-none">–</span></dd>
+      </dl>
+      <p id="st-extra" class="muted"></p>
+      <ul id="st-warnings" class="warnlist"></ul>
+    </section>
+
+    <section class="card" id="st-card-heads">
+      <h2>Heads</h2>
+      <table id="st-heads">
+        <thead><tr><th>head</th><th class="num">shaft °</th><th class="num">±width °</th><th class="num">mirror at °</th><th class="num">reflector at °</th><th>now</th></tr></thead>
+        <tbody><tr><td colspan="6" class="muted">no status yet</td></tr></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Press one</h2>
+      <form data-cmd="press">
+        <label>channel <input name="channel" type="number" min="1" max="8" step="1" value="1"></label>
+        <label>press ms <input name="press_ms" type="number" min="1" step="1" value="120"></label>
+        <button type="submit">Press</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Play a pattern</h2>
+      <form data-cmd="play">
+        <label class="wide">pattern <input name="pattern" type="text" value="13425678" placeholder="13425678, or rounds" autocomplete="off" spellcheck="false"></label>
+        <label>interval ms <input name="interval_ms" type="number" min="1" step="1" value="400"></label>
+        <label>press ms <input name="press_ms" type="number" min="1" step="1" value="120"></label>
+        <label>repeat <input name="repeat" type="number" min="1" step="1" value="1"></label>
+        <button type="submit">Play</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Stress</h2>
+      <form data-cmd="stress">
+        <label>seed <input name="seed" type="number" min="0" step="1" value="1"></label>
+        <label>seconds <input name="seconds" type="number" min="1" step="1" value="60"></label>
+        <button type="submit">Start stress</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Sweep</h2>
+      <form data-cmd="sweep">
+        <label>from ° <input name="from_deg" type="number" step="any" value="-30"></label>
+        <label>to ° <input name="to_deg" type="number" step="any" value="30"></label>
+        <label>speed °/s <input name="speed_dps" type="number" min="0.05" step="any" value="10"></label>
+        <label>dwell ms <input name="dwell_ms" type="number" min="0" step="1" value="500"></label>
+        <label>cycles (0 = forever) <input name="cycles" type="number" min="0" step="1" value="0"></label>
+        <button type="submit">Sweep</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Scan every head</h2>
+      <form data-cmd="scan">
+        <label>speed °/s <input name="speed_dps" type="number" min="0.05" step="any" value="4"></label>
+        <label>dwell ms <input name="dwell_ms" type="number" min="0" step="1" value="300"></label>
+        <label>cycles <input name="cycles" type="number" min="0" step="1" value="1"></label>
+        <label>face <select name="face"><option value="">as now</option><option>mirror</option><option>reflector</option></select></label>
+        <button type="submit">Scan</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Visit a head</h2>
+      <form data-cmd="visit">
+        <label>head <input name="head" type="number" min="1" max="8" step="1" value="1"></label>
+        <label>dwell ms <input name="dwell_ms" type="number" min="0" step="1" value="500"></label>
+        <label>face <select name="face"><option value="">as now</option><option>mirror</option><option>reflector</option></select></label>
+        <button type="submit">Visit</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Menace</h2>
+      <form data-cmd="menace">
+        <label>seed <input name="seed" type="number" min="0" step="1" value="1"></label>
+        <label>seconds (0 = forever) <input name="seconds" type="number" min="0" step="1" value="60"></label>
+        <label>face <select name="face"><option value="">as now</option><option>mirror</option><option>reflector</option></select></label>
+        <label class="risky"><input name="allow_hits" type="checkbox"> <span><strong>RISKY: allow hits</strong> &ndash; may dwell on a head and press its trigger line for real</span></label>
+        <button type="submit" class="go">Menace</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Profile a head</h2>
+      <form data-cmd="profile">
+        <label>head <input name="head" type="number" min="1" max="8" step="1" value="1"></label>
+        <label>face <select name="face"><option>mirror</option><option>reflector</option></select></label>
+        <label>span ° <input name="span_deg" type="number" min="0" step="any" value="10"></label>
+        <label>step ° <input name="step_deg" type="number" min="0.01" step="any" value="0.5"></label>
+        <label>dwell ms <input name="dwell_ms" type="number" min="1" step="1" value="2000"></label>
+        <label>passes <input name="passes" type="number" min="1" step="1" value="1"></label>
+        <button type="submit">Profile</button>
+        <span class="msg" aria-live="polite"></span>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Face &amp; park</h2>
+      <div class="row">
+        <span>face turned to the heads:</span>
+        <button type="button" class="facebtn" data-face="mirror" aria-pressed="false">mirror</button>
+        <button type="button" class="facebtn" data-face="reflector" aria-pressed="false">reflector</button>
+        <button type="button" id="st-park">Park</button>
+        <span class="msg" id="st-face-msg" aria-live="polite"></span>
+      </div>
+      <p class="muted small">The face can only be changed while the mirror is not moving.</p>
+    </section>
+
+    <section class="card" id="st-card-log">
+      <h2>Commands sent</h2>
+      <ol id="st-log" class="log"><li class="muted">none yet</li></ol>
+    </section>
+  </main>
+
+  <script src="{% static 'js/sandtest.js' %}?v={{ git_hash }}"></script>
+</body>
+</html>

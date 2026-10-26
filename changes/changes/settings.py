@@ -152,6 +152,7 @@ ALLOWED_HOSTS = [
 INSTALLED_APPS = [
     'bells.apps.BellsConfig',
     'events.apps.EventsConfig',
+    'sandtest.apps.SandtestConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

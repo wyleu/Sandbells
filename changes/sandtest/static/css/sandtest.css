@@ -1,0 +1,168 @@
+/* sandtest.css -- the Sandtest rig page.  Same warm palette as the farm and
+   alignment pages: green (ok), gold (look at this / stop), grey (waiting).
+   The alarm red is kept for "not coming" and is not used here, not even for
+   STOP.  No animations, no images: it has to be light on the Pi's Luakit. */
+
+html, body { margin: 0; }
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #1a1610;
+  color: #f1e3c2;
+  font-size: 17px;
+}
+
+a { color: #ffd978; }
+
+header#st-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  background: linear-gradient(#251f16, #1a1610);
+  border-bottom: 1px solid #54462a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  font-size: 1.05rem;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.05rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  border: 1px solid #54462a;
+  background: #2c2519;
+}
+.pill:empty { display: none; }
+.pill-wait { color: #d9c9a0; }
+.pill-ok { color: #9be39b; background: #1b3a22; border-color: #2f6b3d; }
+.pill-busy { color: #ffd978; background: #40341a; border-color: #8a7330; }
+
+/* the stop bar stays on screen while the cards scroll */
+#st-stopbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  background: #221c12;
+  border-bottom: 1px solid #54462a;
+}
+
+button {
+  font: inherit;
+  min-height: 2.3rem;
+  padding: 0.2rem 0.9rem;
+  border: 1px solid #6b5a35;
+  border-radius: 0.5rem;
+  background: #2c2519;
+  color: #f1e3c2;
+}
+button:hover { background: #3b3223; border-color: #a58a4a; }
+button:disabled { opacity: 0.5; }
+button[aria-pressed="true"] { border-color: #fc3; background: #40341a; color: #fff3cf; box-shadow: 0 0 0 1px #fc3 inset; }
+
+button.stop {
+  min-width: 10rem;
+  min-height: 3.4rem;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  background: #fc3;
+  color: #1a1610;
+  border: 3px solid #fff3cf;
+  border-radius: 0.7rem;
+}
+button.stop:hover { background: #ffd978; border-color: #fff; }
+button.go { border-color: #8a7330; }
+
+.stopmsg { color: #ffd978; font-weight: 600; }
+.stopmsg:empty { display: none; }
+
+.note { margin: 0; padding: 0.35rem 0.8rem; background: #221c12; border-bottom: 1px solid #3b3223; }
+.warn { color: #ffd978; }
+
+#sandtest-root {
+  padding: 0.7rem 0.8rem 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+  gap: 0.7rem;
+  align-items: start;
+}
+
+.card {
+  background: #221c12;
+  border: 1px solid #54462a;
+  border-radius: 0.7rem;
+  padding: 0.5rem 0.8rem 0.7rem;
+}
+.card h2 { margin: 0 0 0.4rem; font-size: 1.05rem; color: #ffd978; font-weight: 600; }
+#st-card-heads, #st-card-log { grid-column: 1 / -1; }
+
+dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 1rem; margin: 0; }
+dl.kv dt { color: #bfae85; }
+dl.kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.muted { color: #bfae85; }
+.small { font-size: 0.85rem; margin: 0.4rem 0 0; }
+p.muted { margin: 0.4rem 0 0; }
+
+/* last good status kept on screen but dimmed once it is old */
+#sandtest-root.stale dl.kv dd, #sandtest-root.stale #st-heads { opacity: 0.55; }
+
+.flag { display: inline-block; padding: 0 0.6rem; border-radius: 999px; border: 1px solid #54462a; }
+.flag-none { color: #bfae85; }
+.flag-clear { color: #9be39b; background: #1b3a22; border-color: #2f6b3d; }
+.flag-hit { color: #1a1610; background: #fc3; border-color: #fff3cf; font-weight: 700; }
+
+ul.warnlist { margin: 0.4rem 0 0; padding-left: 1.2rem; color: #ffd978; }
+ul.warnlist:empty { display: none; }
+
+table#st-heads { border-collapse: collapse; width: 100%; }
+#st-heads th, #st-heads td { padding: 0.2rem 0.6rem; border-bottom: 1px solid #3b3223; text-align: left; }
+#st-heads th { color: #bfae85; font-weight: normal; }
+#st-heads .num { text-align: right; font-variant-numeric: tabular-nums; }
+#st-heads tr.inwin td { background: #40341a; color: #fff3cf; }
+
+form { display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; align-items: end; }
+label { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.9rem; color: #d9c9a0; }
+label.wide { flex: 1 1 14rem; }
+input[type="number"], input[type="text"], select {
+  font: inherit;
+  min-height: 2.2rem;
+  box-sizing: border-box;
+  width: 7rem;
+  padding: 0.1rem 0.4rem;
+  background: #1a1610;
+  color: #f1e3c2;
+  border: 1px solid #6b5a35;
+  border-radius: 0.4rem;
+}
+label.wide input { width: 100%; }
+select { width: auto; }
+
+label.risky {
+  flex-direction: row;
+  align-items: center;
+  flex: 1 1 100%;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border: 2px dashed #fc3;
+  border-radius: 0.5rem;
+  color: #ffd978;
+}
+label.risky input { width: 1.4rem; height: 1.4rem; }
+form.hits-on button[type="submit"] { background: #fc3; color: #1a1610; border-color: #fff3cf; font-weight: 700; }
+
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: center; }
+.msg { font-size: 0.9rem; color: #9be39b; }
+.msg.bad { color: #ffd978; font-weight: 600; }
+
+ol.log { margin: 0; padding-left: 1.5rem; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+ol.log li { padding: 0.05rem 0; }
+ol.log li.bad { color: #ffd978; }
+ol.log code { color: #d9c9a0; }
