@@ -127,6 +127,7 @@ Created from `install-steps/settings.example.json` on first install. Typical con
 - **display.random_bells** — default number of bells for the random front page
 - **display.random_windows** — `3` (cycle of three methods) or `2` (there and back)
 - **display.pattern_position_mode** — `centre`, `shorter`, or `float` (how stacks sit in a column)
+- **sandtest.host** / **sandtest.token** — where the Sandtest test rig is, for the `/sandtest/` page (see [docs/sandtest.md](docs/sandtest.md))
 
 Do not commit real WiFi passwords; keep secrets only on the machine.
 
@@ -259,6 +260,7 @@ Useful display URLs (behind the kiosk / nginx root):
 - `/layout-test/6/Rounds/Kings/Kennet/` — fixed three-method path
 - `/swing/6/` — circle animation
 - `/farm/status/` — farm / multi-Pi status
+- `/sandtest/` — control page for the Sandtest rig (Pico 2 W opto outputs and mirror); see [docs/sandtest.md](docs/sandtest.md)
 
 ---
 
