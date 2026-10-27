@@ -192,6 +192,14 @@ class PowerViewTests(TestCase):
 
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)
 class FarmPagePowerTests(TestCase):
+    def setUp(self):
+        # These tests are about the registry entry that is "this machine", so
+        # pin the host name: on a Pi really called sandbells2 the OTHER entry
+        # (sandbells2.local) would otherwise count as local and show buttons.
+        p = mock.patch("bells.controls.socket.gethostname", return_value="testbox")
+        p.start()
+        self.addCleanup(p.stop)
+
     def test_buttons_on_the_local_machines_page(self, _):
         r = self.client.get(reverse("farm_status_index", args=[0]))
         self.assertContains(r, 'id="power"')
