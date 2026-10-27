@@ -1,4 +1,4 @@
-/* align.css -- the Alignment page.  Warm and homely like the farm pages:
+/* align.css -- the sandheads page (was "Alignment").  Warm and homely like the farm pages:
    green (clear / ok), purple (beam broken), a little gold.  The alarm colour
    is kept for "not coming" and is not used here. */
 
@@ -15,35 +15,44 @@ body {
 
 a { color: #ffd978; }
 
-header#align-header {
+/* The header is two lines like the farm status pages: the shared top line
+   (menu buttons, styled by menu_style.html), then who this page is about
+   (the machine photo, the link and tower pills, the clock). */
+header#align-header { flex: 0 0 auto; }
+
+.topline {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 0.6rem;
+  gap: 0.75rem 1rem;
   align-items: center;
-  flex: 0 0 auto;
+  flex-wrap: wrap;
   padding: 0.45rem 0.8rem;
-  background: linear-gradient(#251f16, #1a1610);
-  border-bottom: 1px solid #54462a;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
   font-size: 1.05rem;
 }
 
-a.navbtn {
-  display: inline-block;
-  border: 1px solid #6b5a35;
-  border-radius: 999px;
-  padding: 0.12rem 0.85rem;
-  background: #2c2519;
-  color: #f1e3c2;
-  text-decoration: none;
-  line-height: 1.35;
-  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.08);
+#align-id {
+  display: flex;
+  gap: 0.4rem 0.8rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.5rem 0.8rem;
+  background: #17140f;
+  border-bottom: 1px solid #3a3220;
 }
-a.navbtn:hover { background: #3b3223; border-color: #a58a4a; }
-a.navbtn.brand { font-weight: 600; color: #ffd978; }
-a.navbtn.on { border-color: #fc3; background: #40341a; color: #fff3cf; box-shadow: 0 0 0 1px #fc3 inset; }
+#align-id .right { margin-left: auto; white-space: nowrap; }
+#align-idtext { min-width: 0; margin-right: 0.4rem; }
+#align-title { margin: 0; font-size: 1.5rem; line-height: 1.2; font-weight: 600; color: #f6e9c8; }
+#align-ident { font-size: 0.95rem; color: #b9a97f; min-height: 1.2em; }
 
-#align-ident { opacity: 0.8; margin-left: 0.4rem; }
+/* small kiosk screens (800x480): a modest picture, everything on one screen */
+@media (max-height: 640px) {
+  #align-id { padding: 0.25rem 0.8rem; }
+  #align-id .mphoto { --s: 52px !important; }
+  #align-title { font-size: 1.2rem; }
+  #align-ident { font-size: 0.85rem; min-height: 0; }
+}
+@media (max-width: 520px) {
+  #align-id .mphoto { --s: 48px !important; }
+}
 
 .pill {
   display: inline-block;
@@ -61,83 +70,114 @@ a.navbtn.on { border-color: #fc3; background: #40341a; color: #fff3cf; box-shado
 #align-note {
   flex: 0 0 auto;
   margin: 0;
-  padding: 0.35rem 0.8rem;
-  font-size: 0.95rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
   color: #ffd978;
   background: #221c12;
   border-bottom: 1px solid #3b3223;
 }
 
-#align-main {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 0.6rem 0.8rem 0.8rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
-  grid-auto-rows: min-content;
-  gap: 0.7rem;
-  overflow-y: auto;
-  align-content: start;
-}
-
-#align-wait { grid-column: 1 / -1; margin: 1rem; opacity: 0.75; }
-
-.card {
-  border: 1px solid #54462a;
-  border-radius: 12px;
-  padding: 0.55rem 0.75rem 0.7rem;
-  background: #251f16;
-  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.06);
-}
-.card.watching { border-color: #fc3; box-shadow: 0 0 0 1px #fc3 inset; }
-
-.card h2 {
+/* the row of head buttons: warm rounded tabs, one per channel; gold = the one
+   on show, the dot = active (green) or not (hollow) */
+#align-heads {
+  flex: 0 0 auto;
   display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  margin: 0 0 0.4rem;
-  font-size: 1.05rem;
-  font-weight: 600;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem 0.1rem;
 }
-.card h2 .kind { font-weight: normal; opacity: 0.7; font-size: 0.9rem; }
-.card h2 .watch {
-  margin-left: auto;
+#align-heads:empty { display: none; }
+button.headtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font: inherit;
-  font-size: 0.85rem;
-  padding: 0.05rem 0.7rem;
+  padding: 0.2rem 0.8rem 0.2rem 0.65rem;
   color: #f1e3c2;
   background: #2c2519;
   border: 1px solid #6b5a35;
   border-radius: 999px;
   cursor: pointer;
+  line-height: 1.3;
 }
-.card.watching h2 .watch { border-color: #fc3; color: #fff3cf; background: #40341a; }
+button.headtab:hover { background: #3b3223; border-color: #a58a4a; }
+button.headtab .dot {
+  width: 0.65rem; height: 0.65rem; box-sizing: border-box;
+  border-radius: 50%; border: 2px solid #8a7a52; background: transparent;
+}
+button.headtab.act .dot { background: #6fdc7f; border-color: #6fdc7f; box-shadow: 0 0 5px rgba(111, 220, 127, 0.55); }
+button.headtab .num { font-size: 1.15rem; font-weight: 600; }
+button.headtab .kw { font-size: 0.8rem; opacity: 0.7; }
+button.headtab.inact { border-style: dashed; color: #b9a97f; }
+button.headtab.sel { border-style: solid; border-color: #fc3; background: #40341a; color: #fff3cf; box-shadow: 0 0 0 1px #fc3 inset; }
+button.headtab.sel .kw { opacity: 0.9; }
+
+#align-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.5rem 0.8rem 0.7rem;
+  overflow-y: auto;
+}
+
+#align-wait { margin: 1rem; opacity: 0.75; }
+
+/* ONE panel: the trace on the left, readouts and nudges on the right (a
+   single column when the window is narrow) */
+.card {
+  border: 1px solid #54462a;
+  border-radius: 12px;
+  padding: 0.45rem 0.75rem 0.65rem;
+  background: #251f16;
+  box-shadow: inset 0 1px 0 rgba(255, 235, 190, 0.06);
+}
+.card.watching { border-color: #fc3; box-shadow: 0 0 0 1px #fc3 inset; }
+.card.inactive { border-style: dashed; }
+
+.card h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.card h2 .kind { font-weight: normal; opacity: 0.7; font-size: 0.9rem; }
+.card h2 .state { margin-left: auto; font-weight: normal; font-size: 0.85rem; color: #d9c9a0; }
+.card.watching h2 .state { color: #9be39b; }
+.card.inactive h2 .state { color: #ffd978; }
+
+.card .body { display: grid; grid-template-columns: 1fr; gap: 0.5rem 1rem; }
+@media (min-width: 700px) {
+  .card .body { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+}
+.card .left, .card .right { min-width: 0; }
 
 canvas.scope {
   display: block;
   width: 100%;
-  height: 5.2rem;
+  height: 7.2rem;
   background: #17130c;
   border: 1px solid #3b3223;
   border-radius: 8px;
 }
+@media (max-height: 560px) { canvas.scope { height: 6.4rem; } }
 .card.off canvas.scope { opacity: 0.35; }
 
 .readouts {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.3rem 0.6rem;
-  margin: 0.5rem 0 0.4rem;
+  margin: 0 0 0.5rem;
 }
 .readouts div { min-width: 0; }
-.readouts .lab { display: block; font-size: 0.75rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.03em; }
+.readouts .lab { display: block; font-size: 0.72rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.03em; }
 .readouts .val { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.readouts .sub { display: block; font-size: 0.75rem; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.readouts .sub { display: block; font-size: 0.75rem; opacity: 0.6; font-variant-numeric: tabular-nums; min-height: 1em; }
 .card.off .readouts .val, .readouts .stale { opacity: 0.55; }
 
-.nudges { display: flex; flex-wrap: wrap; gap: 0.5rem 1.4rem; align-items: center; }
+.nudges { display: flex; flex-direction: column; gap: 0.4rem; }
 .pair { display: flex; align-items: center; gap: 0.35rem; }
-.pair .name { font-size: 0.9rem; opacity: 0.8; min-width: 5.2rem; }
+.pair .name { font-size: 0.9rem; opacity: 0.8; min-width: 5.6rem; }
 
 button.nudge {
   font: inherit;
@@ -157,3 +197,6 @@ button.nudge:disabled { opacity: 0.4; cursor: default; }
 
 .msg { margin-top: 0.45rem; min-height: 1.2em; font-size: 0.9rem; color: #9be39b; }
 .msg.refused { color: #ffd978; }
+
+.hint { margin-top: 0.4rem; font-size: 0.9rem; color: #ffd978; }
+.hint:empty { display: none; }

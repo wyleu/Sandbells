@@ -59,6 +59,7 @@ to `/var/www/sandbells/static/img/farm/` like everything else.
 | Page | Where |
 |------|-------|
 | farm status page of every machine (`/farm/status/<n>/`) | the identity line under the top line (112 px, 52 px on small screens), `bells/farm_status.html` |
+| sandheads tab (`/farm/heads/`, once `/farm/align/`) | the same identity line, with the `sandswing` photo (112 px, 52 px on small screens), `bells/align.html`; its look comes with `events/menu_style.html` |
 
 ## Pages on other branches (not in this branch; add the one line when they merge)
 
@@ -70,11 +71,6 @@ needs the tag loaded and one line:
   after `{% top_menu current="sandtest" %}`, add `{% machine_photo "sandtest" size=48 %}`.
   The `sandtest` key is already in `PHOTOS`. The page already includes
   `events/menu_style.html`, so the css comes with it.
-* **Alignment pages** (branch `align-page`, `bells/templates/bells/align.html`):
-  `{% load static farm_ui %}`, add `{% include "bells/machine_photo_style.html" %}`
-  in `<head>` (this page does not include `menu_style.html`), and in
-  `<header id="align-header">` before `align-ident` add
-  `{% if inst %}{% machine_photo inst size=40 %}{% endif %}`.
 * **Power controls** (branch `power`, `bells/power_controls.html`) sit on the
   farm status page, which already shows the photo, so nothing extra is needed.
   Already merged: on the `farm-photos-power` branch (this branch on top of

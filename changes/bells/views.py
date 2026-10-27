@@ -24,6 +24,7 @@ from django.http import Http404
 from django.http import JsonResponse
 from django.http import FileResponse
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.template import loader
 
 
@@ -514,8 +515,17 @@ def load_farm_instances():
 
 
 def farm_align(request, index=None):
-    """The Alignment page for one concentrator: a card per active head with a
-    rolling comparator trace, live readouts and live nudges.  The browser
+    """The page's first address, /farm/align/[<n>/]: on to /farm/heads/ (the
+    #head=N part of the address is kept by the browser)."""
+    url = reverse("farm_heads") if index is None else reverse("farm_heads_index", args=[index])
+    if request.META.get("QUERY_STRING"):
+        url += "?" + request.META["QUERY_STRING"]
+    return redirect(url)
+
+
+def farm_heads(request, index=None):
+    """The sandheads tab for one concentrator: a row of head buttons and one
+    head's panel (comparator trace, readouts, live nudges).  The browser
     talks to the Pico's /ws directly; nothing here is stored or sent on."""
     from bells import align
     instances = load_farm_instances()

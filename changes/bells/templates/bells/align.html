@@ -1,23 +1,33 @@
-{% load static events_live %}
+{% load static events_live farm_ui %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Alignment{% if inst %} · {{ inst.name }}{% endif %}</title>
+  <title>sandheads{% if inst %} · {{ inst.name }}{% endif %}</title>
   <link rel="stylesheet" href="{% static 'css/align.css' %}?v={{ git_hash }}">
-  {% include "events/menu_style.html" %}
+  {% include "events/menu_style.html" %}{# the shared top line, which also carries bells/machine_photo_style.html #}
 </head>
 <body>
-  <header id="align-header" class="topbar">
-    {% top_menu current="align" %}
-    <span id="align-ident">{% if inst %}{{ inst.family }} · {{ inst.name }}{% endif %}</span>
-    <span id="align-link" class="pill pill-wait">connecting…</span>
-    <span id="align-tower" class="pill pill-wait"></span>
-    <span class="right">{% include "events/mini_clock.html" %}</span>
+  <header id="align-header">
+    <div class="topbar topline">
+      {% top_menu current="heads" %}
+    </div>
+    <div id="align-id" class="topbar">
+      {% if inst %}{% machine_photo inst size=112 placeholder=True %}{% endif %}
+      <div id="align-idtext">
+        <h1 id="align-title">sandheads</h1>
+        <div id="align-ident">{% if inst %}{{ inst.family }} · {{ inst.name }}{% endif %}</div>
+      </div>
+      <span id="align-link" class="pill pill-wait">connecting…</span>
+      <span id="align-tower" class="pill pill-wait"></span>
+      <span class="right">{% include "events/mini_clock.html" %}</span>
+    </div>
   </header>
 
   <p id="align-note">Live adjustments only: they are <strong>not saved</strong> to settings.json,
     and a reboot returns the head to its saved values.</p>
+
+  <nav id="align-heads" role="tablist" aria-label="heads"></nav>
 
   <main id="align-main">
     {% if inst %}

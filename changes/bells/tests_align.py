@@ -1,4 +1,4 @@
-"""Tests for the Alignment page (bells/align.py, the farm_align view,
+"""Tests for the sandheads page, once the Alignment page (bells/align.py, the farm_heads view,
 static/js/align.js and css/align.css)."""
 import re
 import shutil
@@ -52,9 +52,10 @@ class AlignHelperTests(SimpleTestCase):
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)
 class AlignPageTests(TestCase):
     def test_page_renders_for_the_concentrator(self, _):
-        r = self.client.get(reverse("farm_align"))
+        r = self.client.get(reverse("farm_heads"))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, 'id="align-main"')
+        self.assertContains(r, 'id="align-heads"')                # the row of head buttons
         self.assertContains(r, 'id="align-cfg"')                  # json_script
         self.assertContains(r, HOME)
         self.assertContains(r, "Align.start(")
@@ -62,35 +63,62 @@ class AlignPageTests(TestCase):
         self.assertEqual(r.context["inst"]["id"], "sandswing")
 
     def test_both_addresses_reach_the_page(self, _):
-        body = self.client.get(reverse("farm_align")).content.decode()
+        body = self.client.get(reverse("farm_heads")).content.decode()
         self.assertIn("192.168.0.81", body)
         self.assertIn("10.42.0.81", body)
 
     def test_by_index_and_other_devices_are_404(self, _):
-        self.assertEqual(self.client.get(reverse("farm_align_index", args=[1])).status_code, 200)
-        self.assertEqual(self.client.get(reverse("farm_align_index", args=[0])).status_code, 404)
-        self.assertEqual(self.client.get(reverse("farm_align_index", args=[9])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("farm_heads_index", args=[1])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("farm_heads_index", args=[0])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("farm_heads_index", args=[9])).status_code, 404)
+
+    def test_the_old_alignment_addresses_go_to_the_new_ones(self, _):
+        self.assertEqual(reverse("farm_heads"), "/farm/heads/")
+        self.assertEqual(reverse("farm_align"), "/farm/align/")
+        r = self.client.get("/farm/align/")
+        self.assertRedirects(r, "/farm/heads/", fetch_redirect_response=False)
+        self.assertEqual(self.client.get("/farm/align/", follow=True).status_code, 200)
+        r = self.client.get("/farm/align/1/")
+        self.assertRedirects(r, "/farm/heads/1/", fetch_redirect_response=False)
+        self.assertEqual(self.client.get("/farm/align/0/", follow=True).status_code, 404)
+        self.assertEqual(self.client.get("/farm/align/9/", follow=True).status_code, 404)
 
     def test_live_only_note_is_on_the_page(self, _):
-        r = self.client.get(reverse("farm_align"))
+        r = self.client.get(reverse("farm_heads"))
         self.assertContains(r, 'id="align-note"')
         self.assertContains(r, "not saved")
         self.assertContains(r, "settings.json")
         self.assertContains(r, "reboot")
 
+    def test_header_has_the_sandswing_photo_like_its_farm_status_page(self, _):
+        body = self.client.get(reverse("farm_heads")).content.decode()
+        farm = self.client.get(reverse("farm_status_index", args=[1])).content.decode()
+        img = re.search(r'<img src="(/static/img/farm/sandswing\.jpg\?v=[^"]*)"', body)
+        self.assertTrue(img, "the sandswing photo is in the header")
+        self.assertIn(img.group(1), farm)                         # the very same picture
+        self.assertIn('alt="sandswing"', body)
+        self.assertEqual(body.count("border-radius: 18%"), 1)                  # its look comes with the shared top line, once
+
+    def test_the_sandheads_page_is_a_tab_with_a_row_for_the_heads(self, _):
+        r = self.client.get(reverse("farm_heads"))
+        self.assertContains(r, "<title>sandheads")
+        self.assertContains(r, '<h1 id="align-title">sandheads</h1>')
+        self.assertContains(r, 'id="align-heads"')
+        self.assertContains(r, 'role="tablist"')
+
     def test_scripts_are_cache_busted_like_the_farm_page(self, _):
-        body = self.client.get(reverse("farm_align")).content.decode()
+        body = self.client.get(reverse("farm_heads")).content.decode()
         self.assertRegex(body, r'css/align\.css\?v=[0-9a-z]+"')
         self.assertRegex(body, r'js/align\.js\?v=[0-9a-z]+"')
 
     def test_not_a_live_page_and_no_template_comment_leaks(self, _):
-        body = self.client.get(reverse("farm_align")).content.decode()
+        body = self.client.get(reverse("farm_heads")).content.decode()
         self.assertNotIn("with-live", body)
         self.assertNotIn("{#", body)
         self.assertNotIn("live-events", body)
 
     def test_no_red_on_the_page(self, _):
-        body = strip_comments(self.client.get(reverse("farm_align")).content.decode())
+        body = strip_comments(self.client.get(reverse("farm_heads")).content.decode())
         self.assertNotRegex(body, r"(?i)\bred\b")
         self.assertEqual(red_colours(CSS.read_text()), [])
         self.assertEqual(red_colours((HERE / "static" / "js" / "align.js").read_text()), [])
@@ -99,11 +127,11 @@ class AlignPageTests(TestCase):
 @mock.patch("bells.views.load_farm_instances", return_value=NO_CONCENTRATOR)
 class AlignNoConcentratorTests(TestCase):
     def test_page_says_there_is_nothing_to_align(self, _):
-        r = self.client.get(reverse("farm_align"))
+        r = self.client.get(reverse("farm_heads"))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "nothing to align")
         self.assertNotContains(r, "Align.start(")
-        self.assertEqual(self.client.get(reverse("farm_align_index", args=[0])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("farm_heads_index", args=[0])).status_code, 404)
 
 
 def strip_comments(text):
