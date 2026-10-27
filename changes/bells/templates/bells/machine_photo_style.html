@@ -1,0 +1,15 @@
+{% comment %}The look of {% machine_photo %} (bells/templatetags/farm_ui.py).  Already pulled
+in by events/menu_style.html, so every page with the shared top line has it; a page
+without that line includes this file on its own, in <head>.{% endcomment %}
+<style>
+  /* A machine photo (the machine_photo tag, bells/templatetags/farm_ui.py): a
+     rounded square in the same warm frame as the buttons.  --s is its size;
+     a page can shrink it (e.g. "#farm-id .mphoto { --s: 56px !important }"). */
+  .mphoto { display: inline-block; flex: 0 0 auto; box-sizing: border-box; width: var(--s, 112px);
+            height: var(--s, 112px); border-radius: 18%; overflow: hidden; background: #2c2519;
+            border: 1px solid #6b5a35; line-height: 0; vertical-align: middle;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+  .mphoto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .mphoto-none { display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+                 font-size: calc(var(--s, 112px) * 0.42); font-weight: 600; color: #a58a4a; }
+</style>

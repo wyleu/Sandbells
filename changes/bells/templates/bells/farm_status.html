@@ -1,4 +1,4 @@
-{% load static events_live %}
+{% load static events_live farm_ui %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,13 +8,21 @@
   {% include "events/menu_style.html" %}
 </head>
 <body{% if live_events %} class="with-live"{% endif %}>
-  <header id="farm-header" class="topbar">
-    {% top_menu current=index %}
-    <span id="farm-ident">{{ inst.family }} · {{ inst.name }}</span>
-    <span id="farm-level" class="level level-unknown">…</span>
-    <span id="farm-summary"></span>
-    {% include "bells/power_controls.html" %}
-    <span class="right">{% include "events/mini_clock.html" %}</span>
+  <header id="farm-header">
+    <div class="topbar topline">
+      {% top_menu current=index %}
+    </div>
+    <div id="farm-id">
+      {% machine_photo inst size=112 placeholder=True %}
+      <div id="farm-idtext">
+        <h1 id="farm-ident">{{ inst.family }} · {{ inst.name }}</h1>
+        <div id="farm-host">{{ host_label }}{% if host_label and inst.role %} · {% endif %}{{ inst.role }}</div>
+      </div>
+      <span id="farm-level" class="level level-unknown">…</span>
+      <span id="farm-summary"></span>
+      {% include "bells/power_controls.html" %}
+      <span class="right">{% include "events/mini_clock.html" %}</span>
+    </div>
   </header>
 
   <main id="farm-main">

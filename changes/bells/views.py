@@ -149,6 +149,7 @@ def farm_status(request, index=0):
         "prev": (index - 1) % len(instances),
         "next": (index + 1) % len(instances),
         "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
+        "host_label": farm_host_label(inst, socket.gethostname().split(".")[0]),
         "live_events": inst.get("family") == EVENTS_CONCENTRATOR_FAMILY,
         "ws_urls_json": mark_safe(json.dumps(device_urls(inst, "ws")).replace("</", "<\\/")),
     })
@@ -185,6 +186,24 @@ def farm_action(request):
         return JsonResponse(actions.run(inst, key, action, body.get("params")))
     except actions.ActionError as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=e.status)
+
+
+def farm_host_label(inst, this_host=""):
+    """The address to show under a device's name: its registry "host", else the
+    host of its status url, else (a host-kind entry that is this Pi) our own
+    name.  Display only; "" when nothing honest is known."""
+    from urllib.parse import urlparse
+    host = str(inst.get("host") or "").strip()
+    if not host:
+        try:
+            host = urlparse(str(inst.get("status_url") or "")).hostname or ""
+        except ValueError:
+            host = ""
+    if host in ("127.0.0.1", "localhost", "::1"):
+        host = ""
+    if not host and inst.get("kind") == "host" and this_host:
+        host = this_host + ".local"
+    return host
 
 
 def device_urls(inst, kind):

@@ -207,6 +207,24 @@ class FarmPagePowerTests(TestCase):
         self.assertIn(">Reboot</button>", body)
         self.assertIn(">Shut down</button>", body)
 
+    def test_photo_and_power_controls_on_the_same_page(self, _):
+        """farm-photos + power: the local machine's page shows its photo and the
+        buttons, the buttons sit in the identity line (<div id="farm-id">) after
+        farm-summary, and another machine's page has its photo but no buttons."""
+        body = self.client.get(reverse("farm_status_index", args=[0])).content.decode()
+        self.assertEqual(body.count('id="power"'), 1)
+        self.assertRegex(body, r'<img[^>]+src="/static/img/farm/sandbells\.jpg\?v=[0-9a-z]+"')
+        i_id = body.index('<div id="farm-id">')
+        i_photo = body.index("/static/img/farm/sandbells.jpg")
+        i_sum = body.index('id="farm-summary"')
+        i_pow = body.index('id="power"')
+        i_end = body.index("</header>")
+        self.assertTrue(i_id < i_photo < i_sum < i_pow < i_end)
+        self.assertEqual(body.count('<div id="farm-id">'), 1)
+        other = self.client.get(reverse("farm_status_index", args=[1])).content.decode()
+        self.assertIn("/static/img/farm/sandbells2.jpg", other)
+        self.assertNotIn('id="power"', other)
+
     def test_no_buttons_for_other_machines_or_picos(self, _):
         for i in (1, 2):
             r = self.client.get(reverse("farm_status_index", args=[i]))

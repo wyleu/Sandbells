@@ -14,20 +14,66 @@ body {
   overflow: hidden;
 }
 
+/* The header is two lines: the shared top line (menu buttons + clock, styled
+   by .topbar in events/menu_style.html), then who this page is about. */
 header#farm-header {
+  flex: 0 0 auto;
+}
+
+.topline {
   display: flex;
   gap: 0.75rem 1rem;
   align-items: center;
   flex-wrap: wrap;
-  flex: 0 0 auto;
   padding: 0.45rem 0.8rem;
-  border-bottom: 1px solid #333;
   font-size: 1.05rem;
+}
+
+#farm-id .right { margin-left: auto; white-space: nowrap; }
+#farm-id .mini-clock { color: #f1e3c2; font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+
+#farm-id {
+  display: flex;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.6rem 0.8rem;
+  background: #17140f;
+  border-bottom: 1px solid #3a3220;
+}
+
+#farm-idtext { min-width: 0; }
+
+#farm-ident {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #f6e9c8;
+}
+
+#farm-host {
+  font-size: 0.95rem;
+  color: #b9a97f;
+  min-height: 1.2em;
 }
 
 #farm-summary {
   opacity: 0.85;
   flex: 1 1 12rem;
+  color: #e6dcc4;
+}
+
+/* small kiosk screens (e.g. 800x480): keep the pictures modest so the status
+   cards keep their room */
+@media (max-height: 640px) {
+  #farm-id { padding: 0.25rem 0.8rem; }
+  #farm-id .mphoto { --s: 52px !important; }
+  #farm-ident { font-size: 1.2rem; }
+  #farm-host { font-size: 0.85rem; min-height: 0; }
+}
+@media (max-width: 520px) {
+  #farm-id .mphoto { --s: 48px !important; }
 }
 
 a { color: #8af; }
@@ -44,13 +90,13 @@ a { color: #8af; }
 }
 
 .farm-section {
-  border: 1px solid #333;
-  border-radius: 8px;
+  border: 1px solid #3a3220;
+  border-radius: 12px;
   padding: 0.55rem 0.7rem;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #181818;
+  background: #1a1712;
 }
 
 .farm-section h2 {
@@ -59,7 +105,8 @@ a { color: #8af; }
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  opacity: 0.75;
+  color: #d8c48a;
+  opacity: 0.9;
 }
 
 .farm-section dl {
@@ -87,6 +134,7 @@ a { color: #8af; }
   border-radius: 999px;
   font-size: 0.85rem;
   text-transform: uppercase;
+  vertical-align: middle;
 }
 
 .level-ok, .val-ok { color: #7d7; }
@@ -120,13 +168,13 @@ button.act {
   margin-left: 0.4rem;
   padding: 0.05rem 0.6rem;
   min-width: 3rem;
-  background: #2a2a2a;
-  color: #eee;
-  border: 1px solid #666;
-  border-radius: 6px;
+  background: #2c2519;
+  color: #f1e3c2;
+  border: 1px solid #6b5a35;
+  border-radius: 999px;
   cursor: pointer;
 }
-button.act:hover { background: #3a3a3a; }
+button.act:hover { background: #3b3223; border-color: #a58a4a; }
 button.act:disabled { opacity: 0.6; cursor: default; }
 
 /* page 3 already has the big clock in its live panel */
