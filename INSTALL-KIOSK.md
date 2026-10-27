@@ -48,6 +48,7 @@ After reboot you should see the Sandbells interface full-screen on the HDMI moni
 | 07   | `07-time.sh` (added)      | Also installs `fake-hwclock` (no RTC) and saves the time once chrony is synchronised |
 | 17   | `17-observability.sh`     | Persistent journal capped at 50M (`/etc/systemd/journald.conf.d/sandbells.conf`); `sandbells-thermal.timer` logs temp, throttling, load, memory every minute (`journalctl -t sandbells-thermal`) |
 | 18   | `18-ingest.sh`            | Checks websocket-client + migrations, installs and enables `sandbells-ingest.service` |
+| 19   | `19-power.sh`             | `/etc/sudoers.d/sandbells-power` (0440, `visudo -cf`): the gunicorn user may run only `systemctl reboot` and `systemctl poweroff` without a password, for the Reboot / Shut down buttons on the farm status page (see docs/power.md) |
 
 `master_install.sh` automatically runs every `install-steps/NN-*.sh` in order, so the new steps are picked up with no further changes.
 

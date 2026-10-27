@@ -1,0 +1,23 @@
+{% load static power_tags %}{% power_machine inst as machine %}{% if machine %}
+{% comment %}Reboot / Shut down for THIS machine only (shown on the farm entry that is the
+machine running Sandbells).  POST /control/<name>/ with the CSRF token; two steps in
+the page (press, then a confirm that lapses after 5 s).  power.js wires it up.{% endcomment %}
+<link rel="stylesheet" href="{% static 'css/power.css' %}?v={{ git_hash }}">
+<span id="power" class="power" data-machine="{{ machine }}"
+      data-reboot-url="{% url 'control_action' 'reboot' %}"
+      data-poweroff-url="{% url 'control_action' 'poweroff' %}"
+      data-ping-url="{% url 'control_ping' %}">
+  {% csrf_token %}
+  <span class="power-idle">
+    <button type="button" class="power-btn" data-action="reboot" title="Reboot {{ machine }}">Reboot</button>
+    <button type="button" class="power-btn" data-action="poweroff" title="Shut down {{ machine }}">Shut down</button>
+  </span>
+  <span class="power-confirm" hidden>
+    <button type="button" class="power-yes"></button>
+    <button type="button" class="power-no">Cancel</button>
+    <span class="power-note"></span>
+  </span>
+  <span class="power-msg" aria-live="polite"></span>
+</span>
+<script src="{% static 'js/power.js' %}?v={{ git_hash }}"></script>
+{% endif %}

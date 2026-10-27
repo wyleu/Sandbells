@@ -1,0 +1,21 @@
+/* power.css -- Reboot / Shut down on the farm status page.  Plain dark like
+   the page: neutral buttons, gold for "are you sure" and for anything that
+   needs reading.  The alarm red is kept for "not coming": none here. */
+.power { display: inline-flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; align-items: center; }
+.power button {
+  font: inherit;
+  padding: 0.12rem 0.8rem;
+  color: #eee;
+  background: #222;
+  border: 1px solid #555;
+  border-radius: 0.4rem;
+}
+.power button:hover { background: #333; border-color: #888; }
+.power button:disabled { opacity: 0.5; }
+.power-confirm[hidden], .power-idle[hidden] { display: none; }
+.power-confirm { display: inline-flex; flex-wrap: wrap; gap: 0.4rem 0.6rem; align-items: center; }
+.power .power-yes { color: #111; background: #fc6; border: 2px solid #fff; font-weight: 700; }
+.power .power-yes:hover { background: #fc3; }
+.power-note { color: #fc6; font-size: 0.9rem; }
+.power-msg { color: #fc6; font-weight: 600; }
+.power-msg:empty { display: none; }

@@ -6,6 +6,7 @@ from . import views
 from . import models
 
 from . import status_views
+from . import controls
 
 # Serializers define the API representation
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -68,6 +69,8 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('', views.home, name='root_home'),
     path("api/system-status/", status_views.system_status, name="system_status"),
+    path("control/ping/", controls.control_ping, name="control_ping"),
+    path("control/<str:name>/", controls.control_action, name="control_action"),
     path("api/farm/action/", views.farm_action, name="farm_action"),
     path("api/farm/device-status/",views.farm_device_status,name="farm_device_status"),
     path("layout-test/<int:number>/<str:a>/<str:b>/<str:c>/", views.layout_test, name="layout_test"),
