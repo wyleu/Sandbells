@@ -7,6 +7,8 @@ reflector at the laser heads.  The firmware lives in its own project
 any browser on the network.  Menu button: **Sandtest** (top line, between the
 farm devices and *Rings by day*).
 
+Cheat sheet for unattended stress runs (controls, timing, recipes, logs): [sandtest-cheatsheet.md](sandtest-cheatsheet.md).
+
 ## Where the rig is
 
 Set the address in `/etc/sandbells/settings.json` (read on every request, no
