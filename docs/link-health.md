@@ -68,3 +68,59 @@ sandmon GPS NO Lock shows as stratum 16 / leap 3), `last_seq`, `uptime_s`,
   client was asked again every 2 s).  A Pico in its send-path backoff answers
   `/ws` with a 503 (see the sandswing repo's `docs/link-health.md`, "Send
   path"); the browser sees a failed connect and the same schedule applies.
+
+## Frames the ingest cannot decode
+
+A frame that is not valid UTF-8 or not valid JSON (seen: a ~1.4 kB sandswing
+heartbeat cut off mid-string) used to end the connection when it was
+rejected by websocket-client itself (`disconnected: cannot decode: b'...'`),
+and so dropped a working link.  Now it is a **bad frame**: skipped, counted,
+logged, and the link is only dropped after `BAD_FRAME_LIMIT` in a row.
+
+The behaviour is a transition table (`events/framestate.py`); the state is
+the number of bad frames in a row, N = `BAD_FRAME_LIMIT`:
+
+| state | `good_frame` | `bad_frame` |
+|---|---|---|
+| 0 .. N-2 | -> 0, reset | -> state+1, count |
+| N-1 | -> 0, reset | -> N, count + disconnect |
+| N | -> 0, reset | -> N, count + disconnect |
+
+* **bad_frame** = text that is not UTF-8 (`UnicodeDecodeError`, or the
+  library's `WebSocketPayloadException` "cannot decode") or not JSON
+  (`ParseError` `not_utf8` / `not_json`).  The ingest asks websocket-client
+  to skip its own UTF-8 check (`skip_utf8_validation`) so it gets the bytes
+  back.  The library has read the whole frame before it complains, so the
+  stream stays in step and the next `recv()` is the next frame.
+* **good_frame** = any frame that decoded, including a heartbeat
+  (`sand.panel/v1`, ignored) and a frame Sandbells rejects for its content
+  (wrong schema, missing field): those are not decode failures.  It resets
+  the count; a new connection starts at 0.
+* **N = 5** is a first guess.  Replace it with a number taken from the
+  journal (how long do bad runs get? do they end by themselves?) in
+  `constants.BAD_FRAME_LIMIT`.
+* The skipped frame is not stored.  If it was an event, the next event shows
+  a **gap** (`gap sandswing/<boot>: missing seq 7-7`), exactly as for any
+  lost frame; a skipped heartbeat leaves no gap (its `seq` is not tracked).
+
+Log lines (logger `events.ingest`, at most one `bad frame` WARNING per
+`BAD_FRAME_LOG_INTERVAL_S` = 10 s, the rest are counted in "more not logged"):
+
+```
+WARNING bad frame skipped (not_json): len 1400, first 60 b'...', last 60 b'...' (1 in a row, 1 total, 0 more not logged)
+WARNING bad frame skipped (cannot decode): len 1058, first 60 b'...', last 60 b'...' (1 in a row, 1 total, 0 more not logged)
+WARNING disconnected: 5 bad frames in a row
+INFO    frames 412, ignored 80, bad 3, accepted 329, ... rejected 1 {'not_json': 1}, gaps 1 (missing 1), ...
+```
+
+Only the length and the first and last 60 bytes are logged (as a Python
+bytes repr, so control characters are escaped).  The sandswing heartbeat
+carries no passwords; if a frame ever might, cut the excerpt in
+`Ingest._act_count`.  The "disconnected" reason also goes into the stored
+`ingest` / `disconnected` event.  `rejected` in the summary still counts a
+`not_json` / `not_utf8` frame as well (so `bad` is the figure to watch), but
+its own WARNING is replaced by the `bad frame` line.
+
+After changing the code: `sudo systemctl restart sandbells-ingest`, then
+`journalctl -u sandbells-ingest -f`.  Tests: `python manage.py test
+events.tests_badframe events.tests_ingest`.

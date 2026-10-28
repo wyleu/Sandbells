@@ -4,6 +4,12 @@ No network here: wsclient.py feeds frames in and calls idle() when the
 socket is quiet.  Logging is a periodic summary, plus a WARNING for each
 gap and at most one WARNING per reject reason per REJECT_LOG_INTERVAL_S.
 
+A frame that cannot be decoded (not UTF-8 / not JSON, e.g. a heartbeat cut
+off mid-string) is a "bad frame": skipped, counted, one rate-limited
+WARNING with its length and first/last bytes.  framestate.FrameGuard (a
+transition table) decides when enough in a row mean the link is bad; the
+reason is then left in drop_reason for wsclient, which closes the socket.
+
 The first frame of each (src, boot_id) seeds the GapTracker from the DB
 (max stored seq, one query on the UNIQUE(src, boot_id, seq) index), so a
 restart does not report already-stored seqs as missed.  Events still in
@@ -24,6 +30,7 @@ import time
 
 from . import constants as C
 from .gaps import GapTracker
+from .framestate import FrameGuard
 from .linkstate import LinkState
 from .parse import ParseError, parse
 
@@ -56,6 +63,11 @@ class Ingest:
         self.reject_log_interval_s = float(reject_log_interval_s)
         self.frames = 0
         self.ignored = 0              # frames of IGNORED_SCHEMAS (not stored)
+        self.bad = 0                  # frames that could not be decoded (skipped)
+        self.guard = FrameGuard()
+        self.drop_reason = None       # set when the guard says: drop the link
+        self._bad_logged_at = None
+        self._bad_unlogged = 0        # bad frames since the last WARNING
         self.rejects = {}             # reason -> count
         self._reject_logged_at = {}   # reason -> clock() of last WARNING
         self._summary_at = clock()
@@ -68,11 +80,17 @@ class Ingest:
         except ParseError as e:
             if e.reason == C.R_IGNORED:          # e.g. sand.panel/v1 mimic frames
                 self.ignored += 1
+                self._good_frame()
                 self._panel_frame(text)
                 return None
-            self._reject(e)
+            self._reject(e, quiet=e.reason in C.DECODE_REASONS)
+            if e.reason in C.DECODE_REASONS:
+                self._bad_frame(text, e.reason)
+            else:
+                self._good_frame()
             self.link.frame(False)
             return None
+        self._good_frame()
         self.link.frame(True)
         self._seed_from_db(p.src, p.boot_id)
         obs = self.tracker.observe(p.src, p.boot_id, p.seq)
@@ -84,6 +102,19 @@ class Ingest:
                      " (missed %d-%d)" % obs.missing if obs.missing else "")
         self._write(self.store.add, p)
         return obs
+
+    def bad_frame(self, data, why=C.BAD_FRAME_WHY_TRANSPORT):
+        """A frame the WebSocket layer could not decode (wsclient): the
+        bytes stand in for the text.  True if the link should be dropped."""
+        self.frames += 1
+        self._bad_frame(data, why)
+        self.link.frame(False)
+        return self.drop_reason is not None
+
+    def new_connection(self):
+        """A fresh socket: consecutive bad frames start again from 0."""
+        self.guard.reset()
+        self.drop_reason = None
 
     def idle(self):
         """Socket quiet: flush if due, emit the summary if due."""
@@ -139,10 +170,10 @@ class Ingest:
 
     def summary(self):
         c, s = self.tracker.counts, self.store.stats
-        return ("frames %d, ignored %d, accepted %d, submitted %d, buffered %d, "
+        return ("frames %d, ignored %d, bad %d, accepted %d, submitted %d, buffered %d, "
                 "rejected %d %s, "
                 "gaps %d (missing %d), dup %d, late %d, resets %d, dropped %d"
-                % (self.frames, self.ignored, s["added"], s["written"], len(self.store),
+                % (self.frames, self.ignored, self.bad, s["added"], s["written"], len(self.store),
                    sum(self.rejects.values()), self.rejects or "",
                    c.get(C.GAP_GAP, 0), self.tracker.missing_total,
                    c.get(C.GAP_DUPLICATE, 0), c.get(C.GAP_OUT_OF_ORDER, 0),
@@ -159,8 +190,48 @@ class Ingest:
         if last is not None and self.tracker.seed(src, boot_id, last):
             log.info("resume %s/%s after seq %d (stored)", src, boot_id, last)
 
-    def _reject(self, err):
+    # ---- frames that cannot be decoded ------------------------------------
+    def _good_frame(self):
+        self._do(self.guard.feed(C.FRAME_GOOD), None, None)
+
+    def _bad_frame(self, data, why):
+        self.bad += 1
+        self._do(self.guard.feed(C.FRAME_BAD), data, why)
+
+    def _do(self, actions, data, why):
+        """Run the actions of one table row (framestate.py)."""
+        for name in actions:
+            self._actions[name](self, data, why)
+
+    def _act_reset(self, data, why):
+        pass                                  # the table already set state 0
+
+    def _act_count(self, data, why):
+        """Skip it: one rate-limited WARNING (length, first/last bytes)."""
+        now = self.clock()
+        last = self._bad_logged_at
+        if last is not None and now - last < C.BAD_FRAME_LOG_INTERVAL_S:
+            self._bad_unlogged += 1
+            return
+        raw = data.encode(C.TEXT_ENCODING, "replace") if isinstance(data, str) else bytes(data)
+        n = C.BAD_FRAME_EXCERPT_BYTES
+        log.warning("bad frame skipped (%s): len %d, first %d %r, last %d %r "
+                    "(%d in a row, %d total, %d more not logged)",
+                    why, len(raw), n, raw[:n], n, raw[-n:],
+                    self.guard.state, self.bad, self._bad_unlogged)
+        self._bad_logged_at = now
+        self._bad_unlogged = 0
+
+    def _act_disconnect(self, data, why):
+        self.drop_reason = "%d bad frames in a row" % self.guard.state
+
+    _actions = {C.ACT_RESET: _act_reset, C.ACT_COUNT: _act_count,
+                C.ACT_DISCONNECT: _act_disconnect}
+
+    def _reject(self, err, quiet=False):
         self.rejects[err.reason] = self.rejects.get(err.reason, 0) + 1
+        if quiet:                     # the "bad frame" WARNING covers it
+            return
         now = self.clock()
         last = self._reject_logged_at.get(err.reason)
         if last is None or now - last >= self.reject_log_interval_s:

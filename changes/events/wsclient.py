@@ -17,10 +17,14 @@ Link health (docs/link-health.md):
   * TCP keepalive underneath, for the kernel's own view;
   * backoff only resets after a connection that delivered a frame, so a
     Pico refusing us (1013, max clients) is retried with growing delays;
+  * a frame that cannot be decoded (not UTF-8 / JSON) is skipped and
+    counted, not a reason to disconnect: only BAD_FRAME_LIMIT in a row are
+    (framestate.py, Ingest.bad_frame);
   * every connect / disconnect (with reason) / first failed connect is an
     "ingest" event (Ingest.note) and in the LinkState file for page 3.
 """
 
+import ast
 import json
 import logging
 import socket
@@ -54,8 +58,13 @@ def keepalive_sockopts():
 
 def default_connect(url, timeout):
     import websocket                      # pip: websocket-client
+    # skip_utf8_validation: a text frame that is not UTF-8 then reaches
+    # read_frames as a UnicodeDecodeError that still holds the bytes (the
+    # library's own check raises WebSocketPayloadException, whose message is
+    # only a repr).  Either way it is one bad frame, not a dead link.
     return websocket.create_connection(url, timeout=timeout,
-                                       sockopt=keepalive_sockopts())
+                                       sockopt=keepalive_sockopts(),
+                                       skip_utf8_validation=True)
 
 
 def hello(seq):
@@ -72,6 +81,32 @@ def timeout_errors():
         return (socket.timeout,)
 
 
+def bad_frame_errors():
+    """What recv() raises for a text frame that is not valid UTF-8 (the
+    stream is still in step: the whole frame was read first)."""
+    try:
+        import websocket
+        return (UnicodeDecodeError, websocket.WebSocketPayloadException)
+    except ImportError:
+        return (UnicodeDecodeError,)
+
+
+def undecodable_bytes(exc):
+    """The frame's bytes from a bad_frame_errors() exception (best effort)."""
+    data = getattr(exc, "object", None)           # UnicodeDecodeError
+    if isinstance(data, (bytes, bytearray)):
+        return bytes(data)
+    text = str(exc)                               # "cannot decode: b'...'"
+    if text.startswith(C.WS_CANNOT_DECODE_PREFIX):
+        try:
+            data = ast.literal_eval(text[len(C.WS_CANNOT_DECODE_PREFIX):])
+        except (ValueError, SyntaxError):
+            data = None
+        if isinstance(data, bytes):
+            return data
+    return text.encode(C.TEXT_ENCODING, "replace")
+
+
 class Disconnected(Exception):
     """read_frames() ended because the link went away (reason in str)."""
 
@@ -86,6 +121,10 @@ def read_frames(ws, ingest, stop, timeouts, clock=time.monotonic):
     hb_seq = 0
     started = last_rx = clock()
     peer_hb0 = getattr(ingest, "pico_heartbeats", 0)
+    bad_errors = bad_frame_errors()
+    new_connection = getattr(ingest, "new_connection", None)
+    if new_connection is not None:
+        new_connection()
     while not stop.is_set():
         now = clock()
         if send is not None and (hb_at is None or now - hb_at >= C.CLIENT_HEARTBEAT_S):
@@ -113,6 +152,13 @@ def read_frames(ws, ingest, stop, timeouts, clock=time.monotonic):
                 log.warning("disconnected: %s", read_frames.reason)
                 return n
             continue
+        except bad_errors as e:           # not decodable: skip, drop after N in a row
+            last_rx = clock()             # the peer is alive
+            if ingest.bad_frame(undecodable_bytes(e)):
+                read_frames.reason = ingest.drop_reason
+                log.warning("disconnected: %s", read_frames.reason)
+                return n
+            continue
         except Exception as e:            # closed, reset, protocol error
             read_frames.reason = str(e) or type(e).__name__
             log.warning("disconnected: %s", read_frames.reason)
@@ -126,6 +172,10 @@ def read_frames(ws, ingest, stop, timeouts, clock=time.monotonic):
             continue
         n += 1
         ingest.handle_frame(msg)
+        if getattr(ingest, "drop_reason", None):     # too many bad frames in a row
+            read_frames.reason = ingest.drop_reason
+            log.warning("disconnected: %s", read_frames.reason)
+            return n
     return n
 
 

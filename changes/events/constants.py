@@ -145,6 +145,23 @@ LOGGER_NAME = "events.ingest"
 SUMMARY_INTERVAL_S = 60.0       # one INFO summary line per this
 REJECT_LOG_INTERVAL_S = 60.0    # at most one WARNING per reject reason per this
 
+# ---- ingest: frames it cannot decode (framestate.py, docs/link-health.md) --
+# A frame that is not valid UTF-8 / JSON (e.g. a Pico heartbeat cut off
+# mid-string) is skipped and counted; the link is dropped only after this
+# many in a row.  FIRST GUESS: replace with a number read from the journal
+# ("bad frame" lines, "bad N" in the summary) once there is data.
+BAD_FRAME_LIMIT = 5
+BAD_FRAME_LOG_INTERVAL_S = 10.0     # at most one "bad frame" WARNING per this
+BAD_FRAME_EXCERPT_BYTES = 60        # first and last this many bytes are logged
+DECODE_REASONS = (R_NOT_UTF8, R_NOT_JSON)   # ParseError reasons that mean "cannot decode"
+WS_CANNOT_DECODE_PREFIX = "cannot decode: "  # websocket-client WebSocketPayloadException text
+FRAME_GOOD = "good_frame"       # events of the frame table
+FRAME_BAD = "bad_frame"
+ACT_RESET = "reset"             # actions of the frame table
+ACT_COUNT = "count"
+ACT_DISCONNECT = "disconnect"
+BAD_FRAME_WHY_TRANSPORT = "cannot decode"   # the WebSocket library refused the text
+
 # ---- ingest: URL from the existing Sandbells settings.json (config.py) -----
 SANDBELLS_SETTINGS_PATH = "/etc/sandbells/settings.json"
 SANDBELLS_SETTINGS_ENV = "SANDBELLS_SETTINGS"   # same override as the scripts

@@ -47,7 +47,7 @@ def tearDownModule():
 
 class FakeWs:
     """recv() plays a script: str/bytes -> frame, TIMEOUT -> timeout,
-    a callable -> called, then a timeout.  Script exhausted -> closed."""
+    an exception instance -> raised, a callable -> called, then a timeout.  Script exhausted -> closed."""
     TIMEOUT = object()
 
     def __init__(self, script):
@@ -64,6 +64,8 @@ class FakeWs:
             self.connected = False
             raise ConnectionResetError("closed")
         item = self.script.pop(0)
+        if isinstance(item, BaseException):       # e.g. a frame the library refused
+            raise item
         if item is self.TIMEOUT:
             raise socket.timeout()
         if callable(item):
