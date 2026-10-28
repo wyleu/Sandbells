@@ -89,6 +89,14 @@ def _do(box, cfg, method, path, body):
             headers["Content-Type"] = "application/json"
         if cfg.token:
             headers["X-Sandtest-Token"] = cfg.token
+        conn.connect()
+        # http.client sends the headers and the body as two packets; Nagle holds the
+        # second back until the first is acknowledged, and the rig gives up on a body
+        # that is more than 0.3 s late ("bad JSON: syntax error").  Send both at once.
+        try:
+            conn.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except OSError:
+            pass
         conn.request(method, path, body=body, headers=headers)
         if conn.sock is not None:
             conn.sock.settimeout(left())
@@ -148,10 +156,22 @@ def _why(e):
     return str(e) or e.__class__.__name__
 
 
+def _truncated(res):
+    """True when the rig refused a command only because its body arrived cut short.
+    The rig parses before it acts, so nothing ran and sending it again is safe."""
+    return (res.kind == REFUSED and res.rig_status == 400 and
+            ("bad JSON" in (res.error or "") or "incomplete body" in (res.error or "")))
+
+
 def _run(box, cfg, method, path, body):
     global _inflight
     try:
         _do(box, cfg, method, path, body)
+        if method == "POST" and box and _truncated(box[0]):
+            first = box.pop()
+            _do(box, cfg, method, path, body)
+            if box and box[0].kind == REFUSED and _truncated(box[0]):
+                box[0].error = first.error
     finally:
         with _lock:
             _inflight -= 1

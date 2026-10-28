@@ -50,6 +50,7 @@ class FakePico:
         self.cmd_body = None         # None: {"ok": true, "cmd": <cmd>}
         self.raw_reply = None        # (status, bytes) to send instead of JSON
         self.delay = 0.0
+        self.truncate_cmds = 0       # refuse this many POST /cmd as the rig does when the body is late
         pico = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -74,6 +75,9 @@ class FakePico:
                 if self.command == "GET" and self.path == "/status":
                     return self._reply(200, pico.status_body)
                 if self.command == "POST" and self.path == "/cmd":
+                    if pico.truncate_cmds > 0:
+                        pico.truncate_cmds -= 1
+                        return self._reply(400, b'{"ok":false,"error":"bad JSON: syntax error in JSON"}')
                     if pico.cmd_body is not None:
                         return self._reply(pico.cmd_status, pico.cmd_body)
                     return self._reply(200, json.dumps({"ok": True, "cmd": json.loads(body)["cmd"]}).encode())
@@ -224,6 +228,26 @@ class CmdProxyTests(ProxyBase):
         self.assertEqual((method, path), ("POST", "/cmd"))
         self.assertEqual(json.loads(body), cmd)
         self.assertEqual(headers["Content-Type"], "application/json")
+
+    def test_a_cut_short_body_is_sent_again_once(self):
+        self.pico.truncate_cmds = 1
+        r = self.post({"cmd": "press", "channel": 1, "press_ms": 120})
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.json()["ok"])
+        self.assertEqual(len(self.pico.requests), 2)
+
+    def test_a_body_cut_short_twice_is_reported(self):
+        self.pico.truncate_cmds = 2
+        r = self.post({"cmd": "press", "channel": 1})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("bad JSON", r.json()["error"])
+        self.assertEqual(len(self.pico.requests), 2)
+
+    def test_a_real_refusal_is_not_sent_again(self):
+        self.pico.cmd_status = 400
+        self.pico.cmd_body = b'{"ok":false,"error":"bell 9 has no opto pin"}'
+        self.post({"cmd": "press", "channel": 9})
+        self.assertEqual(len(self.pico.requests), 1)
 
     def test_every_page_command_is_accepted(self):
         for cmd in ({"cmd": "stop"}, {"cmd": "press", "channel": 1}, {"cmd": "stress", "seed": 1},
