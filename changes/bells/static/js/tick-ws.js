@@ -1,8 +1,9 @@
 // tick-ws.js  – or inline in your template
 const TICK_WS_URL = "ws://sandsense-tower.local/ws";   // or the numeric IP
 
+// needs js/reconnect_delay.js loaded first (shared 1, 2, 4, 8, 15 s jittered delay)
 let tickSocket = null;
-let reconnectDelay = 2000;
+const tickDelay = window.ReconnectDelay.create();
 
 function connectTickSource() {
     if (tickSocket) {
@@ -13,7 +14,7 @@ function connectTickSource() {
 
     tickSocket.onopen = () => {
         console.log("Escapement tick WebSocket connected");
-        reconnectDelay = 2000;
+        tickDelay.opened();
     };
 
     tickSocket.onmessage = (event) => {
@@ -33,9 +34,9 @@ function connectTickSource() {
     };
 
     tickSocket.onclose = () => {
-        console.log("Tick WS closed – reconnecting in", reconnectDelay, "ms");
-        setTimeout(connectTickSource, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
+        const wait = tickDelay.closed();
+        console.log("Tick WS closed – reconnecting in", wait, "ms");
+        setTimeout(connectTickSource, wait);
     };
 
     tickSocket.onerror = (err) => {

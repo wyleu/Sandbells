@@ -59,3 +59,12 @@ sandmon GPS NO Lock shows as stratum 16 / leap 3), `last_seq`, `uptime_s`,
   connection, `PEER_SILENT_S` (20 s) without a frame -> reconnect.  TCP
   keepalive 10/5/3.  Backoff resets only after a connection that delivered
   frames.
+* Sandbells display (browser): every page that opens the Pico's `/ws`
+  (`farm_status.js`, `align.js`, `kiosk_bells.js`, `tick-ws.js`) waits through
+  one shared helper, `static/js/reconnect_delay.js`: 1, 2, 4, 8, 15 s (cap),
+  each cut by a random 0-30 %, and back to 1 s only after a connection has
+  stayed up 30 s.  A socket that opens and is dropped within a second does not
+  reset it (the old pages reset at `onopen`, so a Pico dropping every new
+  client was asked again every 2 s).  A Pico in its send-path backoff answers
+  `/ws` with a 503 (see the sandswing repo's `docs/link-health.md`, "Send
+  path"); the browser sees a failed connect and the same schedule applies.

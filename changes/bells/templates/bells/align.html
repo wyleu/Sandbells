@@ -39,6 +39,7 @@
 
   {% if cfg %}
   {{ cfg|json_script:"align-cfg" }}
+  <script src="{% static 'js/reconnect_delay.js' %}?v={{ git_hash }}"></script>
   <script src="{% static 'js/align.js' %}?v={{ git_hash }}"></script>
   <script>
     Align.start(JSON.parse(document.getElementById("align-cfg").textContent));

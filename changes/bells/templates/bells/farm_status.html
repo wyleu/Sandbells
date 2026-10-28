@@ -30,6 +30,7 @@
   </main>
   {% if live_events %}{% live_panel %}{% endif %}
 
+  <script src="{% static 'js/reconnect_delay.js' %}?v={{ git_hash }}"></script>
   <script src="{% static 'js/farm_status.js' %}?v={{ git_hash }}"></script>
   <script>
     FarmStatus.start({

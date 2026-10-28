@@ -29,7 +29,7 @@
 
   var CFG = { wsUrls: [], keepAliveMs: 2000, windowMs: 2000 };
   var S = {
-    sock: null, urlIx: 0, delay: 2000, connectTimer: null, keepTimer: null,
+    sock: null, urlIx: 0, rd: window.ReconnectDelay.create(), connectTimer: null, keepTimer: null,
     helloAt: 0, lastRx: 0, heardHb: 0,
     kinds: [], tower: "", gotInfo: false,
     sel: 0,                      // the head on show (1-based), active or not
@@ -469,7 +469,7 @@
     sock.onopen = function () {
       if (S.connectTimer) clearTimeout(S.connectTimer);
       S.connectTimer = null;
-      S.delay = 2000;
+      S.rd.opened();                           // reconnect_delay.js: resets only after 30 s up
       S.lastRx = Date.now();
       S.heardHb = 0;
       setLink("pill-ok", "live");
@@ -489,8 +489,7 @@
     setLink("pill-wait", "retrying…");
     S.urlIx += 1;                              // the other address (home / tower) next time
     if (document.visibilityState === "hidden") return;
-    setTimeout(connect, S.delay);
-    S.delay = Math.min(S.delay * 1.5, 15000);
+    setTimeout(connect, S.rd.closed());
   }
 
   /* ---- the rolling trace -------------------------------------------------- */
@@ -596,7 +595,7 @@
         try { if (S.sock) S.sock.close(); } catch (e) {}
         S.sock = null;
       } else {
-        S.delay = 2000;
+        S.rd.reset();
         connect();
       }
     });

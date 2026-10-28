@@ -28,13 +28,15 @@
     // if (kind === "tick") { /* clock pulse later */ }
   }
 
+  var rd = window.ReconnectDelay.create();      // reconnect_delay.js: 1, 2, 4, 8, 15 s, jittered
+
   function connectFarmWs() {
     var ws;
     try { ws = new WebSocket(KIOSK_WS); }
     catch (e) { console.log("WS construct", e); return; }
-    ws.onopen = function () { console.log("farm WS open", KIOSK_WS); };
+    ws.onopen = function () { rd.opened(); console.log("farm WS open", KIOSK_WS); };
     ws.onmessage = function (ev) { handleMsg(ev.data); };
-    ws.onclose = function () { setTimeout(connectFarmWs, 2000); };
+    ws.onclose = function () { setTimeout(connectFarmWs, rd.closed()); };
     ws.onerror = function () { try { ws.close(); } catch (e2) {} };
   }
 

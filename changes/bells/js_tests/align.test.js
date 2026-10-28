@@ -7,6 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const SRC = fs.readFileSync(path.join(__dirname, "..", "static", "js", "align.js"), "utf8");
+const RECONNECT_SRC = fs.readFileSync(path.join(__dirname, "..", "static", "js", "reconnect_delay.js"), "utf8");
 const SCHEMA = "sand.panel/v1";
 
 class Ctx {                       // canvas 2d recorder
@@ -72,6 +73,7 @@ function rig(cfg, opts) {
     clearTimeout() {}, clearInterval() {}, Date, JSON, Math, parseInt, String,
   };
   vm.createContext(sandbox);
+  vm.runInContext(RECONNECT_SRC, sandbox);       // the page loads reconnect_delay.js first
   vm.runInContext(SRC, sandbox);
   const Align = sandbox.window.Align;
   Align.start(Object.assign({ wsUrls: ["ws://home/ws", "ws://tower/ws"], keepAliveMs: 2000,
@@ -370,6 +372,21 @@ test("a lost socket retries on the other address; hidden stops the scope and clo
   r.listeners.visibilitychange();
   assert.ok(r.sockets[1].sent.some((m) => m.scope === false && m.ch === 1));
   assert.equal(r.sockets[1].readyState, 3);
+});
+
+test("a Pico that keeps dropping the page is retried more and more slowly", () => {
+  const r = rig();
+  const waits = [];
+  for (let i = 0; i < 6; i++) {
+    const s = r.sockets[r.sockets.length - 1];
+    s.open();                                           // opens, is dropped within a second
+    s.close();
+    const t = r.timers.filter((x) => x.kind === "t").pop();
+    waits.push(t.ms);
+    t.fn();
+  }
+  const exp = [1000, 2000, 4000, 8000, 15000, 15000];   // 1, 2, 4, 8, 15 s cap, jitter cuts up to 30 %
+  waits.forEach((w, i) => assert.ok(w >= exp[i] * 0.7 - 1 && w <= exp[i], `${i}: ${w}`));
 });
 
 test("frames for a head that is not on show, junk and foreign schemas are ignored", () => {

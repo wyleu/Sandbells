@@ -210,7 +210,7 @@
     if (!urls.length) return null;
     var which = 0;
     var ws = null;
-    var delay = 2000;
+    var rd = window.ReconnectDelay.create();     // reconnect_delay.js: 1, 2, 4, 8, 15 s, jittered
     var timer = null;
 
     function stopTimer() {
@@ -231,7 +231,7 @@
       ws = sock;
       sock.onopen = function () {
         opened = true;
-        delay = 2000;
+        rd.opened();                       // the delay only resets after 30 s up
         timer = setInterval(function () {
           if (sock.readyState !== 1) return;
           try { sock.send(HELLO); } catch (e) {}
@@ -254,12 +254,10 @@
         if (document.visibilityState === "hidden") return;
         if (!opened && urls.length > 1) {   // never connected: try the next address
           which = (which + 1) % urls.length;
-          setTimeout(connect, which ? 0 : delay);
-          if (!which) delay = Math.min(delay * 1.5, 15000);
+          setTimeout(connect, which ? 0 : rd.closed());
           return;
         }
-        setTimeout(connect, delay);
-        delay = Math.min(delay * 1.5, 15000);
+        setTimeout(connect, rd.closed());
       };
     }
 
@@ -271,7 +269,7 @@
         } catch (e) {}
         ws = null;
       } else if (document.visibilityState === "visible") {
-        delay = 2000;
+        rd.reset();
         connect();
       }
     });
