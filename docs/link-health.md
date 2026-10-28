@@ -69,6 +69,16 @@ sandmon GPS NO Lock shows as stratum 16 / leap 3), `last_seq`, `uptime_s`,
   `/ws` with a 503 (see the sandswing repo's `docs/link-health.md`, "Send
   path"); the browser sees a failed connect and the same schedule applies.
 
+* Sandbells home page, bell movement: the small diagonal movement of `#bell-circle`
+  (`bell_motion.js`) is driven by Sandbells' own event feed, not by a socket to the
+  Pico.  `bell_feed.js` polls `/events/api/since/?type=&limit=50&after=<id>` every
+  `LIVE_POLL_MS` (1 s, as the farm page's live list does), starts from the newest id
+  so stored events do not replay, and moves once per new stroke or trigger event
+  (at most 3 movements per answer, 350 ms apart).  Failed polls are ignored and
+  retried on the `reconnect_delay.js` schedule; a hidden tab does not poll.
+  `kiosk_bells.js` still opens one `/ws` (hard-coded there) but only to pass older
+  `{bell, u, amp}` messages to `BellBand.setTape`.
+
 ## Frames the ingest cannot decode
 
 A frame that is not valid UTF-8 or not valid JSON (seen: a ~1.4 kB sandswing

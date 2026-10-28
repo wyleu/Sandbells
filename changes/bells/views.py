@@ -41,6 +41,7 @@ from bells.app_settings import display_settings
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
 from bells.status_schema import wrap_document
 from events.constants import CONCENTRATOR_FAMILY as EVENTS_CONCENTRATOR_FAMILY
+from events import constants as EVENTS
 
 def home(request, number=6):
     # Render the iframe container
@@ -84,6 +85,13 @@ def home(request, number=6):
         'count': len(to_patterns),
         }
     context["display"] = display_settings()
+    # bell_feed.js polls the farm page's endpoint at the farm page's rate (bell movement only)
+    context["feed"] = {
+        "url": reverse("events:api_since"),
+        "poll_ms": EVENTS.LIVE_POLL_MS,
+        "limit": EVENTS.LIVE_LIMIT_DEFAULT,
+        "timeout_ms": EVENTS.LIVE_FETCH_TIMEOUT_MS,
+    }
 
     return render(request, 'bells/home.html', context)
 

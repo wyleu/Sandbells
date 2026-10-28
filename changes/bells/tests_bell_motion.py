@@ -28,10 +28,10 @@ class BellMotionPageTests(TestCase):
         self.assertLess(script[0], kiosk[0])
         self.assertIn('id="bell-circle"', body)
 
-    def test_kiosk_script_hands_every_frame_to_the_movement(self):
+    def test_kiosk_script_builds_the_movement_once_for_the_event_feed(self):
+        # the movement is driven by bell_feed.js (see tests_bell_feed.py), not by a WebSocket frame
         src = (JS / "kiosk_bells.js").read_text()
-        self.assertIn("BellMotion.create(el)", src)
-        self.assertEqual(src.count("moveHost(m)"), 1)
+        self.assertEqual(src.count("BellMotion.create(el)"), 1)
 
 
 class BellMotionCssTests(SimpleTestCase):
