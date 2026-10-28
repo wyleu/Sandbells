@@ -1,5 +1,6 @@
 (function () {
   var HOST = null;
+  var moveHost = null;             // bell_motion.js: a small diagonal movement per stroke or trigger
   var KIOSK_WS = "ws://192.168.0.198/ws";  // sandswing jabber
   // var KIOSK_WS = "ws://192.168.0.154/ws";  // sandsense ticks
 
@@ -7,6 +8,7 @@
     var el = document.getElementById("bell-circle");
     if (!el || !window.BellBand) return;
     HOST = el;
+    moveHost = window.BellMotion.create(el);
     BellBand.draw(el, {
       width: 250,
       height: 250,
@@ -21,6 +23,7 @@
     var m;
     try { m = JSON.parse(raw); } catch (e) { return; }
     if (!m || !HOST || !window.BellBand) return;
+    moveHost(m);
     var kind = m.type || (m.bell != null ? "bell" : (m.tick != null ? "tick" : ""));
     if (kind === "bell") {
       BellBand.setTape(HOST, m.bell, m.u, m.amp != null ? m.amp : 1);
