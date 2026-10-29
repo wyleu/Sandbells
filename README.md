@@ -207,6 +207,7 @@ cat /run/sandbells-fan.pct
 - **systemd/** in this repository is the only place unit files are maintained.
 - **install-steps** copy those units into `/etc/systemd/system` and enable them. Prefer `install -m 644` from the repo path.
 - Do not rely on long-term hand edits under `/etc/systemd/system`.
+- After a `git pull` that changes **systemd/**, run `./sandbells_sync_units.sh --dry-run`, then `./sandbells_sync_units.sh`: it installs the changed units, runs `daemon-reload` and restarts the changed ones that are running (`sandbells_reset.sh` runs it too).
 
 Kiosk unit: `After=lightdm.service` and `WantedBy=graphical.target`. Do not use `After=graphical.target` on the kiosk unit (that deadlocks with `WantedBy=graphical.target`).
 

@@ -11,6 +11,7 @@
 #   - which directory holds manage.py
 #   - which virtualenv to use
 #   - collectstatic --noinput
+#   - copy changed systemd/ unit files into /etc/systemd/system
 #   - restart nginx, gunicorn, and the Luakit kiosk
 # This script does that in one go from any cwd.
 #
@@ -25,6 +26,11 @@
 #   ./sandbells_reset.sh
 #   SANDBELLS_ROOT=/other/path ./sandbells_reset.sh
 #
+# Unit files: sandbells_sync_units.sh runs first, so the restarts below use
+# the repo's systemd/ units.  It restarts other changed, active units itself
+# (e.g. sandbells-ingest) but leaves $RESTART_UNITS to the restart here, so
+# nothing is restarted twice.
+#
 # Needs sudo for systemctl. Does not pull git, migrate, or reboot.
 # =============================================================================
 
@@ -34,6 +40,8 @@ ROOT="${SANDBELLS_ROOT:-${HOME}/Code/Sandbells}"
 APP="${SANDBELLS_APP:-${ROOT}/changes}"
 VENV="${SANDBELLS_VENV:-${ROOT}/Bellvirtenv}"
 PY="${VENV}/bin/python"
+SYNC_UNITS="${ROOT}/sandbells_sync_units.sh"
+RESTART_UNITS="nginx gunicorn sandbells-kiosk"
 LOGTAG="sandbells-reset"
 
 log() { echo "[$LOGTAG] $*"; }
@@ -64,9 +72,14 @@ log "collectstatic"
 cd "$APP"
 "$PY" manage.py collectstatic --noinput
 
-log "restart nginx gunicorn sandbells-kiosk"
-sudo systemctl restart nginx gunicorn sandbells-kiosk
+log "sync systemd units"
+SANDBELLS_ROOT="$ROOT" "$SYNC_UNITS" --skip-restart "$RESTART_UNITS"
+
+log "restart $RESTART_UNITS"
+# shellcheck disable=SC2086  # a list of unit names
+sudo systemctl restart $RESTART_UNITS
 
 log "status"
-systemctl is-active nginx gunicorn sandbells-kiosk | paste -sd' ' -
+# shellcheck disable=SC2086
+systemctl is-active $RESTART_UNITS | paste -sd' ' -
 log "done"
