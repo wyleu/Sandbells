@@ -6,6 +6,7 @@ app_name = "events"
 
 urlpatterns = [
     path("days/", views.days_page, name="days"),
+    path("strokes/", views.strokes_page, name="strokes"),
     path("ring/<str:src>/<str:boot_id>/<int:first_seq>/", views.ring_page,
          name="ring"),
     path("api/since/", api.since, name="api_since"),

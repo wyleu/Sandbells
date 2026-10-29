@@ -138,18 +138,27 @@ FARM = [{"id": "sandswing", "name": "sandswing", "family": "sandswing",
 
 
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)
-class FarmPagePanelTests(TestCase):
-    def test_panel_only_on_sandswing_page(self, _):
-        r = self.client.get(reverse("farm_status_index", args=[0]))
-        self.assertContains(r, 'id="live-events"')
-        self.assertContains(r, 'class="with-live"')
+class StrokesPagePanelTests(TestCase):
+    """The live list moved off the sandswing farm page onto the Strokes page."""
+    def test_panel_on_the_strokes_page_not_the_farm_pages(self, _):
+        r = self.client.get(reverse("events:strokes"))
+        self.assertContains(r, 'id="live-events"', count=1)
         self.assertContains(r, 'data-url="%s"' % reverse("events:api_since"))
         self.assertContains(r, 'data-first="%d"' % C.LIVE_FIRST_LOAD)
-        self.assertContains(r, "FarmStatus.start(")              # existing page intact
-        r = self.client.get(reverse("farm_status_index", args=[1]))
-        self.assertNotContains(r, "live-events")
-        self.assertNotContains(r, "with-live")
-        self.assertContains(r, "FarmStatus.start(")
+        self.assertNotContains(r, "{#")
+        for j in range(len(FARM)):
+            r = self.client.get(reverse("farm_status_index", args=[j]))
+            self.assertNotContains(r, "live-events")
+            self.assertNotContains(r, "with-live")
+            self.assertContains(r, "FarmStatus.start(")          # the device page itself intact
+
+    def test_beat_column_has_its_lead_lag_scale(self, _):
+        r = self.client.get(reverse("events:strokes"))
+        self.assertContains(r, 'class="beat-scale"', count=1)
+        self.assertContains(r, "early · lead")
+        self.assertContains(r, "late · lag")
+        self.assertContains(r, "on the beat")
+        self.assertContains(r, 'bar.className = "beat-bar"')    # script inlined
 
 
 NODE = shutil.which("node")
@@ -158,9 +167,9 @@ NODE_TIMEOUT_S = 60
 
 
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)
-class FarmPageClockTests(TestCase):
+class StrokesPageClockTests(TestCase):
     def test_clock_in_live_panel_only(self, _):
-        r = self.client.get(reverse("farm_status_index", args=[0]))
+        r = self.client.get(reverse("events:strokes"))
         self.assertContains(r, 'id="live-clock" data-tz="%s"' % C.DISPLAY_TZ_NAME)
         for el in ('id="clock-hms"', 'id="clock-zone"', 'id="clock-segs"', 'id="clock-next"'):
             self.assertContains(r, el)
@@ -170,8 +179,9 @@ class FarmPageClockTests(TestCase):
         panel = body.index('id="live-events"')
         self.assertLess(panel, body.index('id="live-clock"'))
         self.assertLess(body.index('id="live-clock"'), body.index('id="live-table"'))
-        r = self.client.get(reverse("farm_status_index", args=[1]))
-        self.assertNotContains(r, "live-clock")
+        for j in range(len(FARM)):
+            r = self.client.get(reverse("farm_status_index", args=[j]))
+            self.assertNotContains(r, "live-clock")
 
 
 @skipUnless(NODE, "node not installed")
@@ -183,9 +193,9 @@ class ClockJsTests(SimpleTestCase):
 
 
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)
-class FarmPageLinkWidgetTests(TestCase):
+class StrokesPageLinkWidgetTests(TestCase):
     def test_widget_in_live_panel_with_all_event_types(self, _):
-        r = self.client.get(reverse("farm_status_index", args=[0]))
+        r = self.client.get(reverse("events:strokes"))
         self.assertContains(r, 'id="link-widget"')
         self.assertContains(r, 'data-url="%s"' % reverse("events:api_link"))
         self.assertContains(r, "link_widget.js -- page 3")       # script inlined
@@ -194,7 +204,7 @@ class FarmPageLinkWidgetTests(TestCase):
         self.assertContains(r, 'class="lw-kind"', count=4)      # ch 1-4 kind words
         self.assertContains(r, 'id="lw-chans"')                 # fault / trigger why
         self.assertContains(r, 'e.type === "channel"')          # survey rows in the list
-        r = self.client.get(reverse("farm_status_index", args=[1]))
+        r = self.client.get(reverse("farm_status_index", args=[0]))
         self.assertNotContains(r, "link-widget")
 
 

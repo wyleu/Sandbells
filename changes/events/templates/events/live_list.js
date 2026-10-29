@@ -1,6 +1,7 @@
 /* live_list.js -- poll /events/api/since/ (DB, not the Pico) and show the
  * newest strokes first.  Vanilla JS, no libraries.  Included inline by
- * events/live_panel.html so no collectstatic is needed. */
+ * events/live_panel.html (the Strokes page) so no collectstatic is needed.
+ * It never asks a device how it is: the stored events are all it uses. */
 (function () {
   "use strict";
   var box = document.getElementById("live-events");
@@ -11,7 +12,7 @@
     poll: +d.poll, retryMax: +d.retryMax, failsWarn: +d.failsWarn,
     idle: +d.idle, ringGap: +d.ringGap, timeout: +d.timeout, tz: d.tz
   };
-  var PERCENT = 100;
+  var PERCENT = 100, CENTRE = 0.5;       // beat.js: pos 0.5 is on the beat
   var MS_PER_S = 1000, S_PER_MIN = 60, NEW_FLASH_MS = 2000;
   var tbody = document.getElementById("live-rows");
   var lastId = null;        // null until the first answer
@@ -41,9 +42,14 @@
     ch.className = "ch";
     ch.textContent = "ch" + e.ch;
     who.appendChild(ch);
-    var bt = cell(tr, null, "beat");               // gold mark: early left, late right
+    var bt = cell(tr, null, "beat");               // gold mark: early (lead) left, late (lag) right
     var hit = beat ? beat.observe(e.src + "/" + e.boot_id + "/" + e.ch, e.interval_ms) : null;
     if (hit) {
+      var bar = document.createElement("span");    // from the centre line to the mark
+      bar.className = "beat-bar";
+      bar.style.left = (Math.min(hit.pos, CENTRE) * PERCENT).toFixed(1) + "%";
+      bar.style.width = (Math.abs(hit.pos - CENTRE) * PERCENT).toFixed(1) + "%";
+      bt.appendChild(bar);
       var mark = document.createElement("span");
       mark.className = "beat-mark";
       mark.style.left = (hit.pos * PERCENT).toFixed(1) + "%";

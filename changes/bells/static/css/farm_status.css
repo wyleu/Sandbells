@@ -176,6 +176,3 @@ button.act {
 }
 button.act:hover { background: #3b3223; border-color: #a58a4a; }
 button.act:disabled { opacity: 0.6; cursor: default; }
-
-/* page 3 already has the big clock in its live panel */
-body.with-live .mini-clock { display: none; }

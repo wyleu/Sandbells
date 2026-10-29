@@ -2,6 +2,7 @@
 
   /events/days/[?date=YYYY-MM-DD]          days with strokes, rings of one day
   /events/ring/<src>/<boot_id>/<seq>/      strokes of one ring (table)
+  /events/strokes/                         the live stroke list, full width
 """
 
 import time
@@ -18,6 +19,15 @@ from .queries import ring_from, ring_json, rings_starting_between, stroke_days
 
 def _now_ms():
     return int(time.time() * C.MS_PER_S)
+
+
+def strokes_page(request):
+    """The live stroke list on a page of its own, the whole screen wide, so the
+    beat column (early / lead left, late / lag right) has room.  Everything on
+    it comes from Sandbells: /events/api/since/ (the stored stroke events) and
+    /events/api/link/ (the ingest's tmpfs file).  Nothing here asks a device
+    for its /status, and there is no socket to a Pico."""
+    return render(request, "events/strokes.html")
 
 
 def days_page(request):

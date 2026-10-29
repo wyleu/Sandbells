@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{% static 'css/farm_status.css' %}?v={{ git_hash }}">
   {% include "events/menu_style.html" %}
 </head>
-<body{% if live_events %} class="with-live"{% endif %}>
+<body>
   <header id="farm-header">
     <div class="topbar topline">
       {% top_menu current=index %}
@@ -28,7 +28,6 @@
   <main id="farm-main">
     <p id="farm-wait">Loading {{ inst.name }}…</p>
   </main>
-  {% if live_events %}{% live_panel %}{% endif %}
 
   <script src="{% static 'js/reconnect_delay.js' %}?v={{ git_hash }}"></script>
   <script src="{% static 'js/farm_status.js' %}?v={{ git_hash }}"></script>

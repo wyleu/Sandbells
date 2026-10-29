@@ -191,7 +191,7 @@ DAY_LABEL_FORMAT = "%a %d %b %Y"    # "Thu 22 Oct 2026"
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 
-# ---- live list (farm page 3) ----------------------------------------------
+# ---- live list (the Strokes page, /events/strokes/) ------------------------
 TIME_OK_ACC = ACC_MS                        # marker bright only for ms ...
 TIME_OK_SYNC = (SYNC_SYNCED, SYNC_HELD)     # ... and a locked mapping
 LIVE_PREV_SEQ_SPAN = 1000      # look back this many seqs for a ch's last stroke

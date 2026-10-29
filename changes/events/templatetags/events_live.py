@@ -1,4 +1,4 @@
-"""{% live_panel %} -- the live stroke list panel for the sandswing farm page."""
+"""{% live_panel %} -- the live stroke list panel of the Strokes page (/events/strokes/)."""
 
 from django import template
 from django.urls import reverse
@@ -31,8 +31,9 @@ def live_panel():
 @register.inclusion_tag("events/top_menu.html")
 def top_menu(current=None):
     """{% top_menu current=<farm index> %} -- the shared left side of every top
-    line: Sandbells, one button per farm device, sandheads (when the farm has a concentrator), Rings by day.  current is the
-    farm page index, or "days" on the events pages."""
+    line: Sandbells, one button per farm device, sandheads and Strokes (when the farm has a
+    concentrator), Rings by day.  current is the farm page index, or "heads", "strokes", or
+    "days" on those pages."""
     from bells.views import load_farm_instances      # here: bells imports events
     instances = load_farm_instances()
     devices = [{"index": i, "name": d["name"], "on": current == i}
@@ -43,4 +44,7 @@ def top_menu(current=None):
             "days_url": reverse("events:days"),
             # the sandheads tab, for the first concentrator (none: no button)
             "heads_url": "" if conc is None else reverse("farm_heads_index", args=[conc]),
-            "heads_on": current == "heads"}
+            "heads_on": current == "heads",
+            # the Strokes page: the live stroke list, full width (none: no button)
+            "strokes_url": "" if conc is None else reverse("events:strokes"),
+            "strokes_on": current == "strokes"}

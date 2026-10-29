@@ -10,7 +10,7 @@
 | Stored event | `sand.event/v1` type `channel`, `{ch, kind, prev_kind, why}`. Sent only when a channel's kind changes (so once per channel at boot, `prev_kind: "unknown"`), kept for replay like `link` events. |
 
 ## Sandbells
-- `channel` is a known event type (`TYPE_CHANNEL`). It is stored, and shown in page 3's live list as `sandswing · channel ch 2 fault (was empty): …`, with faults in red. It is never counted as a stroke, because stroke queries filter `type="stroke"`.
+- `channel` is a known event type (`TYPE_CHANNEL`). It is stored, and shown in the Strokes page's live list as `sandswing · channel ch 2 fault (was empty): …`, with faults in red. It is never counted as a stroke, because stroke queries filter `type="stroke"`.
 - In the page 3 link widget:
   - the kind word under each ch 1–4 LED comes from `body.chan`, or `panel_state` on older firmware;
   - a line per fault (red) or trigger (violet) channel, e.g. `ch 2 FAULT: Orange shorted to ground … (l50 0.00 < 0.20)`.

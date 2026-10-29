@@ -40,7 +40,6 @@ from bells.functions import (
 from bells.app_settings import display_settings
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
 from bells.status_schema import wrap_document
-from events.constants import CONCENTRATOR_FAMILY as EVENTS_CONCENTRATOR_FAMILY
 from events import constants as EVENTS
 
 def home(request, number=6):
@@ -160,7 +159,6 @@ def farm_status(request, index=0):
         "next": (index + 1) % len(instances),
         "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
         "host_label": farm_host_label(inst, socket.gethostname().split(".")[0]),
-        "live_events": inst.get("family") == EVENTS_CONCENTRATOR_FAMILY,
         "ws_urls_json": mark_safe(json.dumps(device_urls(inst, "ws")).replace("</", "<\\/")),
     })
 
