@@ -230,6 +230,18 @@ _LAST_GOOD = {}          # device id -> the status url that answered last
 STATUS_TRY_TIMEOUT_S = 3
 
 
+def _status_query(request):
+    """sandswing /status deltas: pass ?since=<status_version>&boot=<boot_id>
+    on to the device, checked (digits; hex).  Anything else: no query."""
+    since = (request.GET.get("since") or "").strip()
+    boot = (request.GET.get("boot") or "").strip()
+    if not since.isdigit() or len(since) > 10:
+        return ""
+    if boot and (len(boot) > 16 or any(c not in "0123456789abcdef" for c in boot)):
+        return ""
+    return "since=%s&boot=%s" % (since, boot)
+
+
 def farm_device_status(request):
     url = (request.GET.get("url") or "").strip()
     owner = next((i for i in load_farm_instances()
@@ -242,9 +254,10 @@ def farm_device_status(request):
         urls.remove(good)
         urls.insert(0, good)
     err = "no answer"
+    query = _status_query(request)
     for u in urls:
         try:
-            with urlopen(u, timeout=8 if len(urls) == 1 else STATUS_TRY_TIMEOUT_S) as resp:
+            with urlopen(u + ("&" if "?" in u else "?") + query if query else u, timeout=8 if len(urls) == 1 else STATUS_TRY_TIMEOUT_S) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
             _LAST_GOOD[owner["id"]] = u
             return JsonResponse(wrap_document(data))

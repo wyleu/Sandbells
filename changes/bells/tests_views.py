@@ -82,3 +82,38 @@ class FarmHeldStatusTests(SimpleTestCase):
         doc = json.loads(r.content)
         self.assertEqual((doc["held"], doc["tower"]), ("ringing", "active"))
         self.assertNotIn("error", doc)
+
+
+class FarmStatusDeltaQueryTests(SimpleTestCase):
+    """sandswing /status deltas: the proxy passes ?since=&boot= on to the
+    device (checked), and nothing else."""
+    HOME = "http://192.168.0.81/status"
+
+    def fetch(self, params):
+        import io
+        from unittest import mock
+        from django.test import RequestFactory
+        from bells import views
+        calls = []
+
+        def fake_open(url, timeout=0):
+            calls.append(url)
+            return io.BytesIO(b'{"schema": "sand.status/v1", "delta": true, "since": 4}')
+
+        entry = {"id": "sandswing", "family": "sandswing", "status_url": self.HOME}
+        views._LAST_GOOD.clear()
+        with mock.patch.object(views, "load_farm_instances", return_value=[entry]), \
+                mock.patch.object(views, "urlopen", side_effect=fake_open):
+            r = views.farm_device_status(RequestFactory().get("/", dict(params, url=self.HOME)))
+        self.assertEqual(r.status_code, 200)
+        return calls
+
+    def test_since_and_boot_are_passed_on(self):
+        self.assertEqual(self.fetch({"since": "4", "boot": "b007"}),
+                         [self.HOME + "?since=4&boot=b007"])
+        self.assertEqual(self.fetch({"since": "0", "boot": ""}), [self.HOME + "?since=0&boot="])
+
+    def test_anything_odd_is_dropped(self):
+        self.assertEqual(self.fetch({}), [self.HOME])
+        self.assertEqual(self.fetch({"since": "4;rm", "boot": "b007"}), [self.HOME])
+        self.assertEqual(self.fetch({"since": "4", "boot": "../x"}), [self.HOME])

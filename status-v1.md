@@ -106,6 +106,29 @@ The farm page keeps the last full document on screen and says "Ringing
 (active): status paused"; it is not offline.  When the tower is inactive the
 next poll gets the full document again.
 
+`held` can also say `again` (this poller asked too often), `crowd` (too many
+pollers), `refull` (plain /status again too soon) or `nomem` (the Pico is
+short of memory): the page keeps the last full document the same way.
+
+### Deltas (sandswing)
+
+`GET /status?since=<status_version>&boot=<boot_id>`: a sandswing answers with
+only what changed since that version:
+
+```json
+{"schema": "sand.status/v1", "delta": true, "since": 4, "status_version": 5,
+ "boot_id": "b007", "full": false, "order": ["network", "time", "heads", "tower"],
+ "head": {...top-level fields...}, "sections": [...changed only...], "removed": ["..."]}
+```
+
+`since=0`, another boot or an unknown version gets the whole document
+(`"full": true`, with `status_version` and `boot_id`, without `parts`).  The
+hub proxy passes `since` (digits) and `boot` (hex) on; the farm page keeps
+the last whole document, merges each delta into it (head fields over the
+top, changed sections replaced by id, `order` gives the sections and their
+order), and asks for the whole document again when a delta does not follow
+on from what it has (a Pico restart changes `boot_id`).
+
 ### Chatter
 
 On a device detail page:

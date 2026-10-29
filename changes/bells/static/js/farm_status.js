@@ -133,6 +133,30 @@
     return "/api/system-status/";
   }
 
+  /* sandswing /status deltas: the Pico answers ?since=<status_version>&boot=
+   * <boot_id> with only what changed (head fields, changed sections, the
+   * section order).  Merge one into the last full document; null if it does
+   * not follow on from it (another boot, a missed version): ask for a full. */
+  function mergeStatus(base, d) {
+    if (!base || !d || !d.delta || base.boot_id !== d.boot_id ||
+        base.status_version !== d.since) {
+      return null;
+    }
+    var out = {};
+    var k;
+    for (k in base) out[k] = base[k];
+    if (d.head) {
+      for (k in d.head) out[k] = d.head[k];
+    }
+    var byId = {};
+    (base.sections || []).forEach(function (s) { byId[s.id] = s; });
+    (d.sections || []).forEach(function (s) { byId[s.id] = s; });
+    out.sections = (d.order || []).filter(function (id) { return byId[id]; })
+      .map(function (id) { return byId[id]; });
+    out.status_version = d.status_version;
+    return out;
+  }
+
   function startPoll(cfg) {
     var interval = cfg.interval || 15000;
     if (interval < 3000) interval = 3000;
@@ -140,6 +164,16 @@
     var url = statusFetchUrl(cfg);
     var timer = null;
     var lastDoc = null;
+    var refetched = false;
+
+    function pollUrl() {
+      // via the farm proxy only; a device that ignores the query answers in full
+      if (!cfg.statusUrl) return url;
+      var v = lastDoc && lastDoc.status_version;
+      var b = lastDoc && lastDoc.boot_id;
+      return url + "&since=" + (v ? encodeURIComponent(v) : "0") +
+        "&boot=" + (b ? encodeURIComponent(b) : "");
+    }
 
     function setStale(msg) {
       setLevel($("farm-level"), "warn");
@@ -151,14 +185,15 @@
     function setHeld(doc) {
       setLevel($("farm-level"), doc.level || "ok");
       if ($("farm-summary")) {
-        $("farm-summary").textContent = "Ringing (" + (doc.tower || doc.held) +
-          "): status paused, showing the last full status";
+        $("farm-summary").textContent = doc.held === "ringing"
+          ? "Ringing (" + (doc.tower || doc.held) + "): status paused, showing the last full status"
+          : "Status paused (" + doc.held + "), showing the last full status";
       }
     }
 
     function tick() {
       if (document.visibilityState === "hidden") return;
-      fetch(url, { cache: "no-store" })
+      fetch(pollUrl(), { cache: "no-store" })
         .then(function (r) {
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.json();
@@ -176,6 +211,21 @@
             render(data);
             return;
           }
+          if (data && data.delta) {
+            var merged = mergeStatus(lastDoc, data);
+            if (!merged) {
+              // does not follow on (the Pico restarted, or a reply was
+              // lost): forget the version, ask for the whole document once
+              if (lastDoc) lastDoc.status_version = null;
+              if (!refetched) {
+                refetched = true;
+                tick();
+              }
+              return;
+            }
+            data = merged;
+          }
+          refetched = false;
           lastDoc = data;
           render(data);
         })
@@ -297,6 +347,7 @@
   }
 
   window.FarmStatus = {
+    merge: mergeStatus,
     start: function (cfg) {
       cfg = cfg || {};
       CFG = cfg;
