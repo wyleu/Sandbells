@@ -89,6 +89,23 @@ Each device serves **one** document:
 
 Hub proxy stays `GET /api/farm/device-status/?url=…` and may only fetch URLs listed in the farm registry.
 
+### Held (sandswing while the tower rings)
+
+While its tower is `active` or `ringing_down`, sandswing answers `/status`
+with **200** and a tiny v1 document (under 512 B, `Retry-After: 15`) instead of
+the full one, so stroke events have the link to themselves:
+
+```json
+{"schema": "sand.status/v1", "family": "sandswing", "held": "ringing",
+ "tower": "active", "retry_after_s": 15, "level": "ok",
+ "summary": "Ringing (active): full status paused so strokes have the link",
+ "sections": [{"id": "tower", "title": "Tower", "items": [...]}]}
+```
+
+The farm page keeps the last full document on screen and says "Ringing
+(active): status paused"; it is not offline.  When the tower is inactive the
+next poll gets the full document again.
+
 ### Chatter
 
 On a device detail page:

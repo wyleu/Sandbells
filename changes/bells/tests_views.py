@@ -45,3 +45,40 @@ class FarmAltAddressTests(SimpleTestCase):
             self.assertEqual(r.status_code, 200)
             r = views.farm_device_status(RequestFactory().get("/", {"url": "http://1.2.3.4/status"}))
             self.assertEqual(r.status_code, 400)
+
+
+class FarmHeldStatusTests(SimpleTestCase):
+    """A sandswing that is ringing answers /status 200 with a tiny held
+    sand.status/v1 document (sandswing StatusGate).  The proxy passes it on
+    as it is: one request, no try at the other address, not a 504."""
+    HOME, TOWER = "http://192.168.0.81/status", "http://10.42.0.81/status"
+
+    def test_a_held_document_is_passed_on_from_the_first_address(self):
+        import io
+        import json
+        from unittest import mock
+        from django.test import RequestFactory
+        from bells import views
+
+        held = {"schema": "sand.status/v1", "family": "sandswing", "held": "ringing",
+                "tower": "active", "retry_after_s": 15, "level": "ok",
+                "summary": "Ringing (active): full status paused so strokes have the link",
+                "sections": [{"id": "tower", "title": "Tower", "items": [
+                    {"key": "tower", "label": "Tower", "value": "active", "level": "ok"}]}]}
+        calls = []
+
+        def fake_open(url, timeout=0):
+            calls.append(url)
+            return io.BytesIO(json.dumps(held).encode())
+
+        entry = {"id": "sandswing", "family": "sandswing", "status_url": self.HOME,
+                 "alt_status_urls": [self.TOWER]}
+        views._LAST_GOOD.clear()
+        with mock.patch.object(views, "load_farm_instances", return_value=[entry]), \
+                mock.patch.object(views, "urlopen", side_effect=fake_open):
+            r = views.farm_device_status(RequestFactory().get("/", {"url": self.HOME}))
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(calls, [self.HOME])
+        doc = json.loads(r.content)
+        self.assertEqual((doc["held"], doc["tower"]), ("ringing", "active"))
+        self.assertNotIn("error", doc)

@@ -148,6 +148,14 @@
       }
     }
 
+    function setHeld(doc) {
+      setLevel($("farm-level"), doc.level || "ok");
+      if ($("farm-summary")) {
+        $("farm-summary").textContent = "Ringing (" + (doc.tower || doc.held) +
+          "): status paused, showing the last full status";
+      }
+    }
+
     function tick() {
       if (document.visibilityState === "hidden") return;
       fetch(url, { cache: "no-store" })
@@ -157,6 +165,17 @@
         })
         .then(function (data) {
           if (data && data.error) throw new Error(data.error);
+          if (data && data.held) {
+            // the Pico is ringing (sandswing StatusGate): it answers with a
+            // tiny held document so strokes have the link.  Not offline:
+            // keep the last full status on screen and say why it is paused.
+            if (lastDoc) {
+              setHeld(data);
+              return;
+            }
+            render(data);
+            return;
+          }
           lastDoc = data;
           render(data);
         })
