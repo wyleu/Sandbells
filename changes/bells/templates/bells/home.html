@@ -9,7 +9,7 @@ SANDBELLS
     <div id="clock-wrap">
       {% include "bells/svg_data.html" %}
     </div>
-    <div id="bell-circle" data-feed-url="{{ feed.url }}" data-feed-poll-ms="{{ feed.poll_ms }}" data-feed-limit="{{ feed.limit }}" data-feed-timeout-ms="{{ feed.timeout_ms }}" data-quiver-ms="{{ feed.quiver_ms }}" data-quiver-px="{{ feed.quiver_px }}"></div>
+    <div id="bell-circle" data-feed-url="{{ feed.url }}" data-feed-poll-ms="{{ feed.poll_ms }}" data-feed-limit="{{ feed.limit }}" data-feed-timeout-ms="{{ feed.timeout_ms }}" data-strike-gap-ms="{{ feed.strike_gap_ms }}"></div>
   </div>
   {% include "bells/iframe.html" %}
   {% include "bells/changes.html" %}

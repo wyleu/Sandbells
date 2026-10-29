@@ -1,24 +1,28 @@
 (function () {
   var HOST = null;
-  // The small diagonal movement of the bell that struck (bell_motion.js) is driven by Sandbells' own event feed
+  // The struck bell's clapper movement (bell_motion.js -> strike, the pad press movement) is driven by Sandbells' own event feed
   // (bell_feed.js polling /events/api/since/), not by this WebSocket.
   // This WebSocket is kept only for the older {bell, u, amp} tape messages -> BellBand.setTape;
   // nothing the current sandswing sends is such a message, and the events feed does not carry them.
   var KIOSK_WS = "ws://192.168.0.198/ws";  // sandtest rig; the sandswing concentrator is 192.168.0.81
   // var KIOSK_WS = "ws://192.168.0.154/ws";  // sandsense ticks
 
+  // the press movement of one bell's clapper: a pad click, and each stroke from the event feed
+  function strike(el, bell) {
+    BellBand.settleDemo(el, bell);
+  }
+
   function startFeed(el) {
     var d = el.dataset;              // set by bells/home.html from events.constants
     if (!d.feedUrl || !window.BellFeed || !window.BellMotion) return;
-    var look = { ms: +d.quiverMs, px: +d.quiverPx };   // BELL_QUIVER_MS / _PX
     window.BellFeed.create({
       url: d.feedUrl,
       pollMs: +d.feedPollMs,         // the farm page's live list poll (LIVE_POLL_MS)
       limit: +d.feedLimit,           // events per answer (LIVE_LIMIT_DEFAULT)
       timeoutMs: +d.feedTimeoutMs,   // LIVE_FETCH_TIMEOUT_MS
-      moveMs: look.ms,               // one movement, then the next
+      moveMs: +d.strikeGapMs,        // strokes in one answer start this far apart (BELL_STRIKE_GAP_MS)
       accept: window.BellMotion.isBellStroke,
-      move: window.BellMotion.create(el, look),
+      move: window.BellMotion.create(el, function (bell) { strike(el, bell); }),
       rd: window.ReconnectDelay.create()   // reconnect_delay.js: the delay after a failed poll
     }).start();
   }
@@ -33,7 +37,7 @@
       height: 250,
       bells: [1, 2, 3, 4, 5, 6, 7, 8],
       onPadClick: function (bell) {
-        BellBand.settleDemo(el, bell);
+        strike(el, bell);
       }
     });
   }

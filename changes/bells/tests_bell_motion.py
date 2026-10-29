@@ -1,20 +1,17 @@
-"""The main bell page (home, kiosk_bells.js + #bell-circle) moves the ONE bell that struck a few
-px diagonally when a stroke or trigger event with a bell number arrives (static/js/bell_motion.js
-+ css/bell_motion.css); the rest of the circle stays still.  The event rule, the choice of bell
-and the restart are tested in js_tests/bell_motion.test.js (run by AlignJsTests / PowerJsTests
-with the rest of js_tests); here: the page loads both files cache-busted, the script before
-kiosk_bells.js, the length and distance come from events.constants only, and the CSS keeps to
-the cheap kind of animation."""
+"""The main bell page (home, kiosk_bells.js + #bell-circle): a stroke or trigger event with a
+bell number swings THAT bell's coloured clapper with the same movement as pressing its pad
+(BellBand.settleDemo, through kiosk_bells.js strike()); the bell, the other bells and the circle
+stay still.  The event rule, the choice of bell and the press movement are tested in
+js_tests/bell_motion.test.js (run by AlignJsTests / PowerJsTests with the rest of js_tests);
+here: the page loads the script cache-busted before kiosk_bells.js, the feed and the pad press
+share one path that only draws, and the old whole-bell movement (bell_motion.css) is gone."""
 import re
 from pathlib import Path
 
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from events import constants as C
-
 HERE = Path(__file__).resolve().parent
-CSS = HERE / "static" / "css" / "bell_motion.css"
 JS = HERE / "static" / "js"
 
 
@@ -22,45 +19,42 @@ def positions(body, path):
     return [m.start() for m in re.finditer(r'%s\?v=[0-9a-z]+"' % re.escape(path), body)]
 
 
+def code(name):
+    return (JS / name).read_text().split("*/", 1)[-1]
+
+
 class BellMotionPageTests(TestCase):
-    def test_home_loads_style_and_script_cache_busted_before_kiosk_bells(self):
+    def test_home_loads_the_script_cache_busted_before_kiosk_bells_and_no_motion_css(self):
         body = self.client.get(reverse("home")).content.decode()
-        self.assertEqual(len(positions(body, "css/bell_motion.css")), 1)
         script = positions(body, "js/bell_motion.js")
         kiosk = positions(body, "js/kiosk_bells.js")
         self.assertEqual((len(script), len(kiosk)), (1, 1))
         self.assertLess(script[0], kiosk[0])
         self.assertIn('id="bell-circle"', body)
+        self.assertNotIn("bell_motion.css", body)
+        self.assertFalse((HERE / "static" / "css" / "bell_motion.css").exists())
 
-    def test_kiosk_script_builds_the_movement_once_for_the_event_feed(self):
-        # the movement is driven by bell_feed.js (see tests_bell_feed.py), not by a WebSocket frame
+    def test_the_feed_and_the_pad_press_use_one_strike_and_it_only_draws(self):
         src = (JS / "kiosk_bells.js").read_text()
-        self.assertEqual(src.count("BellMotion.create(el, look)"), 1)
-        self.assertNotIn("BellMotion.create(el)", src)
-
-
-class BellMotionCssTests(SimpleTestCase):
-    def test_small_short_transform_only_and_reduced_motion_respected(self):
-        css = CSS.read_text()
-        self.assertEqual(re.findall(r"animation: bell-motion-[01] (\S+) ease-out 1;", css),
-                         ["var(--bell-motion-ms)"] * 2)
-        self.assertEqual(set(re.findall(r"translate\(([^,]+), ([^)]+\)?)\)", css)),
-                         {("0", "0"), ("var(--bell-motion-px)", "var(--bell-motion-px)")})
-        self.assertNotRegex(css.split("*/", 1)[1], r"\d+(ms|px)", "length and distance are not written here")
-        self.assertEqual((C.BELL_QUIVER_MS, C.BELL_QUIVER_PX), (350, 4), "the same small, short movement")
-        self.assertRegex(css, r"prefers-reduced-motion: reduce\)\s*\{[^}]*animation: none")
-        for bad in ("filter", "blur", "box-shadow", "opacity", "width", "height", "left", "top",
-                    "margin", "will-change", "infinite"):
-            self.assertNotRegex(css.split("*/", 1)[1], r"\b%s\b" % bad, bad)
-
-
-class BellQuiverTargetTests(SimpleTestCase):
-    def test_only_the_struck_bells_group_moves_never_the_circle(self):
-        src = (JS / "bell_motion.js").read_text()
-        code = src.split("*/", 1)[1]
-        self.assertIn(""".bell-pad[data-bell="' + bell + '"] .bell-quiver""", code)
-        self.assertNotIn("host.classList", code)
+        self.assertEqual(src.count("BellBand.settleDemo("), 1)          # only inside strike()
+        strike = src.split("function strike(el, bell) {", 1)[1].split("}", 1)[0]
+        self.assertEqual(strike.strip(), "BellBand.settleDemo(el, bell);")
+        self.assertIn("window.BellMotion.create(el, function (bell) { strike(el, bell); })", src)
+        self.assertRegex(src, r"onPadClick: function \(bell\) \{\s*strike\(el, bell\);\s*\}")
+        # the press movement draws and nothing else: no socket, request, sound or message
         band = (JS / "bell_band.js").read_text()
-        self.assertEqual(band.count('"bell-quiver"'), 1)
-        css = CSS.read_text()
-        self.assertNotIn("#bell-circle", css.split("*/", 1)[1])
+        settle = band.split("function settleDemo", 1)[1].split("global.BellBand", 1)[0]
+        for bad in ("send(", "fetch(", "XMLHttpRequest", "Howl", "postMessage", "WebSocket", ".play("):
+            self.assertNotIn(bad, settle, bad)
+
+
+class BellStrikeTargetTests(SimpleTestCase):
+    def test_only_the_struck_bells_clapper_moves_never_the_circle_or_the_whole_bell(self):
+        motion = code("bell_motion.js")
+        self.assertIn("strike(bell);", motion)
+        for gone in ("classList", "bell-quiver", "bell-motion-", "style"):
+            self.assertNotIn(gone, motion, gone)
+        band = (JS / "bell_band.js").read_text()
+        self.assertNotIn("bell-quiver", band)
+        settle = band.split("function settleDemo", 1)[1].split("global.BellBand", 1)[0]
+        self.assertIn("setTape(host, bell,", settle)                    # the clapper group only

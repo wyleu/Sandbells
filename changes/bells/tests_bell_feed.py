@@ -62,8 +62,7 @@ class BellFeedPageTests(TestCase):
             "feed-poll-ms": str(C.LIVE_POLL_MS),
             "feed-limit": str(C.LIVE_LIMIT_DEFAULT),
             "feed-timeout-ms": str(C.LIVE_FETCH_TIMEOUT_MS),
-            "quiver-ms": str(C.BELL_QUIVER_MS),
-            "quiver-px": str(C.BELL_QUIVER_PX),
+            "strike-gap-ms": str(C.BELL_STRIKE_GAP_MS),
         })
         # and that is exactly what the farm page's live list is given
         panel = live_panel()
@@ -78,7 +77,7 @@ class BellFeedSourceTests(SimpleTestCase):
         src = (JS / "kiosk_bells.js").read_text()
         self.assertIn("BellFeed.create(", src)
         self.assertIn("BellMotion.isBellStroke", src)
-        self.assertEqual(src.count("BellMotion.create(el, look)"), 1)
+        self.assertEqual(src.count("BellMotion.create(el, "), 1)
         self.assertNotIn("moveHost", src)
         handle = src.split("function handleMsg", 1)[1].split("function connectFarmWs", 1)[0]
         self.assertNotIn("BellMotion", handle)
@@ -99,17 +98,14 @@ class BellFeedSourceTests(SimpleTestCase):
         self.assertIn('"&after="', code)
         self.assertIn("visibilityState", code)
 
-    def test_one_movement_per_event_is_the_css_length(self):
-        # one number, data-quiver-ms: the feed's spacing and the movement's length (via --bell-motion-ms)
+    def test_strokes_in_one_answer_are_spaced_by_the_one_constant(self):
+        # one number, data-strike-gap-ms (events.constants BELL_STRIKE_GAP_MS): no literal in the scripts
         kiosk = (JS / "kiosk_bells.js").read_text()
-        self.assertIn("var look = { ms: +d.quiverMs, px: +d.quiverPx };", kiosk)
-        self.assertIn("moveMs: look.ms,", kiosk)
+        self.assertIn("moveMs: +d.strikeGapMs,", kiosk)
         feed = (JS / "bell_feed.js").read_text().split("*/", 1)[1]
         self.assertIn("later(playNext, o.moveMs)", feed)
         self.assertNotIn("MOVE_MS", feed)
-        motion = (JS / "bell_motion.js").read_text().split("*/", 1)[1]
-        self.assertIn('"--bell-motion-ms", look.ms + "ms"', motion)
-        self.assertIn('"--bell-motion-px", look.px + "px"', motion)
+        self.assertEqual(C.BELL_STRIKE_GAP_MS, 350)
 
 
 @skipUnless(NODE, "node is not installed")

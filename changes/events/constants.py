@@ -204,11 +204,11 @@ LIVE_IDLE_NOTE_MS = 2 * MS_PER_MINUTE
 LIVE_FETCH_TIMEOUT_MS = 4000
 BELL_LABEL = "Bell %d"
 
-# ---- home page bell quiver (bells/home.html data-quiver-*, bell_motion.js/.css) --
-# The bell that struck (the event's "bell", mapped from its ch) moves this far
-# down and to the right and back, over this long; the feed plays one at a time.
-BELL_QUIVER_MS = 350
-BELL_QUIVER_PX = 4
+# ---- home page bell strokes (bells/home.html data-strike-gap-ms, bell_feed.js) --
+# Each stroke swings the struck bell's clapper (the pad press movement); strokes
+# that arrive together in one poll answer start this far apart (3 x this is
+# about one LIVE_POLL_MS, see bell_feed.js MAX_MOVES).
+BELL_STRIKE_GAP_MS = 350
 
 # ---- page 3 link widget (link_widget.js, api.link) -------------------------
 LINK_POLL_MS = 2000             # widget poll of /events/api/link/

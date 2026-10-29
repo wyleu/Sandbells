@@ -5,7 +5,7 @@
  *
  *   BellFeed.create({
  *     url: "/events/api/since/", pollMs: 1000, limit: 50, timeoutMs: 4000,
- *     moveMs: 350, accept: BellMotion.isBellStroke, move: BellMotion.create(el, look),
+ *     moveMs: 350, accept: BellMotion.isBellStroke, move: BellMotion.create(el, strike),
  *     rd: ReconnectDelay.create(),
  *   }).start();
  *
@@ -16,7 +16,7 @@
  *    is true is handed to move() once.  Heartbeats are never stored; link, ingest and
  *    channel events, and strokes with no bell number, fail accept(), so they do nothing.
  *  - A burst (up to `limit` events in one answer) plays at most MAX_MOVES movements, one
- *    after another, moveMs apart (one movement's length, data-quiver-ms); the rest are dropped, so the work stays small.
+ *    after another, moveMs apart (data-strike-gap-ms); the rest are dropped, so the work stays small.
  *  - A full answer (limit events) is followed at once by the next poll, to catch up.
  *  - A poll that fails or times out is ignored quietly and retried after the next delay
  *    of the shared ReconnectDelay schedule (1, 2, 4, 8, 15 s, jittered); the first good

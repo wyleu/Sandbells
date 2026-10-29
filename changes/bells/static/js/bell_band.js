@@ -167,15 +167,10 @@
       num.setAttribute("pointer-events", "none");
       num.textContent = String(d.bell);
 
-      // the pad's own transform places it on the circle; the inner group is what
-      // bell_motion.js moves (a CSS transform on the pad would replace its placement)
-      var body = document.createElementNS(NS, "g");
-      body.setAttribute("class", "bell-quiver");
-      body.appendChild(fill);
-      body.appendChild(clipG);
-      body.appendChild(ring);
-      body.appendChild(num);
-      g.appendChild(body);
+      g.appendChild(fill);
+      g.appendChild(clipG)
+      g.appendChild(ring);
+      g.appendChild(num);
 
       if (opts.onPadClick) {
         g.addEventListener("click", function (ev) { opts.onPadClick(d.bell, d, ev); });
@@ -211,13 +206,21 @@
     setTape(host, bell, 2.5, 0);
   }
 
+  // The press movement of one bell's clapper (the home page's pad click, and each stroke from
+  // the event feed via bell_motion.js): a swing along the tape axis that dies away.  Visual
+  // only: it calls setTape and nothing else.  A new one for the same bell (another press, the
+  // next stroke) takes over from the one still running, so two never fight over the clapper.
   function settleDemo(host, bell, opts) {
     opts = opts || {};
+    var el = typeof host === "string" ? document.querySelector(host) : host;
+    var runs = el && el.__bellBand ? (el.__bellBand.settle = el.__bellBand.settle || {}) : {};
+    var run = runs[bell] = (runs[bell] || 0) + 1;
     var amp = opts.amp != null ? opts.amp : 1;
     var omega = opts.omega != null ? opts.omega : 3.2;
     var decay = opts.decay != null ? opts.decay : 0.992;
     var t0 = null;
     function frame(ts) {
+      if (runs[bell] !== run) return;           // a newer settle of this bell has taken over
       if (t0 == null) t0 = ts;
       var t = (ts - t0) / 1000;
       amp *= decay;

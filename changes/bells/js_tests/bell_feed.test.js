@@ -125,7 +125,7 @@ test("a burst plays at most MAX_MOVES movements, 350 ms apart, and the rest are 
   r.answers.push({ events: burst, latest_id: 140 });
   await r.step();
   assert.deepEqual(r.moved, [101]);
-  assert.ok(r.pending().includes(350), "the next movement after one movement's length (moveMs)");
+  assert.ok(r.pending().includes(350), "the next movement moveMs (data-strike-gap-ms) later");
   await r.step(); await r.step(); await r.step();
   assert.deepEqual(r.moved, [101, 102, 103]);
   assert.equal(BF.MAX_MOVES, 3);

@@ -1,4 +1,5 @@
-// node --test changes/bells/js_tests/  -- bell_motion.js, the small diagonal movement of the bell that struck
+// node --test changes/bells/js_tests/  -- bell_motion.js: a stroke swings the struck bell's clapper,
+// with the pad press movement (bell_band.js settleDemo)
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -7,61 +8,48 @@ const path = require("node:path");
 const vm = require("node:vm");
 const BM = require("../static/js/bell_motion.js");
 
-const LOOK = { ms: 350, px: 4 };
-
-function fakeEl() {
-  const set = new Set();
-  return { set, classList: { add: (c) => set.add(c), remove: (c) => set.delete(c) } };
-}
-/* #bell-circle with one .bell-quiver group per drawn bell (1..8), as bell_band.js draws it */
+/* #bell-circle with a .bell-pad per drawn bell (1..8), as bell_band.js draws it */
 function fakeHost(bells) {
-  const groups = {};
-  const props = {};
+  const drawn = new Set(bells || [1, 2, 3, 4, 5, 6, 7, 8]);
   const asked = [];
-  for (const b of bells || [1, 2, 3, 4, 5, 6, 7, 8]) groups[b] = fakeEl();
   return {
-    groups, props, asked,
-    style: { setProperty: (k, v) => { props[k] = v; } },
+    asked,
     querySelector: (sel) => {
       asked.push(sel);
-      const m = /^\.bell-pad\[data-bell="(\d+)"\] \.bell-quiver$/.exec(sel);
-      return m && groups[m[1]] ? groups[m[1]] : null;
+      const m = /^\.bell-pad\[data-bell="(\d+)"\]$/.exec(sel);
+      return m && drawn.has(Number(m[1])) ? {} : null;
     },
   };
 }
-const moving = (host) => Object.keys(host.groups).filter((b) => host.groups[b].set.size).map(Number);
+function rig(bells) {
+  const struck = [];
+  const host = fakeHost(bells);
+  return { host, struck, move: BM.create(host, (bell) => struck.push(bell)) };
+}
 
 // what /events/api/since/ gives: "bell" from the channel map, null when the channel is unmapped
 const stroke = (bell) => ({ schema: "sand.event/v1", type: "stroke", src: "sandswing", ch: 3, bell, body: { ch: 3 } });
 const trigger = (bell) => ({ type: "stroke", src: "sandswing", ch: 1, bell, body: { ch: 1, test: true, src: "trigger" } });
 
-test("a stroke for bell 8 moves only bell 8's group, not the circle or another bell", () => {
-  const host = fakeHost();
-  BM.create(host, LOOK)(stroke(8));
-  assert.deepEqual(moving(host), [8]);
-  assert.deepEqual([...host.groups[8].set], ["bell-motion-1"]);
-  assert.deepEqual(host.asked, ['.bell-pad[data-bell="8"] .bell-quiver']);
+test("a stroke for bell 8 strikes bell 8 (the press movement), nothing else", () => {
+  const r = rig();
+  r.move(stroke(8));
+  assert.deepEqual(r.struck, [8]);
+  assert.deepEqual(r.host.asked, ['.bell-pad[data-bell="8"]']);
 });
 
-test("a trigger plug test stroke moves its bell too", () => {
-  const host = fakeHost();
-  BM.create(host, LOOK)(trigger(2));
-  assert.deepEqual(moving(host), [2]);
-});
-
-test("the length and distance come from the page (data-quiver-*), as CSS variables on the circle", () => {
-  const host = fakeHost();
-  BM.create(host, LOOK);
-  assert.deepEqual(host.props, { "--bell-motion-ms": "350ms", "--bell-motion-px": "4px" });
+test("a trigger plug test stroke strikes its bell too; each stroke strikes again", () => {
+  const r = rig();
+  r.move(trigger(2)); r.move(stroke(2)); r.move(stroke(5));
+  assert.deepEqual(r.struck, [2, 2, 5]);
 });
 
 test("no bell number (unmapped channel, or none given) or a bell not drawn: nothing moves", () => {
-  const host = fakeHost();
-  const move = BM.create(host, LOOK);
+  const r = rig();
   for (const m of [stroke(null), stroke(undefined), trigger(null), { ch: 2, test: true, src: "trigger" },
-    stroke(9), stroke(0), stroke(-1), stroke(2.5), stroke("8")]) move(m);
-  assert.deepEqual(moving(host), []);
-  assert.deepEqual(host.asked, ['.bell-pad[data-bell="9"] .bell-quiver']);   // asked, not drawn
+    stroke(9), stroke(0), stroke(-1), stroke(2.5), stroke("8")]) r.move(m);
+  assert.deepEqual(r.struck, []);
+  assert.deepEqual(r.host.asked, ['.bell-pad[data-bell="9"]']);   // asked, not drawn
 });
 
 test("isBellStroke: only strokes and triggers that carry a bell, so the feed queues nothing else", () => {
@@ -75,73 +63,98 @@ test("isBellStroke: only strokes and triggers that carry a bell, so the feed que
 });
 
 test("heartbeats, link and channel events, and junk do not move anything", () => {
-  const host = fakeHost();
-  const move = BM.create(host, LOOK);
+  const r = rig();
   for (const m of [
     { schema: "sand.panel/v1", type: "heartbeat", bell: 1, body: { chan: [["trigger", "why"]] } },
     { schema: "sand.panel/v1", type: "stroke", bell: 1 },
     { schema: "sand.event/v1", type: "link", bell: 1, body: { what: "client" } },
     { schema: "sand.event/v1", type: "channel", ch: 1, bell: 1, body: { ch: 1, kind: "trigger" } },
     { tick: 5 }, {}, null, undefined, "stroke", 7,
-  ]) move(m);
-  assert.deepEqual(moving(host), []);
+  ]) r.move(m);
+  assert.deepEqual(r.struck, []);
   assert.equal(BM.isStrokeOrTrigger(stroke(null)), true, "the older rule is kept as it was");
 });
 
-test("each bell switches between two animation names on its own, so a burst restarts that bell", () => {
-  const host = fakeHost();
-  const move = BM.create(host, LOOK);
-  const seen = [];
-  for (let i = 0; i < 3; i++) { move(stroke(8)); seen.push([...host.groups[8].set].join()); }
-  assert.deepEqual(seen, ["bell-motion-1", "bell-motion-0", "bell-motion-1"]);
-  move(stroke(1));
-  assert.deepEqual([...host.groups[1].set], ["bell-motion-1"], "bell 1 starts its own alternation");
-  assert.deepEqual([...host.groups[8].set], ["bell-motion-1"], "bell 8 is left as it was");
+test("no element or no strike function: nothing happens", () => {
+  assert.doesNotThrow(() => BM.create(null, () => assert.fail("struck"))(stroke(8)));
+  assert.doesNotThrow(() => BM.create(fakeHost(), null)(stroke(8)));
 });
 
-test("no element: nothing happens", () => {
-  assert.doesNotThrow(() => BM.create(null, LOOK)(stroke(8)));
-  assert.doesNotThrow(() => BM.create(null)(stroke(8)));
+/* bell_band.js in a sandbox: a fake document, a manual requestAnimationFrame, a host with
+ * one clapper group per bell that records the transforms setTape gives it */
+function band() {
+  const frames = [];
+  const claps = {};
+  const host = {
+    __bellBand: { mouthByBell: {}, tape: {} },
+    querySelector: (sel) => {
+      const m = /^\.bell-pad\[data-bell="(\d+)"\] \.bell-clapper-g$/.exec(sel);
+      if (!m) return null;
+      const b = m[1];
+      claps[b] = claps[b] || { moves: [], setAttribute(k, v) { if (k === "transform") this.moves.push(v); } };
+      return claps[b];
+    },
+  };
+  for (let b = 1; b <= 8; b++) host.__bellBand.mouthByBell[b] = 20;
+  const win = {};
+  const sandbox = { window: win, document: {}, requestAnimationFrame: (fn) => frames.push(fn), Math };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "static", "js", "bell_band.js"), "utf8"), sandbox);
+  const run = (n, ms) => {
+    for (let i = 0; i < n && frames.length; i++) {
+      const due = frames.splice(0);
+      due.forEach((fn) => fn(i * ms));
+    }
+  };
+  return { BB: win.BellBand, host, claps, frames, run };
+}
+
+test("settleDemo (the press movement) moves only that bell's clapper, and dies away to rest", () => {
+  const b = band();
+  b.BB.settleDemo(b.host, 8);
+  b.run(2000, 16);
+  assert.deepEqual(Object.keys(b.claps), ["8"]);
+  const moves = b.claps[8].moves;
+  assert.ok(new Set(moves).size > 10, "it swings");
+  assert.equal(moves[moves.length - 1], "translate(0,0)", "back at rest at the end");
+  assert.equal(b.frames.length, 0, "and stops asking for frames");
 });
 
-/* bell_band.js draws each pad as <g class="bell-pad" data-bell=N transform=translate(x,y)>
- * holding one <g class="bell-quiver"> with the bell's drawing, which is what moves */
-function fakeDom() {
+test("a second settle of the same bell takes over: one loop per bell, never two fighting", () => {
+  const b = band();
+  b.BB.settleDemo(b.host, 8);
+  b.run(5, 16);
+  b.BB.settleDemo(b.host, 8);
+  b.BB.settleDemo(b.host, 3);
+  assert.equal(b.frames.length, 3, "two queued frames for bell 8 and one for bell 3");
+  b.run(1, 16);
+  assert.equal(b.frames.length, 2, "the older bell 8 loop has stopped; the new one and bell 3 go on");
+});
+
+test("bell_band.js: each pad is placed by its own transform and its click is the press", () => {
   function node(tag) {
-    const n = {
+    return {
       tag, attrs: {}, children: [], style: {}, listeners: {},
       setAttribute(k, v) { this.attrs[k] = String(v); },
-      getAttribute(k) { return this.attrs[k]; },
-      appendChild(c) { this.children.push(c); c.parent = this; return c; },
+      appendChild(c) { this.children.push(c); return c; },
       addEventListener(ev, fn) { this.listeners[ev] = fn; },
       set innerHTML(v) { this.children = []; },
     };
-    return n;
   }
-  return { createElementNS: (ns, tag) => node(tag), node };
-}
-
-test("bell_band.js: each pad keeps its place on the circle and wraps its drawing in one .bell-quiver", () => {
-  const dom = fakeDom();
   const win = {};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "static", "js", "bell_band.js"), "utf8"),
-    { window: win, document: dom });
-  const host = dom.node("div");
-  win.BellBand.draw(host, { width: 250, height: 250, bells: [1, 2, 3, 4, 5, 6, 7, 8], onPadClick() {} });
-  const svg = host.children[0];
-  const pads = svg.children.filter((c) => c.attrs.class === "bell-pad");
+    { window: win, document: { createElementNS: (ns, tag) => node(tag) } });
+  const host = node("div");
+  const pressed = [];
+  win.BellBand.draw(host, { width: 250, height: 250, bells: [1, 2, 3, 4, 5, 6, 7, 8], onPadClick: (bell) => pressed.push(bell) });
+  const pads = host.children[0].children.filter((c) => c.attrs.class === "bell-pad");
   assert.equal(pads.length, 8);
   for (const pad of pads) {
     assert.match(pad.attrs.transform, /^translate\(/);
-    assert.equal(pad.children.length, 1);
-    const body = pad.children[0];
-    assert.equal(body.attrs.class, "bell-quiver");
-    assert.equal(body.attrs.transform, undefined, "the moving group has no placement of its own");
-    const classes = body.children.map((c) => c.attrs.class);
-    assert.ok(classes.includes("bell-clapper-g") && classes.includes("bell-num"), classes.join());
-    assert.equal(typeof pad.listeners.click, "function", "a click on the pad still works");
+    assert.ok(pad.children.some((c) => c.attrs.class === "bell-clapper-g"), "the clapper is in the pad");
   }
-  const brown = pads.find((p) => p.attrs["data-bell"] === "8").children[0].children
-    .find((c) => c.attrs.class === "bell-clapper-g").children.find((c) => c.attrs.class === "bell-clapper");
-  assert.equal(brown.attrs.fill, "#8b0000", "bell 8 is the brown one");
+  const eight = pads.find((p) => p.attrs["data-bell"] === "8");
+  eight.listeners.click({});
+  assert.deepEqual(pressed, [8]);
+  const clap = eight.children.find((c) => c.attrs.class === "bell-clapper-g").children.find((c) => c.attrs.class === "bell-clapper");
+  assert.equal(clap.attrs.fill, "#8b0000", "bell 8's clapper is the brown one");
 });
