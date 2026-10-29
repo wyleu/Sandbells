@@ -167,10 +167,15 @@
       num.setAttribute("pointer-events", "none");
       num.textContent = String(d.bell);
 
-      g.appendChild(fill);
-      g.appendChild(clipG)
-      g.appendChild(ring);
-      g.appendChild(num);
+      // the pad's own transform places it on the circle; the inner group is what
+      // bell_motion.js moves (a CSS transform on the pad would replace its placement)
+      var body = document.createElementNS(NS, "g");
+      body.setAttribute("class", "bell-quiver");
+      body.appendChild(fill);
+      body.appendChild(clipG);
+      body.appendChild(ring);
+      body.appendChild(num);
+      g.appendChild(body);
 
       if (opts.onPadClick) {
         g.addEventListener("click", function (ev) { opts.onPadClick(d.bell, d, ev); });

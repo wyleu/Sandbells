@@ -6,8 +6,10 @@ const BF = require("../static/js/bell_feed.js");
 const BM = require("../static/js/bell_motion.js");
 const RD = require("../static/js/reconnect_delay.js");
 
-const stroke = (id) => ({ id, type: "stroke", src: "sandswing", body: { ch: 1 } });
-const trigger = (id) => ({ id, type: "stroke", src: "sandswing", body: { ch: 1, test: true, src: "trigger" } });
+// as /events/api/since/ gives them: "bell" from the channel map, null for an unmapped channel
+const stroke = (id) => ({ id, type: "stroke", src: "sandswing", ch: 1, bell: 8, body: { ch: 1 } });
+const trigger = (id) => ({ id, type: "stroke", src: "sandswing", ch: 1, bell: 8, body: { ch: 1, test: true, src: "trigger" } });
+const unmapped = (id) => ({ id, type: "stroke", src: "sandswing", ch: 7, bell: null, body: { ch: 7 } });
 const link = (id) => ({ id, type: "link", src: "sandswing", body: { what: "client" } });
 const channel = (id) => ({ id, type: "channel", src: "sandswing", body: { ch: 1, kind: "trigger" } });
 const ingest = (id) => ({ id, type: "ingest", src: "host", body: { what: "connected" } });
@@ -35,8 +37,8 @@ function rig(extra) {
     clearTimeout: (id) => { if (timers[id - 1]) timers[id - 1].live = false; },
   };
   const feed = BF.create(Object.assign({
-    url: "/events/api/since/", pollMs: 1000, limit: 50, timeoutMs: 4000,
-    accept: BM.isStrokeOrTrigger, move: (e) => moved.push(e.id), env,
+    url: "/events/api/since/", pollMs: 1000, limit: 50, timeoutMs: 4000, moveMs: 350,
+    accept: BM.isBellStroke, move: (e) => moved.push(e.id), env,
     rd: RD.create({ random: () => 0, now: () => clock.t }),
   }, extra || {}));
   const r = { urls, answers, timers, moved, doc, listeners, feed, clock };
@@ -104,6 +106,16 @@ test("link, ingest and channel events do nothing, but still advance the id", asy
   assert.equal(r.feed.lastId(), 8);
 });
 
+test("a stroke with no bell number (unmapped channel) does nothing and takes no movement's place", async () => {
+  const r = rig();
+  r.answers.push({ events: [], latest_id: 50 });
+  r.feed.start(); await r.settle();
+  r.answers.push({ events: [unmapped(51), unmapped(52), unmapped(53), stroke(54)], latest_id: 54 });
+  await r.step();
+  assert.deepEqual(r.moved, [54], "played at once, not after three empty slots");
+  assert.equal(r.feed.lastId(), 54);
+});
+
 test("a burst plays at most MAX_MOVES movements, 350 ms apart, and the rest are dropped", async () => {
   const r = rig();
   r.answers.push({ events: [], latest_id: 100 });
@@ -113,7 +125,7 @@ test("a burst plays at most MAX_MOVES movements, 350 ms apart, and the rest are 
   r.answers.push({ events: burst, latest_id: 140 });
   await r.step();
   assert.deepEqual(r.moved, [101]);
-  assert.ok(r.pending().includes(BF.MOVE_MS));
+  assert.ok(r.pending().includes(350), "the next movement after one movement's length (moveMs)");
   await r.step(); await r.step(); await r.step();
   assert.deepEqual(r.moved, [101, 102, 103]);
   assert.equal(BF.MAX_MOVES, 3);

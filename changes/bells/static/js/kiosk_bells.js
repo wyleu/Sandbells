@@ -1,6 +1,6 @@
 (function () {
   var HOST = null;
-  // The small diagonal movement (bell_motion.js) is driven by Sandbells' own event feed
+  // The small diagonal movement of the bell that struck (bell_motion.js) is driven by Sandbells' own event feed
   // (bell_feed.js polling /events/api/since/), not by this WebSocket.
   // This WebSocket is kept only for the older {bell, u, amp} tape messages -> BellBand.setTape;
   // nothing the current sandswing sends is such a message, and the events feed does not carry them.
@@ -10,13 +10,15 @@
   function startFeed(el) {
     var d = el.dataset;              // set by bells/home.html from events.constants
     if (!d.feedUrl || !window.BellFeed || !window.BellMotion) return;
+    var look = { ms: +d.quiverMs, px: +d.quiverPx };   // BELL_QUIVER_MS / _PX
     window.BellFeed.create({
       url: d.feedUrl,
       pollMs: +d.feedPollMs,         // the farm page's live list poll (LIVE_POLL_MS)
       limit: +d.feedLimit,           // events per answer (LIVE_LIMIT_DEFAULT)
       timeoutMs: +d.feedTimeoutMs,   // LIVE_FETCH_TIMEOUT_MS
-      accept: window.BellMotion.isStrokeOrTrigger,
-      move: window.BellMotion.create(el),
+      moveMs: look.ms,               // one movement, then the next
+      accept: window.BellMotion.isBellStroke,
+      move: window.BellMotion.create(el, look),
       rd: window.ReconnectDelay.create()   // reconnect_delay.js: the delay after a failed poll
     }).start();
   }

@@ -91,6 +91,8 @@ def home(request, number=6):
         "poll_ms": EVENTS.LIVE_POLL_MS,
         "limit": EVENTS.LIVE_LIMIT_DEFAULT,
         "timeout_ms": EVENTS.LIVE_FETCH_TIMEOUT_MS,
+        "quiver_ms": EVENTS.BELL_QUIVER_MS,     # the struck bell's movement (bell_motion.js)
+        "quiver_px": EVENTS.BELL_QUIVER_PX,
     }
 
     return render(request, 'bells/home.html', context)

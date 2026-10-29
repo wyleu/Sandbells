@@ -5,7 +5,7 @@
  *
  *   BellFeed.create({
  *     url: "/events/api/since/", pollMs: 1000, limit: 50, timeoutMs: 4000,
- *     accept: BellMotion.isStrokeOrTrigger, move: BellMotion.create(el),
+ *     moveMs: 350, accept: BellMotion.isBellStroke, move: BellMotion.create(el, look),
  *     rd: ReconnectDelay.create(),
  *   }).start();
  *
@@ -14,9 +14,9 @@
  *    stored when the page opens do not play back.
  *  - Each later poll asks for ids above the highest one seen; an event for which accept()
  *    is true is handed to move() once.  Heartbeats are never stored; link, ingest and
- *    channel events fail accept(), so they do nothing.
+ *    channel events, and strokes with no bell number, fail accept(), so they do nothing.
  *  - A burst (up to `limit` events in one answer) plays at most MAX_MOVES movements, one
- *    after another; the rest are dropped, so the work stays small.
+ *    after another, moveMs apart (one movement's length, data-quiver-ms); the rest are dropped, so the work stays small.
  *  - A full answer (limit events) is followed at once by the next poll, to catch up.
  *  - A poll that fails or times out is ignored quietly and retried after the next delay
  *    of the shared ReconnectDelay schedule (1, 2, 4, 8, 15 s, jittered); the first good
@@ -26,8 +26,7 @@
 (function (root) {
   "use strict";
 
-  var MOVE_MS = 350;      // one movement lasts this long (bell_motion.css), so the next starts after it
-  var MAX_MOVES = 3;      // at most this many movements per answer: 3 x 350 ms is about one 1 s poll
+  var MAX_MOVES = 3;      // at most this many movements per answer: 3 x moveMs (350 ms) is about one 1 s poll
 
   function create(o) {
     var env = o.env || root;
@@ -50,7 +49,7 @@
       playTimer = null;
       if (!queue.length) return;
       o.move(queue.shift());
-      if (queue.length) playTimer = later(playNext, MOVE_MS);
+      if (queue.length) playTimer = later(playNext, o.moveMs);
     }
 
     function enqueue(events) {
@@ -137,7 +136,7 @@
     return { start: start, poll: poll, lastId: function () { return lastId; } };
   }
 
-  var api = { create: create, MOVE_MS: MOVE_MS, MAX_MOVES: MAX_MOVES };
+  var api = { create: create, MAX_MOVES: MAX_MOVES };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
   root.BellFeed = api;
 })(typeof window !== "undefined" ? window : this);

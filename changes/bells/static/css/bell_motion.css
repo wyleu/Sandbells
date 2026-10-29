@@ -1,19 +1,21 @@
-/* bell_motion.css -- the small diagonal movement of the bell display when a stroke or
- * trigger event arrives (bell_motion.js adds one of the two classes).
+/* bell_motion.css -- the small diagonal movement of the bell that struck (one bell's
+ * .bell-quiver group on the home page's circle; bell_motion.js adds one of the two classes).
+ * Length and distance are --bell-motion-ms / --bell-motion-px, set on #bell-circle by
+ * bell_motion.js from events.constants BELL_QUIVER_MS / BELL_QUIVER_PX (no numbers here).
  * Only transform on an element that already exists: no layout, no filter, no blur.
  * Two identical keyframes under two names, so a burst of events restarts the movement
  * by switching names (no forced reflow). */
-.bell-motion-0 { animation: bell-motion-0 350ms ease-out 1; }
-.bell-motion-1 { animation: bell-motion-1 350ms ease-out 1; }
+.bell-motion-0 { animation: bell-motion-0 var(--bell-motion-ms) ease-out 1; }
+.bell-motion-1 { animation: bell-motion-1 var(--bell-motion-ms) ease-out 1; }
 
 @keyframes bell-motion-0 {
   0%   { transform: translate(0, 0); }
-  35%  { transform: translate(4px, 4px); }
+  35%  { transform: translate(var(--bell-motion-px), var(--bell-motion-px)); }
   100% { transform: translate(0, 0); }
 }
 @keyframes bell-motion-1 {
   0%   { transform: translate(0, 0); }
-  35%  { transform: translate(4px, 4px); }
+  35%  { transform: translate(var(--bell-motion-px), var(--bell-motion-px)); }
   100% { transform: translate(0, 0); }
 }
 

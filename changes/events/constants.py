@@ -204,6 +204,12 @@ LIVE_IDLE_NOTE_MS = 2 * MS_PER_MINUTE
 LIVE_FETCH_TIMEOUT_MS = 4000
 BELL_LABEL = "Bell %d"
 
+# ---- home page bell quiver (bells/home.html data-quiver-*, bell_motion.js/.css) --
+# The bell that struck (the event's "bell", mapped from its ch) moves this far
+# down and to the right and back, over this long; the feed plays one at a time.
+BELL_QUIVER_MS = 350
+BELL_QUIVER_PX = 4
+
 # ---- page 3 link widget (link_widget.js, api.link) -------------------------
 LINK_POLL_MS = 2000             # widget poll of /events/api/link/
 LINK_STALE_MS = 15000           # no Pico heartbeat this long: grey (3 missed)
