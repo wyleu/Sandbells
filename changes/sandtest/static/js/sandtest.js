@@ -82,6 +82,41 @@
     return { cls: "clear", text: "clear of every head" };
   }
 
+  /* repeat as shown to the eye: 0 means the rig plays until stopped. */
+  function fmtRepeat(v) {
+    if (v === 0 || v === "0") return "∞ (until stopped)";
+    return num(v);
+  }
+
+  /* One line about the player's current/last run (status.player.run), with
+   * "forever" instead of 0 / null / NaN for a repeat=0 pattern. */
+  function runText(run, runPresses) {
+    if (!run) return "";
+    if (typeof run === "string") return run;
+    if (run.kind !== "pattern") return JSON.stringify(run);
+    var forever = run.forever === true || run.repeat === 0;
+    var parts = ["pattern " + (run.rows || []).join(" ")];
+    if (run.interval_ms !== undefined) parts.push(run.interval_ms + " ms apart, " + run.press_ms + " ms press");
+    parts.push("repeat " + (forever ? "∞ (until stopped)" : fmtRepeat(run.repeat)));
+    var total = forever ? "∞" : num(run.strokes);
+    if (runPresses !== undefined && runPresses !== null) parts.push("presses " + num(runPresses) + " / " + total);
+    else parts.push("strokes " + total);
+    if (!forever && run.duration_ms !== null && run.duration_ms !== undefined) parts.push("length " + fmtAge(run.duration_ms));
+    return parts.join(" · ");
+  }
+
+  /* The Play button, driven only by the polled /status (player.state), so it
+   * is right after a page reload too.  While the player is running (or
+   * paused) it is a Stop button.  -> {stop, text, cls, title}. */
+  function playButton(player) {
+    var st = player && player.state;
+    if (st === "running" || st === "paused") {
+      return { stop: true, text: "Stop", cls: "stop-play",
+               title: "The rig is " + st + "; press to stop it (same as STOP)" };
+    }
+    return { stop: false, text: "Play", cls: "", title: "Play this pattern" };
+  }
+
   // ---- command building --------------------------------------------------
   // Each spec: the rig's cmd (and sweep mode), and for each form field its
   // type.  An empty field is left out so the rig's own default applies.
@@ -89,7 +124,7 @@
   var INT = "int", NUM = "num", STR = "str", BOOL = "bool", FACE = "face";
   var SPECS = {
     press: { cmd: "press", f: { channel: [INT, 1, 8, true], press_ms: [INT, 1] } },
-    play: { cmd: "play", f: { pattern: [STR, 0, 0, true], interval_ms: [INT, 1], press_ms: [INT, 1], repeat: [INT, 1] } },
+    play: { cmd: "play", f: { pattern: [STR, 0, 0, true], interval_ms: [INT, 1], press_ms: [INT, 1], repeat: [INT, 0] } },
     stress: { cmd: "stress", f: { seed: [INT, 0, 4294967295], seconds: [INT, 1, 86400] } },
     sweep: { cmd: "sweep", mode: "sweep", f: { from_deg: [NUM, -36000, 36000, true], to_deg: [NUM, -36000, 36000, true],
              speed_dps: [NUM, 0.05, 3600], dwell_ms: [INT, 0], cycles: [INT, 0] } },
@@ -233,7 +268,7 @@
       if (sw.profile) extra.push("profile: head " + sw.profile.head + " " + sw.profile.face + " point " + sw.profile.point + "/" + sw.profile.points +
                                  " pass " + sw.profile.pass + "/" + sw.profile.passes);
       if (sw.mode === "menace") extra.push("menace seed " + sw.seed + (sw.allow_hits ? " · HITS ALLOWED" : " · avoiding every head"));
-      if (pl.run) extra.push("run: " + (typeof pl.run === "string" ? pl.run : JSON.stringify(pl.run)));
+      if (pl.run) extra.push("run: " + runText(pl.run, pl.run_presses));
       text("st-extra", extra.join(" · "));
       if (!extra.length) $("st-extra").textContent = "";
 
@@ -266,10 +301,26 @@
         tb.appendChild(tr);
       });
 
+      renderPlayButton(pl);
+
       var fb = document.querySelectorAll(".facebtn");
       for (var i = 0; i < fb.length; i++) {
         fb[i].setAttribute("aria-pressed", fb[i].getAttribute("data-face") === sw.face ? "true" : "false");
       }
+    }
+
+    // -- the Play button toggles to Stop while the rig says it is playing
+    var playForm = document.querySelector('form[data-cmd="play"]');
+    var playBtn = playForm ? playForm.querySelector('button[type="submit"]') : null;
+    var playIsStop = false;
+    function renderPlayButton(pl) {
+      if (!playBtn) return;
+      var b = playButton(pl);
+      playIsStop = b.stop;
+      playBtn.textContent = b.text;
+      playBtn.className = b.cls;
+      playBtn.title = b.title;
+      playBtn.setAttribute("data-mode", b.stop ? "stop" : "play");
     }
 
     // -- polling, only while visible
@@ -359,6 +410,11 @@
       var msg = form.querySelector(".msg");
       form.addEventListener("submit", function (ev) {
         ev.preventDefault();
+        if (form === playForm && playIsStop) {
+          msg.textContent = "stopping…"; msg.className = "msg";
+          sendStop(msg);
+          return;
+        }
         var built = buildCommand(form.getAttribute("data-cmd"), formValues(form));
         if (built.error) { msg.textContent = built.error; msg.className = "msg bad"; return; }
         msg.textContent = "sending…"; msg.className = "msg";
@@ -383,22 +439,28 @@
       sendAndReport({ cmd: "park" }, $("st-face-msg"));
     });
 
-    // -- STOP: never disabled; one automatic retry; says plainly if it failed
+    // -- STOP: never disabled; one automatic retry; says plainly if it failed.
+    // The Play button sends the same stop while the rig is playing.
     var stopMsg = $("st-stopmsg");
-    $("st-stop").addEventListener("click", function () {
+    function sendStop(formMsg) {
       var cmd = { cmd: "stop" };
       stopMsg.textContent = "stopping…";
+      function say(t, ok) {
+        stopMsg.textContent = t;
+        if (formMsg) { formMsg.textContent = ok ? "stopped" : t; formMsg.className = ok ? "msg" : "msg bad"; }
+      }
       sendAndReport(cmd, null, function (ok, why) {
-        if (ok) { stopMsg.textContent = "stop sent " + ukTime(new Date()); return; }
-        stopMsg.textContent = "STOP NOT CONFIRMED (" + why + ") · trying again";
+        if (ok) { say("stop sent " + ukTime(new Date()), true); return; }
+        say("STOP NOT CONFIRMED (" + why + ") · trying again", false);
         setTimeout(function () {
           sendAndReport(cmd, null, function (ok2, why2) {
-            stopMsg.textContent = ok2 ? "stop sent " + ukTime(new Date())
-              : "STOP FAILED: " + why2 + " · press again, or switch the rig off";
+            say(ok2 ? "stop sent " + ukTime(new Date())
+              : "STOP FAILED: " + why2 + " · press again, or switch the rig off", ok2);
           });
         }, 400);
       });
-    });
+    }
+    $("st-stop").addEventListener("click", function () { sendStop(null); });
 
     document.addEventListener("visibilitychange", onVisibility);
     renderConn();
@@ -406,5 +468,6 @@
   }
 
   return { fmtAge: fmtAge, connState: connState, headRows: headRows, windowFlag: windowFlag,
-           buildCommand: buildCommand, num: num, start: start, STALE_MS: STALE_MS };
+           buildCommand: buildCommand, num: num,
+           fmtRepeat: fmtRepeat, runText: runText, playButton: playButton, start: start, STALE_MS: STALE_MS };
 });

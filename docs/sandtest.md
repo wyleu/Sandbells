@@ -58,6 +58,13 @@ to Sandbells there is no CORS and no mixed-content problem.
   (stops the pattern, releases every output, halts the mirror).  It is never
   disabled, retries once if the first try fails, and says plainly if it could
   not be confirmed.  It is gold, not red: red is reserved for "not coming".
+* **Play** toggles: while the rig's `/status` says `player.state` is
+  `running` (or `paused`) the Play button turns into a gold **Stop** and
+  pressing it sends the same `{"cmd":"stop"}` as STOP; otherwise it plays the
+  form's pattern.  The label follows the polled status, not the last click, so
+  it is right after a page reload.  **repeat 0** plays the pattern over and
+  over until stopped (overnight runs); the run line then says
+  `repeat ∞ (until stopped) · presses N / ∞`.
 * Connection pill: *connected* (green), *NO ANSWER · last good status N s ago*
   (gold, the last values stay on screen but dimmed), *not reachable* (grey).
 * Rig: version, player state, presses sent, outputs pressed now, worst

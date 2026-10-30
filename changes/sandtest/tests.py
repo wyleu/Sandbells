@@ -229,6 +229,12 @@ class CmdProxyTests(ProxyBase):
         self.assertEqual(json.loads(body), cmd)
         self.assertEqual(headers["Content-Type"], "application/json")
 
+    def test_repeat_zero_is_forwarded_unchanged(self):
+        cmd = {"cmd": "play", "pattern": "1", "repeat": 0}
+        r = self.post(cmd)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(json.loads(self.pico.requests[-1][3]), cmd)
+
     def test_a_cut_short_body_is_sent_again_once(self):
         self.pico.truncate_cmds = 1
         r = self.post({"cmd": "press", "channel": 1, "press_ms": 120})
@@ -393,6 +399,13 @@ class PageTests(TestCase):
         self.assertTrue(re.search(r'/static/css/sandtest\.css\?v=[0-9a-z]+"', body), body)
         self.assertTrue(re.search(r'/static/js/sandtest\.js\?v=[0-9a-z]+"', body), body)
         self.assertNotIn("?v=\"", body)
+
+    def test_play_form_allows_repeat_zero_and_has_the_toggle_button(self):
+        body = self.client.get(reverse("sandtest:page")).content.decode()
+        self.assertIn('name="repeat" type="number" min="0"', body)
+        self.assertIn("0 = until stopped", body)
+        self.assertIn('id="st-play-btn"', body)
+        self.assertIn('id="st-stop"', body)          # the separate STOP stays
 
     def test_stop_and_status_are_not_hidden_in_the_page(self):
         body = self.client.get(reverse("sandtest:page")).content.decode()

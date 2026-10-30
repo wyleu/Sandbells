@@ -79,6 +79,9 @@ button.stop {
 }
 button.stop:hover { background: #ffd978; border-color: #fff; }
 button.go { border-color: #8a7330; }
+/* the Play button while the rig is playing: it stops it */
+button.stop-play { background: #fc3; color: #1a1610; border-color: #fff3cf; font-weight: 800; letter-spacing: 0.06em; }
+button.stop-play:hover { background: #ffd978; border-color: #fff; }
 
 .stopmsg { color: #ffd978; font-weight: 600; }
 .stopmsg:empty { display: none; }

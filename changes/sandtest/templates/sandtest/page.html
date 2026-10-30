@@ -79,8 +79,8 @@
         <label class="wide">pattern <input name="pattern" type="text" value="13425678" placeholder="13425678, or rounds" autocomplete="off" spellcheck="false"></label>
         <label>interval ms <input name="interval_ms" type="number" min="1" step="1" value="400"></label>
         <label>press ms <input name="press_ms" type="number" min="1" step="1" value="120"></label>
-        <label>repeat <input name="repeat" type="number" min="1" step="1" value="1"></label>
-        <button type="submit">Play</button>
+        <label title="0 = play over and over until stopped, e.g. overnight">repeat (0 = until stopped) <input name="repeat" type="number" min="0" step="1" value="1"></label>
+        <button type="submit" id="st-play-btn" data-mode="play">Play</button>
         <span class="msg" aria-live="polite"></span>
       </form>
     </section>
