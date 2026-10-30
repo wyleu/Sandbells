@@ -31,7 +31,8 @@
     return td;
   }
 
-  function seconds1(ms) { return (ms / MS_PER_S).toFixed(1) + " s"; }
+  // whole milliseconds: a tenth of a second hides the jitter the gap column is for
+  function gapMs(ms) { return Math.round(ms) + " ms"; }
 
   function addRow(e, flash) {
     var tr = document.createElement("tr");
@@ -56,7 +57,7 @@
       mark.title = "beat " + Math.round(hit.beat) + " ms, this gap " + e.interval_ms + " ms";
       bt.appendChild(mark);
     }
-    cell(tr, e.interval_ms === null ? "—" : seconds1(e.interval_ms), "iv");
+    cell(tr, e.interval_ms === null ? "—" : gapMs(e.interval_ms), "iv");
     var q = cell(tr, null, "");
     var m = document.createElement("span");
     m.className = e.time_ok ? "q" : "q dim";
