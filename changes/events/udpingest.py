@@ -37,12 +37,13 @@ def serve(sock, ingest, stop, max_b=C.UDP_MAX_B):
                 ingest.idle()
                 continue
             n += 1
+            ip = peer[0] if isinstance(peer, tuple) else peer
             try:
                 text = data.decode("utf-8")
             except UnicodeDecodeError:
-                ingest.bad_frame(data)
+                ingest.bad_frame(data, C.R_NOT_UTF8, peer=ip)
                 continue
-            ingest.handle_frame(text, peer=peer[0] if isinstance(peer, tuple) else peer)
+            ingest.handle_frame(text, peer=ip)
             ingest.maybe_summary()
     finally:
         ingest.flush()

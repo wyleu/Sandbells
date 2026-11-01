@@ -32,8 +32,8 @@ def live_panel():
 def top_menu(current=None):
     """{% top_menu current=<farm index> %} -- the shared left side of every top
     line: Sandbells, one button per farm device, sandheads and Strokes (when the farm has a
-    concentrator), Rings by day.  current is the farm page index, or "heads", "strokes", or
-    "days" on those pages."""
+    concentrator), Rings by day, Ingest.  current is the farm page index, or "heads",
+    "strokes", "days" or "ingest" on those pages."""
     from bells.views import load_farm_instances      # here: bells imports events
     instances = load_farm_instances()
     devices = [{"index": i, "name": d["name"], "on": current == i}
@@ -47,4 +47,7 @@ def top_menu(current=None):
             "heads_on": current == "heads",
             # the Strokes page: the live stroke list, full width (none: no button)
             "strokes_url": "" if conc is None else reverse("events:strokes"),
-            "strokes_on": current == "strokes"}
+            "strokes_on": current == "strokes",
+            # the Ingest page: is the event ingest there, running, set up right
+            "ingest_url": reverse("events:ingest"),
+            "ingest_on": current == "ingest"}

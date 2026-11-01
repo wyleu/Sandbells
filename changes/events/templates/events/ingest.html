@@ -1,0 +1,103 @@
+{% extends "events/base.html" %}
+{% load events_live %}
+{% block title %}Ingest · {{ verdict }}{% endblock %}
+{% block head %}<meta http-equiv="refresh" content="{{ refresh_s }}">{% endblock %}
+{% block menu %}{% top_menu current="ingest" %}{% endblock %}
+{% block main %}
+{% comment %}Read-only.  Everything comes from this Pi: systemctl, /proc/net/udp,
+ingest_udp's tmpfs status file and the DB.  Nothing asks a Pico anything.{% endcomment %}
+<style>
+  .verdict { display: inline-block; padding: 0.15rem 0.9rem; border-radius: 999px;
+             font-weight: 700; letter-spacing: 0.05em; margin-right: 0.6rem; }
+  .v-OK { background: #1f4a22; color: #bfeac2; border: 1px solid #3c8a42; }
+  .v-QUIET { background: #4a3d12; color: #fde3a0; border: 1px solid #a88a2a; }
+  .v-STALE, .v-DOWN { background: #5a1a1a; color: #ffd0d0; border: 1px solid #c44; }
+  .cols { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; }
+  .cols section { flex: 1 1 22rem; }
+  h2 { font-size: 1.05rem; color: #f1e3c2; margin: 1rem 0 0.3rem; }
+  .good { color: #8d8; } .bad { color: #f88; }
+  td.mono { font-family: ui-monospace, monospace; font-size: 0.8rem; word-break: break-all; }
+</style>
+
+<h1><span class="verdict v-{{ verdict }}">{{ verdict }}</span>{{ why }}</h1>
+<p class="muted">Status file {{ file_path }}{% if file_age_s is not None %}, written {{ file_age_s }} s ago{% endif %}
+  (stale after {{ stale_s }} s) · page reloads every {{ refresh_s }} s</p>
+
+<div class="cols">
+<section>
+  <h2>Units</h2>
+  <table>
+    <tr><th>unit</th><th>path</th><th>installed</th><th>enabled</th><th>active</th></tr>
+    {% for u in units %}
+    <tr><td>{{ u.unit }}</td><td class="muted">{{ u.mode }}</td>
+      <td>{% if u.installed is None %}<span class="muted">?</span>{% elif u.installed %}yes{% else %}<span class="muted">no</span>{% endif %}</td>
+      <td class="{% if u.ok_enabled %}good{% else %}muted{% endif %}">{{ u.enabled }}</td>
+      <td class="{% if u.ok_active %}good{% elif u.enabled == 'enabled' %}bad{% else %}muted{% endif %}">{{ u.active }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Configuration</h2>
+  <table>
+    <tr><th></th><th>configured</th><th>running</th></tr>
+    <tr><th>mode</th><td>{{ configured.mode }}</td><td>{{ running.mode|default:"—" }}</td></tr>
+    <tr><th>bind address</th><td>{{ configured.host }}</td><td>{{ running.host|default:"—" }}</td></tr>
+    <tr><th>port</th><td>UDP {{ configured.port }}</td>
+      <td class="{% if running and running.port != configured.port %}warn{% endif %}">{% if running %}UDP {{ running.port }}{% else %}—{% endif %}</td></tr>
+    <tr><th>pid</th><td></td><td>{{ running.pid|default:"—" }}{% if started.hms %} <span class="muted">since {{ started.hms }}</span>{% endif %}</td></tr>
+    <tr><th>UDP {{ port }} bound</th><td colspan="2" class="{% if port_bound %}good{% elif port_bound is None %}muted{% else %}bad{% endif %}">
+      {% if port_bound %}yes{% elif port_bound is None %}cannot tell{% else %}no: nothing is listening{% endif %}</td></tr>
+    <tr><th>this Pi</th><td colspan="2">{{ ips|join:", "|default:"?" }}
+      <div class="muted">The Pico's settings.json "link": "udp_host" must be one of these.</div></td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>Counters (since ingest_udp started)</h2>
+  {% if counters %}
+  <table>
+    <tr><th>frames</th><td class="num">{{ counters.frames }}</td></tr>
+    <tr><th>ignored <span class="muted">(heartbeats, panel)</span></th><td class="num">{{ counters.ignored }}</td></tr>
+    <tr><th>bad <span class="muted">(not UTF-8 / JSON)</span></th><td class="num{% if counters.bad %} warn{% endif %}">{{ counters.bad }}</td></tr>
+    <tr><th>rejected <span class="muted">(all reasons)</span></th><td class="num{% if counters.rejected %} warn{% endif %}">{{ counters.rejected }}{% for k, n in counters.rejects.items %}<div class="muted">{{ k }} {{ n }}</div>{% endfor %}</td></tr>
+    <tr><th>accepted</th><td class="num">{{ counters.accepted }}</td></tr>
+    <tr><th>written to DB</th><td class="num">{{ counters.written }} <span class="muted">({{ counters.buffered }} buffered)</span></td></tr>
+    <tr><th>seq gaps <span class="muted">(lost datagrams)</span></th><td class="num{% if counters.seq_gaps %} warn{% endif %}">{{ counters.seq_gaps }} <span class="muted">({{ counters.seq_missing }} missing)</span></td></tr>
+    <tr><th>duplicates · late · resets</th><td class="num">{{ counters.duplicates }} · {{ counters.late }} · {{ counters.resets }}</td></tr>
+    {% if counters.dropped or counters.store_errors %}<tr><th>DB: dropped · errors</th><td class="num bad">{{ counters.dropped }} · {{ counters.store_errors }}</td></tr>{% endif %}
+  </table>
+  {% else %}<p class="muted">No counters: no status file from ingest_udp.</p>{% endif %}
+
+  <h2>Last datagram</h2>
+  {% if last.ms %}
+  <table>
+    <tr><th>at</th><td>{{ last.hms }} <span class="muted">({{ last.ago_s }} s ago)</span></td></tr>
+    <tr><th>from</th><td>{{ last.peer|default:"?" }}</td></tr>
+    <tr><th>type · src · seq</th><td>{{ last.type|default:"—" }} · {{ last.src|default:"—" }} · {{ last.seq|default:"—" }}</td></tr>
+    <tr><th>uid</th><td>{{ last.uid|default:"—" }}</td></tr>
+    <tr><th>boot_id</th><td>{{ last.boot_id|default:"—" }}</td></tr>
+  </table>
+  {% else %}<p class="muted">None received.</p>{% endif %}
+
+  <h2>Last stroke in the DB</h2>
+  {% if stroke %}
+  <table>
+    <tr><th>stored</th><td>{{ stroke.stored.hms }} <span class="muted">({{ stroke.stored.ago_s }} s ago)</span></td></tr>
+    <tr><th>Pico time</th><td>{{ stroke.stamped.hms|default:"—" }}</td></tr>
+    <tr><th>src · ch · seq</th><td>{{ stroke.src }} · {{ stroke.ch|default:"—" }} · {{ stroke.seq }} <span class="muted">({{ stroke.boot_id }})</span></td></tr>
+  </table>
+  {% elif stroke_error %}<p class="bad">DB not readable: {{ stroke_error }}</p>
+  {% else %}<p class="muted">No strokes stored.</p>{% endif %}
+</section>
+</div>
+
+<h2>Last {{ recent_max }} rejected or bad datagrams (newest first)</h2>
+{% if rejects %}
+<table>
+  <tr><th>at</th><th>from</th><th>reason</th><th class="num">bytes</th><th>start</th></tr>
+  {% for r in rejects %}
+  <tr><td>{{ r.hms }}</td><td>{{ r.peer|default:"?" }}</td><td class="warn">{{ r.reason }}</td>
+    <td class="num">{{ r.len }}</td><td class="mono">{{ r.excerpt }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">None.</p>{% endif %}
+{% endblock %}

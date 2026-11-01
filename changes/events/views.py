@@ -3,6 +3,7 @@
   /events/days/[?date=YYYY-MM-DD]          days with strokes, rings of one day
   /events/ring/<src>/<boot_id>/<seq>/      strokes of one ring (table)
   /events/strokes/                         the live stroke list, full width
+  /events/ingest/                          the ingest: units, counters, last datagram
 """
 
 import time
@@ -11,6 +12,7 @@ from django.http import Http404, HttpResponseBadRequest
 from django.shortcuts import render
 
 from . import constants as C
+from . import ingestpage
 from . import localtime as LT
 from .mapping import ChannelMapper
 from .models import receiving_host
@@ -28,6 +30,16 @@ def strokes_page(request):
     /events/api/link/ (the ingest's tmpfs file).  Nothing here asks a device
     for its /status, and there is no socket to a Pico."""
     return render(request, "events/strokes.html")
+
+
+def ingest_page(request):
+    """Is the event ingest there, running and set up right?  Read-only:
+    systemctl is-enabled / is-active (short timeout), ingest_udp's status
+    file (tmpfs, never the ingest process itself), the newest stored stroke.
+    Reloads itself every INGEST_PAGE_REFRESH_S; no JS."""
+    ctx = ingestpage.page_context()
+    ctx["host"] = receiving_host()
+    return render(request, "events/ingest.html", ctx)
 
 
 def days_page(request):

@@ -31,6 +31,7 @@ import time
 from . import constants as C
 from .gaps import GapTracker
 from .framestate import FrameGuard
+from .ingeststatus import IngestStatus
 from .linkstate import LinkState
 from .parse import ParseError, parse
 
@@ -49,9 +50,12 @@ class Ingest:
     def __init__(self, store, tracker=None, clock=time.monotonic,
                  summary_interval_s=C.SUMMARY_INTERVAL_S,
                  reject_log_interval_s=C.REJECT_LOG_INTERVAL_S,
-                 last_stored=stored_max_seq, link=None, wall=time.time):
+                 last_stored=stored_max_seq, link=None, wall=time.time,
+                 status=None):
         self.store = store
         self.link = link if link is not None else LinkState(None)
+        # the Ingest page's counters file (ingeststatus.py); None: in memory
+        self.status = status if status is not None else IngestStatus(None)
         self.wall = wall
         self.pico_heartbeats = 0      # sand.panel/v1 heartbeats seen (wsclient)
         self._note_boot = os.urandom(4).hex()
@@ -75,6 +79,13 @@ class Ingest:
     # ---- frames ---------------------------------------------------------
     def handle_frame(self, text, peer=None):
         """peer: the datagram's source IP (UDP path), None from the WebSocket."""
+        self.status.datagram(peer)
+        try:
+            return self._handle_frame(text, peer)
+        finally:
+            self.status.maybe_write(self)       # never raises; cheap when not due
+
+    def _handle_frame(self, text, peer):
         self.frames += 1
         try:
             p = parse(text)
@@ -84,6 +95,7 @@ class Ingest:
                 self._good_frame()
                 self._panel_frame(text, peer)
                 return None
+            self.status.rejected(e.reason, text, peer)
             self._reject(e, quiet=e.reason in C.DECODE_REASONS)
             if e.reason in C.DECODE_REASONS:
                 self._bad_frame(text, e.reason)
@@ -92,6 +104,8 @@ class Ingest:
             self.link.frame(False)
             return None
         self._good_frame()
+        self.status.identity(uid=p.device_id, boot_id=p.boot_id, src=p.src,
+                             type=p.type, seq=p.seq)
         self.link.frame(True)
         self._seed_from_db(p.src, p.boot_id)
         obs = self.tracker.observe(p.src, p.boot_id, p.seq)
@@ -104,12 +118,16 @@ class Ingest:
         self._write(self.store.add, p)
         return obs
 
-    def bad_frame(self, data, why=C.BAD_FRAME_WHY_TRANSPORT):
-        """A frame the WebSocket layer could not decode (wsclient): the
+    def bad_frame(self, data, why=C.BAD_FRAME_WHY_TRANSPORT, peer=None):
+        """A frame the WebSocket layer could not decode (wsclient), or a
+        datagram that is not UTF-8 (udpingest, peer = its source IP): the
         bytes stand in for the text.  True if the link should be dropped."""
+        self.status.datagram(peer)
+        self.status.rejected(why, data, peer)
         self.frames += 1
         self._bad_frame(data, why)
         self.link.frame(False)
+        self.status.maybe_write(self)
         return self.drop_reason is not None
 
     def new_connection(self):
@@ -122,6 +140,7 @@ class Ingest:
         self._write(self.store.poll)
         self.maybe_summary()
         self.link.maybe_write()
+        self.status.maybe_write(self)
 
     def _panel_frame(self, text, peer=None):
         """sand.panel/v1: a heartbeat (LED mimic, link, sync) -> LinkState."""
@@ -131,6 +150,10 @@ class Ingest:
             return
         if isinstance(doc, dict) and doc.get(C.F_TYPE) == C.TYPE_HEARTBEAT:
             self.pico_heartbeats += 1
+            body = doc.get(C.F_BODY) if isinstance(doc.get(C.F_BODY), dict) else {}
+            self.status.identity(uid=body.get(C.BODY_UID) or doc.get(C.F_ID),
+                                 boot_id=doc.get(C.F_BOOT_ID), src=doc.get(C.F_SRC),
+                                 type=C.TYPE_HEARTBEAT, seq=doc.get(C.F_SEQ))
             self.link.heartbeat(doc, peer)
         else:
             self.link.frame(False)

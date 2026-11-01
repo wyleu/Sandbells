@@ -32,7 +32,7 @@ class FakeIngest:
         self.frames.append(text)
         self.peers.append(peer)
 
-    def bad_frame(self, data, why=None):
+    def bad_frame(self, data, why=None, peer=None):
         self.bad += 1
 
     def idle(self):

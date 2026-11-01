@@ -50,6 +50,7 @@ F_SRV = "srv"
 F_STRATUM = "stratum"
 F_BODY = "body"
 BODY_CH = "ch"
+BODY_UID = "uid"                # sand.panel/v1 heartbeat body: the Pico's unique id
 
 REQUIRED_STR_FIELDS = (F_TYPE, F_SRC, F_ID, F_BOOT_ID)
 REQUIRED_INT_FIELDS = (F_SEQ, F_TICK_MS)
@@ -222,3 +223,28 @@ LINK_POLL_MS = 2000             # widget poll of /events/api/link/
 LINK_STALE_MS = 15000           # no Pico heartbeat this long: grey (3 missed)
 LINK_LOST_MS = 30000            # ...this long, or ingest down: red LOST
 INGEST_FILE_STALE_MS = 15000    # link file not rewritten: ingest not running
+
+# ---- ingest status file + page (ingeststatus.py, /events/ingest/) ----------
+# ingest_udp's own counters for the Ingest page: one small JSON file next to
+# the link state (same tmpfs RuntimeDirectory), written atomically.  Separate
+# from link.json so the page can tell "ingest alive" from "Pico alive".
+INGEST_STATUS_PATH = "/run/sandbells-ingest/status.json"
+INGEST_STATUS_ENV = "SANDBELLS_INGEST_STATUS"
+INGEST_STATUS_SCHEMA = "sandbells.ingest_status/v1"
+INGEST_STATUS_WRITE_S = 5.0     # rewrite at least this often (file age = alive)
+INGEST_STATUS_CHANGE_S = 1.0    # on a change: at most one write per this
+INGEST_STATUS_STALE_MS = 15000  # file older than this: STALE (3 writes missed)
+INGEST_STATUS_RECENT = 10       # rejected / bad datagrams kept, newest last
+INGEST_STATUS_EXCERPT = 80      # characters of each one shown
+INGEST_MODE_UDP = "udp"
+UDP_URL_FORMAT = "udp://%s:%d"   # the link state's "url" while ingest_udp listens
+INGEST_STATE_RUNNING = "running"
+INGEST_STATE_STOPPED = "stopped"
+INGEST_QUIET_MS = 15000         # running but no datagram this long: QUIET
+INGEST_UNITS = ("sandbells-ingest-udp.service", "sandbells-ingest.service")
+INGEST_UNIT_MODES = {"sandbells-ingest-udp.service": "udp (manage.py ingest_udp)",
+                     "sandbells-ingest.service": "websocket (manage.py ingest_events)"}
+SYSTEMCTL = "systemctl"
+SYSTEMCTL_TIMEOUT_S = 2.0       # per call; the page never waits longer
+PROC_NET_UDP = "/proc/net/udp"  # is the port bound (by anyone)?
+INGEST_PAGE_REFRESH_S = 5       # the page reloads itself (no JS)

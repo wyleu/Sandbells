@@ -28,10 +28,11 @@
     .heads { font-size: 0.85rem; opacity: 0.8; }
   </style>
   {% include "events/menu_style.html" %}
+  {% block head %}{% endblock %}
 </head>
 <body>
   <header class="topbar">
-    {% top_menu current="days" %}
+    {% block menu %}{% top_menu current="days" %}{% endblock %}
     {% block crumbs %}{% endblock %}
     <span class="right"><span class="host">{{ host }}</span>
     {% include "events/mini_clock.html" %}</span>
