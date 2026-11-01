@@ -112,6 +112,13 @@ SQLITE_BUSY_TIMEOUT_MS = 5000   # wait for a lock instead of failing at once
 # ---- ingest: WebSocket client (wsclient.py, backoff.py) ------------------
 # By IP: sandbells2 cannot resolve .local names.
 WS_DEFAULT_URL = "ws://192.168.0.81/ws"
+# manage.py ingest_udp: the concentrator's tier 3 ("link.ring_send": "udp"):
+# every event is one datagram, fire and forget (no TCP on the Pico, so no
+# 10 s lwIP ERR_MEM hold).  A lost datagram is a seq gap (GapTracker).
+UDP_INGEST_HOST = "0.0.0.0"
+UDP_INGEST_PORT = 5055          # sandswing link_health.UDP_PORT
+UDP_MAX_B = 1472                # sandswing link_health.UDP_MAX_B: one Ethernet frame
+UDP_IDLE_S = 1.0                # recv timeout: flush / summary / link state this often when quiet
 WS_CONNECT_TIMEOUT_S = 5.0
 WS_RECV_TIMEOUT_S = 1.0         # idle wake-up: store.poll(), summary, stop check
 BACKOFF_INITIAL_S = 1.0

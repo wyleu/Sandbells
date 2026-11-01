@@ -1,0 +1,35 @@
+[Unit]
+Description=Sandbells event ingest over UDP (concentrator link.ring_send "udp", tier 3)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sandbells
+Group=sandbells
+WorkingDirectory=/home/sandbells/Code/Sandbells/changes
+Environment=PYTHONUNBUFFERED=1
+# Live link state for the page 3 widget (gunicorn reads it): tmpfs, made
+# fresh at every start.  events.constants.LINK_STATE_PATH.
+RuntimeDirectory=sandbells-ingest
+RuntimeDirectoryMode=0755
+
+# Listens on UDP 0.0.0.0:5055 (events.constants.UDP_INGEST_PORT); the Pico
+# sends to it ("link": {"ring_send": "udp", "udp_host": "<this Pi>"}).
+# Use instead of sandbells-ingest.service (that one dials the Pico's /ws,
+# which a "udp" Pico does not serve).  Both write the same LINK_STATE_PATH.
+ExecStart=/home/sandbells/Code/Sandbells/Bellvirtenv/bin/python manage.py ingest_udp
+
+# SIGTERM -> flush buffered events, then exit
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Restart=always
+RestartSec=5
+
+# Pi 3 friendly scheduling (as gunicorn.service)
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target
