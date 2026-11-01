@@ -73,7 +73,8 @@ class Ingest:
         self._summary_at = clock()
 
     # ---- frames ---------------------------------------------------------
-    def handle_frame(self, text):
+    def handle_frame(self, text, peer=None):
+        """peer: the datagram's source IP (UDP path), None from the WebSocket."""
         self.frames += 1
         try:
             p = parse(text)
@@ -81,7 +82,7 @@ class Ingest:
             if e.reason == C.R_IGNORED:          # e.g. sand.panel/v1 mimic frames
                 self.ignored += 1
                 self._good_frame()
-                self._panel_frame(text)
+                self._panel_frame(text, peer)
                 return None
             self._reject(e, quiet=e.reason in C.DECODE_REASONS)
             if e.reason in C.DECODE_REASONS:
@@ -122,7 +123,7 @@ class Ingest:
         self.maybe_summary()
         self.link.maybe_write()
 
-    def _panel_frame(self, text):
+    def _panel_frame(self, text, peer=None):
         """sand.panel/v1: a heartbeat (LED mimic, link, sync) -> LinkState."""
         try:
             doc = json.loads(text)
@@ -130,7 +131,7 @@ class Ingest:
             return
         if isinstance(doc, dict) and doc.get(C.F_TYPE) == C.TYPE_HEARTBEAT:
             self.pico_heartbeats += 1
-            self.link.heartbeat(doc)
+            self.link.heartbeat(doc, peer)
         else:
             self.link.frame(False)
 

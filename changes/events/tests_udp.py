@@ -23,12 +23,14 @@ class FakeSock:
 class FakeIngest:
     def __init__(self):
         self.frames, self.bad, self.idles, self.flushed, self.new = [], 0, 0, 0, 0
+        self.peers = []
 
     def new_connection(self):
         self.new += 1
 
-    def handle_frame(self, text):
+    def handle_frame(self, text, peer=None):
         self.frames.append(text)
+        self.peers.append(peer)
 
     def bad_frame(self, data, why=None):
         self.bad += 1
@@ -54,6 +56,7 @@ class ServeTests(unittest.TestCase):
         self.assertEqual(ing.bad, 1)
         self.assertGreaterEqual(ing.idles, 1)
         self.assertEqual(ing.flushed, 1)
+        self.assertEqual(ing.peers, ["10.42.0.81", "10.42.0.81"])     # each frame's source IP
 
     def test_real_socket_round_trip(self):
         s = udpingest.open_socket("127.0.0.1", 0, 0.05)

@@ -47,6 +47,9 @@ def _fan_nudge_down(_params: dict) -> dict:
 # Pi), with its cpu uid and the boot_id of its current boot (both read from
 # its last heartbeat in the ingest's link state), and a seq above the last
 # one it took this boot (ms since 1970 here: rises across our restarts).
+# Sent to the source IP of the Pico's last UDP heartbeat (ingest link state
+# "pico_peers", by uid: home or tower without a farm-entry field), else to
+# every host of status_url and alt_status_urls.
 # Not protected against: anyone on the network can read uid and boot_id from
 # the heartbeats and forge our address.  The worst a forger can do is turn
 # the Pico's Wi-Fi off until its next reboot; MIDI is not affected.
@@ -63,44 +66,63 @@ def _udp_send(data: bytes, addr) -> None:
         s.close()
 
 
-def _pico_host(inst: dict) -> str | None:
-    if inst.get("host"):
-        return str(inst["host"])
-    for k in ("status_url", "ws_url"):
-        h = urlparse(inst.get(k) or "").hostname
-        if h:
-            return h
-    return None
+def _url_hosts(inst: dict) -> list:
+    """Hosts of status_url, then alt_status_urls (the farm entry as it is)."""
+    urls = [inst.get("status_url")] + list(inst.get("alt_status_urls") or [])
+    out = []
+    for u in urls:
+        h = urlparse(str(u or "")).hostname
+        if h and h not in out:
+            out.append(h)
+    return out
 
 
-def _last_heartbeat() -> dict | None:
+def _pico_hosts(inst: dict, uid: str, peers: dict) -> tuple:
+    """-> (hosts, how).  The source IP of the last UDP heartbeat from this
+    uid (where the Pico is now, home or tower), else every host of
+    status_url and alt_status_urls.  No new farm-entry field."""
+    seen = (peers or {}).get(uid) or {}
+    if seen.get("ip"):
+        return [seen["ip"]], "last heartbeat"
+    return _url_hosts(inst), "status_url / alt_status_urls"
+
+
+def _link_state() -> dict:
     from events.linkstate import read_link_state
     doc, _age = read_link_state()
-    return (doc or {}).get("pico")
+    return doc or {}
 
 
 def _sandswing_wifi_off(inst: dict, _params: dict, send=_udp_send,
-                        heartbeat=_last_heartbeat, clock=time.time) -> dict:
-    host = _pico_host(inst)
-    if not host:
-        raise ActionError("no address for %s (farm entry host)" % inst.get("id"), 400)
-    hb = heartbeat() or {}
+                        link=_link_state, clock=time.time) -> dict:
+    state = link() or {}
+    hb = state.get("pico") or {}
     boot_id = hb.get("boot_id")
     uid = inst.get("uid") or (hb.get("body") or {}).get("uid")
     if not boot_id or not uid:
         raise ActionError("no heartbeat from the Pico yet (boot_id / uid unknown)", 409)
+    hosts, how = _pico_hosts(inst, uid, state.get("pico_peers"))
+    if not hosts:
+        raise ActionError("no address for %s (no UDP heartbeat source, no status_url)"
+                          % inst.get("id"), 400)
     seq = int(clock() * MS_PER_S)
     cmd = {"schema": SANDSWING_CMD_SCHEMA, "cmd": "wifi_off", "uid": uid,
            "boot_id": boot_id, "seq": seq}
+    data = json.dumps(cmd).encode("utf-8")
     port = int(inst.get("cmd_port") or SANDSWING_CMD_PORT)
-    try:
-        send(json.dumps(cmd).encode("utf-8"), (host, port))
-    except OSError as e:
-        raise ActionError("could not send to %s:%d: %s" % (host, port, e), 504)
-    return {"ok": True, "seq": seq,
-            "message": "Wi-Fi off sent (seq %d). The Pico confirms with a link "
-                       "net_command event, then stays MIDI-only until it is "
-                       "rebooted or repowered." % seq}
+    sent, errors = [], []
+    for h in hosts:                   # same seq to each: the Pico takes one, refuses the rest as replays
+        try:
+            send(data, (h, port))
+            sent.append(h)
+        except OSError as e:
+            errors.append("%s: %s" % (h, e))
+    if not sent:
+        raise ActionError("could not send to port %d: %s" % (port, "; ".join(errors)), 504)
+    return {"ok": True, "seq": seq, "sent_to": sent,
+            "message": "Wi-Fi off sent to %s (%s, seq %d). The Pico confirms with a "
+                       "link net_command event, then stays MIDI-only until it is "
+                       "rebooted or repowered." % (", ".join(sent), how, seq)}
 
 
 # family "sandswing": (key, action) -> handler(inst, params) -> dict

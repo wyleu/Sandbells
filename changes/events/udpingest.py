@@ -24,7 +24,8 @@ def open_socket(host=C.UDP_INGEST_HOST, port=C.UDP_INGEST_PORT, idle_s=C.UDP_IDL
 
 
 def serve(sock, ingest, stop, max_b=C.UDP_MAX_B):
-    """Until stop is set: each datagram -> ingest.handle_frame(text); a quiet
+    """Until stop is set: each datagram -> ingest.handle_frame(text, peer=its
+    source IP: a heartbeat's is where the Pico is now); a quiet
     second -> ingest.idle().  Flushes on the way out.  Returns datagrams seen."""
     n = 0
     ingest.new_connection()
@@ -41,7 +42,7 @@ def serve(sock, ingest, stop, max_b=C.UDP_MAX_B):
             except UnicodeDecodeError:
                 ingest.bad_frame(data)
                 continue
-            ingest.handle_frame(text)
+            ingest.handle_frame(text, peer=peer[0] if isinstance(peer, tuple) else peer)
             ingest.maybe_summary()
     finally:
         ingest.flush()

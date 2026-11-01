@@ -11,7 +11,7 @@ stored as events as well.
     state = LinkState(path)          # path None: in memory only (tests)
     state.connected(url)
     state.frame(kind)                # every frame received
-    state.heartbeat(doc)             # every sand.panel/v1 heartbeat
+    state.heartbeat(doc, peer)       # every sand.panel/v1 heartbeat; peer: UDP source IP
     state.disconnected(reason)
     state.maybe_write()              # from idle(): keeps the file fresh
     read_link_state(path)            # api.py: -> dict or None
@@ -55,6 +55,7 @@ class LinkState:
                 "last_heartbeat_ms": None, "pid": os.getpid(),
             },
             "pico": None,                     # last heartbeat (envelope + body)
+            "pico_peers": {},                 # body.uid -> {"ip", "ms"}: last UDP heartbeat's source
             "written_ms": None,
         }
 
@@ -101,11 +102,17 @@ class LinkState:
             i["last_event_ms"] = now
         self.maybe_write(C.LINK_WRITE_MIN_S)
 
-    def heartbeat(self, doc):
+    def heartbeat(self, doc, peer=None):
+        """peer: the source IP of a UDP heartbeat, kept per Pico uid so a
+        command goes back to where that Pico is now (home or tower)."""
         i = self.ingest
         i["heartbeats"] += 1
-        i["last_heartbeat_ms"] = _ms(self.wall)
+        now = _ms(self.wall)
+        i["last_heartbeat_ms"] = now
         self.doc["pico"] = doc
+        if peer:
+            uid = str((doc.get("body") or {}).get("uid") or "")
+            self.doc.setdefault("pico_peers", {})[uid] = {"ip": str(peer), "ms": now}
         self.maybe_write(C.LINK_WRITE_MIN_S)
 
     # ---- file ------------------------------------------------------------
