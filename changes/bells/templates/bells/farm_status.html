@@ -21,6 +21,7 @@
       <span id="farm-level" class="level level-unknown">…</span>
       <span id="farm-summary"></span>
       {% include "bells/power_controls.html" %}
+      {% if inst.family == "sandswing" %}{% include "bells/wifi_off_control.html" %}{% endif %}
       <span class="right">{% include "events/mini_clock.html" %}</span>
     </div>
   </header>

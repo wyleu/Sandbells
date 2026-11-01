@@ -1,0 +1,38 @@
+{% comment %}sandswing only: "Wi-Fi off until reboot".  POST /api/farm/action/
+{device, key "wifi", action "off"} (bells/actions.py SANDSWING); two steps
+(press, then confirm).  There is no "on": the Pico can hear nothing with
+Wi-Fi off; its next reboot or repower is back at its settings.json default.{% endcomment %}
+<span id="wifi-off" class="power" data-device="{{ inst.id }}">
+  <button type="button" class="power-btn" id="wifi-off-btn" title="Turn {{ inst.name }} Wi-Fi off until it is rebooted (MIDI keeps going)">Wi-Fi off</button>
+  <span id="wifi-off-confirm" hidden>
+    <button type="button" id="wifi-off-yes">Wi-Fi off until reboot?</button>
+    <button type="button" id="wifi-off-no">Cancel</button>
+  </span>
+  <span id="wifi-off-msg" aria-live="polite"></span>
+</span>
+<script>
+(function () {
+  var box = document.getElementById("wifi-off");
+  var btn = document.getElementById("wifi-off-btn");
+  var conf = document.getElementById("wifi-off-confirm");
+  var msg = document.getElementById("wifi-off-msg");
+  function csrf() {
+    var m = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+  btn.onclick = function () { conf.hidden = false; btn.hidden = true; };
+  document.getElementById("wifi-off-no").onclick = function () { conf.hidden = true; btn.hidden = false; };
+  document.getElementById("wifi-off-yes").onclick = function () {
+    conf.hidden = true;
+    msg.textContent = "sending…";
+    fetch("/api/farm/action/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf() },
+      body: JSON.stringify({ device: box.dataset.device, key: "wifi", action: "off" })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      msg.textContent = d.ok ? d.message : ("refused: " + (d.error || "?"));
+      if (!d.ok) { btn.hidden = false; }
+    }).catch(function (e) { msg.textContent = "failed: " + e; btn.hidden = false; });
+  };
+})();
+</script>
