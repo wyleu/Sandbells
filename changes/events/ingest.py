@@ -58,6 +58,10 @@ class Ingest:
         self.status = status if status is not None else IngestStatus(None)
         self.wall = wall
         self.pico_heartbeats = 0      # sand.panel/v1 heartbeats seen (wsclient)
+        self.pending_ack = None       # (boot_id, seq) of the last heartbeat (udpingest acks it)
+        self.acks_sent = 0            # udpingest: acks handed to sendto
+        self.ack_errors = 0           # ...sendto raised (counted, never retried)
+        self.acks_limited = 0         # ...not sent: within UDP_ACK_MIN_S of the last to that IP
         self._note_boot = os.urandom(4).hex()
         self._note_seq = 0
         self.last_stored = last_stored
@@ -155,8 +159,16 @@ class Ingest:
                                  boot_id=doc.get(C.F_BOOT_ID), src=doc.get(C.F_SRC),
                                  type=C.TYPE_HEARTBEAT, seq=doc.get(C.F_SEQ))
             self.link.heartbeat(doc, peer)
+            boot_id, seq = doc.get(C.F_BOOT_ID), doc.get(C.F_SEQ)
+            if isinstance(boot_id, str) and isinstance(seq, int) and not isinstance(seq, bool):
+                self.pending_ack = (boot_id[:C.ACK_BOOT_ID_MAX], seq)
         else:
             self.link.frame(False)
+
+    def take_ack(self):
+        """(boot_id, seq) of a heartbeat just handled, once; else None."""
+        a, self.pending_ack = self.pending_ack, None
+        return a
 
     # ---- this side's own events -----------------------------------------
     def note(self, what, **body):

@@ -120,6 +120,16 @@ UDP_INGEST_HOST = "0.0.0.0"
 UDP_INGEST_PORT = 5055          # sandswing link_health.UDP_PORT
 UDP_MAX_B = 1472                # sandswing link_health.UDP_MAX_B: one Ethernet frame
 UDP_IDLE_S = 1.0                # recv timeout: flush / summary / link state this often when quiet
+# back chat: each sand.panel/v1 heartbeat datagram gets one tiny ack, sent
+# on the same socket to the heartbeat's source (ip, port).  The Pico turns
+# its link LED green on it and rejoins Wi-Fi when acks stop (its wifi_ok()
+# can say up while nothing gets through).  Best effort: never waits,
+# errors are counted.
+SCHEMA_ACK_V1 = "sand.ack/v1"   # sandswing link_health.ACK_SCHEMA
+UDP_ACK_MIN_S = 2.0             # at most one ack per sender IP per this (heartbeats: every 5 s)
+UDP_ACK_MAX_B = 100             # an ack is always smaller than this
+ACK_BOOT_ID_MAX = 16            # the heartbeat's boot_id, cut to this (it is 8 hex)
+UDP_ACK_LOG_EVERY = 100         # a failed ack is logged the first time and every this many
 WS_CONNECT_TIMEOUT_S = 5.0
 WS_RECV_TIMEOUT_S = 1.0         # idle wake-up: store.poll(), summary, stop check
 BACKOFF_INITIAL_S = 1.0

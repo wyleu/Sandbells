@@ -277,6 +277,17 @@ class IngestPageTests(TestCase, TmpDir):
         self.assertContains(r, ingestpage.NO_SYSTEMD)         # no systemd here: still renders
         self.assertContains(r, '<meta http-equiv="refresh" content="%d">' % C.INGEST_PAGE_REFRESH_S)
 
+    def test_acks_are_on_the_page(self):
+        self.write_status()
+        doc, _ = read_ingest_status(self.path)
+        doc["counters"].update(acks_sent=41, ack_errors=2)
+        with open(self.path, "w") as f:
+            json.dump(doc, f)
+        r = self.get()
+        self.assertContains(r, "acks sent")
+        self.assertContains(r, "1 · 41")                       # heartbeats · acks sent
+        self.assertContains(r, "(2 failed)")
+
     def test_running_but_no_recent_datagram_is_quiet(self):
         self.write_status(last_ago_s=C.INGEST_QUIET_MS // C.MS_PER_S + 5)
         self.assertEqual(self.get().context["verdict"], ingestpage.V_QUIET)
@@ -352,3 +363,91 @@ class IngestUdpCommandTests(TestCase, TmpDir):
         self.assertEqual(seen["status"]["state"], C.INGEST_STATE_RUNNING)
         self.assertEqual(read_ingest_status(status_path)[0]["state"], C.INGEST_STATE_STOPPED)
         self.assertEqual(read_link_state(link_path)[0]["ingest"]["state"], C.LINK_STOPPED)
+
+
+class AckSock:
+    """recvfrom from a list, sendto recorded (or raising)."""
+    def __init__(self, items, stop, fail=None):
+        self.items, self.stop, self.fail, self.sent = list(items), stop, fail, []
+
+    def recvfrom(self, n):
+        if not self.items:
+            self.stop.set()
+            raise socket.timeout()
+        return self.items.pop(0)
+
+    def sendto(self, data, peer):
+        if self.fail:
+            raise self.fail
+        self.sent.append((data, peer))
+        return len(data)
+
+
+class AckTests(SimpleTestCase, TmpDir):
+    def serve(self, items, clock=None, fail=None):
+        stop = threading.Event()
+        clock = clock or FakeClock()
+        ing, status = make_ingest(None, clock)
+        sock = AckSock(items, stop, fail)
+        udpingest.serve(sock, ing, stop, acker=udpingest.Acker(clock=clock))
+        return ing, status, sock
+
+    def test_each_heartbeat_gets_one_small_ack_to_its_ip_and_port(self):
+        ing, status, sock = self.serve([(heartbeat(7).encode(), (PEER, 50123))])
+        self.assertEqual(len(sock.sent), 1)
+        data, peer = sock.sent[0]
+        self.assertEqual(peer, (PEER, 50123))                 # where it came from, not 5055
+        self.assertLess(len(data), C.UDP_ACK_MAX_B)
+        self.assertEqual(json.loads(data), {"schema": C.SCHEMA_ACK_V1, "boot_id": "b007", "seq": 7})
+        self.assertEqual((ing.acks_sent, ing.ack_errors, ing.pico_heartbeats), (1, 0, 1))
+        status.snapshot(ing)
+        self.assertEqual(status.doc["counters"]["acks_sent"], 1)
+        self.assertEqual(status.doc["counters"]["ack_errors"], 0)
+
+    def test_events_and_bad_datagrams_get_no_ack(self):
+        ing, _, sock = self.serve([(raw(seq=1).encode(), (PEER, 1)), (b"\xff", (PEER, 1)),
+                                   (b"not json", (PEER, 1))])
+        self.assertEqual(sock.sent, [])
+        self.assertEqual(ing.acks_sent, 0)
+
+    def test_at_most_one_ack_per_sender_per_min_s(self):
+        clock = FakeClock()
+        items = [(heartbeat(1).encode(), (PEER, 1)), (heartbeat(2).encode(), (PEER, 1)),
+                 (heartbeat(9).encode(), ("10.42.0.81", 1))]
+        ing, _, sock = self.serve(items, clock)
+        self.assertEqual([json.loads(d)["seq"] for d, _ in sock.sent], [1, 9])
+        self.assertEqual(ing.acks_limited, 1)
+        acker = udpingest.Acker(clock=clock)
+        ing2, _ = make_ingest(None, clock)
+        s2 = AckSock([], threading.Event())
+        for seq in (1, 2):
+            ing2.handle_frame(heartbeat(seq), peer=PEER)
+            acker(s2, ing2, (PEER, 1))
+            clock.t += C.UDP_ACK_MIN_S
+        self.assertEqual(ing2.acks_sent, 2)                   # 5 s apart in life: every one
+
+    def test_a_failed_sendto_is_counted_and_the_loop_goes_on(self):
+        ing, status, sock = self.serve([(heartbeat(1).encode(), (PEER, 1)),
+                                        (raw(seq=1).encode(), (PEER, 1))],
+                                       fail=OSError(101, "Network is unreachable"))
+        self.assertEqual((ing.acks_sent, ing.ack_errors), (0, 1))
+        self.assertEqual(ing.store.stats["added"], 1)        # the event after it still stored
+        status.snapshot(ing)
+        self.assertEqual(status.doc["counters"]["ack_errors"], 1)
+
+    def test_real_socket_the_sender_reads_its_ack_on_its_own_socket(self):
+        s = udpingest.open_socket("127.0.0.1", 0, 0.05)
+        port = s.getsockname()[1]
+        pico = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        pico.settimeout(2)
+        pico.sendto(heartbeat(3).encode(), ("127.0.0.1", port))
+        stop = threading.Event()
+        ing, _ = make_ingest(None, FakeClock())
+        orig = ing.idle
+        ing.idle = lambda: (orig(), stop.set())
+        udpingest.serve(s, ing, stop)
+        s.close()
+        data, src = pico.recvfrom(256)
+        pico.close()
+        self.assertEqual(src[1], port)
+        self.assertEqual(json.loads(data)["seq"], 3)

@@ -57,6 +57,7 @@ ingest_udp's tmpfs status file and the DB.  Nothing asks a Pico anything.{% endc
   <table>
     <tr><th>frames</th><td class="num">{{ counters.frames }}</td></tr>
     <tr><th>ignored <span class="muted">(heartbeats, panel)</span></th><td class="num">{{ counters.ignored }}</td></tr>
+    <tr><th>heartbeats · acks sent <span class="muted">(back to the Pico)</span></th><td class="num">{{ counters.heartbeats|default:0 }} · {{ counters.acks_sent|default:0 }}{% if counters.ack_errors %} <span class="warn">({{ counters.ack_errors }} failed)</span>{% endif %}{% if counters.acks_limited %} <span class="muted">({{ counters.acks_limited }} rate-limited)</span>{% endif %}</td></tr>
     <tr><th>bad <span class="muted">(not UTF-8 / JSON)</span></th><td class="num{% if counters.bad %} warn{% endif %}">{{ counters.bad }}</td></tr>
     <tr><th>rejected <span class="muted">(all reasons)</span></th><td class="num{% if counters.rejected %} warn{% endif %}">{{ counters.rejected }}{% for k, n in counters.rejects.items %}<div class="muted">{{ k }} {{ n }}</div>{% endfor %}</td></tr>
     <tr><th>accepted</th><td class="num">{{ counters.accepted }}</td></tr>

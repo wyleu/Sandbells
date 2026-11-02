@@ -120,6 +120,9 @@ class IngestStatus:
             "late": t.counts.get(C.GAP_OUT_OF_ORDER, 0),
             "resets": t.counts.get(C.GAP_RESET, 0),
             "heartbeats": ingest.pico_heartbeats,
+            "acks_sent": getattr(ingest, "acks_sent", 0),
+            "ack_errors": getattr(ingest, "ack_errors", 0),
+            "acks_limited": getattr(ingest, "acks_limited", 0),
         }
         self.doc["recent_rejects"] = list(self.recent)
 
