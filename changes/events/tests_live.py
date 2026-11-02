@@ -257,10 +257,24 @@ class LinkApiTests(SimpleTestCase):
         self.assertEqual(out["verdict"], "lost")
         self.assertIn("peer silent 20 s", out["why"])
 
-    def test_old_firmware_connected_without_heartbeats_is_ok(self):
+    def test_no_heartbeat_recent_packet_is_ok(self):
         out = self.get(self.doc(hb_ago_ms=None))
         self.assertEqual(out["verdict"], "ok")
-        self.assertIn("older firmware", out["why"])
+        self.assertIn("no heartbeat", out["why"])
+
+    def test_no_heartbeat_judged_by_last_packet(self):
+        import time
+        now = int(time.time() * 1000)
+        self.assertEqual(self.get(self.doc(
+            hb_ago_ms=None, last_frame_ms=now - C.LINK_STALE_MS - 1000))["verdict"], "stale")
+        out = self.get(self.doc(hb_ago_ms=None, last_frame_ms=now - C.LINK_LOST_MS - 1000))
+        self.assertEqual(out["verdict"], "lost")
+        self.assertIn("no packet", out["why"])
+
+    def test_nothing_ever_heard_is_lost_not_connected(self):
+        out = self.get(self.doc(hb_ago_ms=None, last_frame_ms=None))
+        self.assertEqual(out["verdict"], "lost")
+        self.assertIn("nothing heard", out["why"])
 
 
 @mock.patch("bells.views.load_farm_instances", return_value=FARM)

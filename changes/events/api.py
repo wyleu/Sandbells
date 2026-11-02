@@ -143,9 +143,21 @@ def link_verdict(doc, file_age, now):
     if i.get("state") != C.LINK_CONNECTED:
         why = i.get("last_drop_reason") or i.get("last_error") or i.get("state")
         return dict(base, verdict="lost", why="ingest %s: %s" % (i.get("state"), why))
-    if hb_age is None:                   # old firmware: no heartbeats at all
-        return dict(base, verdict="ok", why="connected (no heartbeat from "
-                    "the concentrator: older firmware)")
+    if hb_age is None:
+        # No heartbeat this run.  Judge by the last packet of any kind, so a
+        # silent or unplugged Pico (or one whose heartbeats never arrive,
+        # e.g. too big for one UDP datagram) goes STALE/LOST, never a
+        # CONNECTED that nothing backs up.
+        if rx_age is None:
+            return dict(base, verdict="lost", why="nothing heard from the concentrator")
+        if rx_age > C.LINK_LOST_MS:
+            return dict(base, verdict="lost", why="no packet for %d s (no heartbeats)"
+                        % (rx_age // C.MS_PER_S))
+        if rx_age > C.LINK_STALE_MS:
+            return dict(base, verdict="stale", why="no packet for %d s (no heartbeats)"
+                        % (rx_age // C.MS_PER_S))
+        return dict(base, verdict="ok", why="connected (packets, but no heartbeat "
+                    "from the concentrator)")
     if hb_age > C.LINK_LOST_MS:
         return dict(base, verdict="lost", why="no heartbeat for %d s" % (hb_age // C.MS_PER_S))
     if hb_age > C.LINK_STALE_MS:
