@@ -638,6 +638,32 @@ class EndToEndTests(TestCase, TmpDir):
                       [(e["type"], e["src"], e["bell"]) for e in r.json()["events"]])
 
 
+class RingCountApiTests(TestCase):
+    """sandbells2 3 Nov: MIDI ch 4 bound to bell 8 (admin, a sandswing row)
+    after 46 strokes of a ring; the Strokes page said 260 for 153 strokes."""
+
+    def test_the_live_ring_counts_each_stroke_once(self):
+        from datetime import datetime, timezone as tz
+        from django.urls import reverse
+        from .models import ChannelMap
+        from .queries import reset_ring_cache
+        reset_ring_cache()
+        t0, gap, before, after = 1793722578000, 3200, 46, 107      # 16:16:18 GMT
+        for seq in range(1, before + after + 1):
+            t = t0 + (seq - 1) * gap
+            Event.objects.create(src=C.MIDI_SRC, boot_id="20595eb3", seq=seq, type=C.TYPE_STROKE,
+                                 ch=4, tick_ms=t, utc_ms=t, body={"ch": 4})
+            if seq == before:
+                ChannelMap.objects.create(src=C.DEFAULT_SRC, ch=4, bell=8,
+                                          valid_from=datetime.fromtimestamp((t + gap // 2) / 1000, tz.utc))
+        ring = self.client.get(reverse("events:api_since"), {"type": "", "limit": 1}).json()["ring"]
+        self.assertEqual((ring["strokes"], ring["events"], ring["start_hms"]),
+                         (153, 153, "16:16:18"))
+        self.assertEqual([(b["bell"], b["strokes"]) for b in ring["bells"]], [(8, 107)])
+        self.assertEqual([(c["ch"], c["bell"], c["unmapped"]) for c in ring["channels"]],
+                         [(4, 8, 46)])
+
+
 class IngestMidiCommandTests(TestCase, TmpDir):
     def test_device_override_once_reads_the_file_and_stores_strokes(self):
         d = self.tmpdir()

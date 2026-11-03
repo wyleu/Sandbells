@@ -73,15 +73,15 @@ def days_page(request):
 
 def _bell_rows(ring):
     """Display lines for the Bells cell: 'Bell 8' (+ two-heads counts),
-    then unmapped channels as 'ch N'."""
+    then each channel's strokes while it had no bell as 'ch N'."""
     rows = []
     for b in ring["bells"]:
         heads = ["ch %d: %d" % (ch, n) for ch, n in b["per_ch"].items()]
         rows.append({"name": "Bell %d" % b["bell"], "strokes": b["strokes"],
                      "heads": heads if len(heads) > 1 else []})
     for c in ring["channels"]:
-        if c["bell"] is None:
-            rows.append({"name": c["label"], "strokes": c["strokes"], "heads": []})
+        if c["unmapped"]:                # its strokes while it had no bell
+            rows.append({"name": c["label"], "strokes": c["unmapped"], "heads": []})
     return rows
 
 

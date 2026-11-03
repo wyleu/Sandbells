@@ -54,21 +54,29 @@ def summarise(ring, mapper, ch_label, events_in_span):
     Stroke counts: several heads on one bell each see every stroke, so a
     bell's "strokes" is the MAX over its channels (not the sum); "per_ch"
     keeps each head's own count so the heads can be compared.  The ring's
-    "strokes" is the sum of per-bell counts plus unmapped channels;
-    "events" is the raw number of stroke events stored."""
+    "strokes" is the sum of per-bell counts plus each channel's unmapped
+    strokes; "events" is the raw number of stroke events stored.
+
+    Each stroke is mapped at its own time, so a channel bound, unbound or
+    rebound mid-ring counts once: under its bell(s) while mapped, and as
+    "unmapped" (that channel's own count) while not.  A channel's "bell" is
+    its mapping at its last stroke in the ring."""
     per_ch, per_bell = {}, {}
     for s in ring.strokes:
         bell = mapper.bell_for(ring.src, s.ch, s.at_ms)
-        c = per_ch.setdefault(s.ch, {"ch": s.ch, "bell": bell,
-                                     "label": ch_label(s.ch), "strokes": 0})
+        c = per_ch.setdefault(s.ch, {"ch": s.ch, "label": ch_label(s.ch),
+                                     "strokes": 0, "unmapped": 0})
+        c["bell"] = bell
         c["strokes"] += 1
-        if bell is not None:
+        if bell is None:
+            c["unmapped"] += 1
+        else:
             per_bell.setdefault(bell, {})
             per_bell[bell][s.ch] = per_bell[bell].get(s.ch, 0) + 1
     bells = [{"bell": bell, "chs": sorted(counts), "per_ch": dict(sorted(counts.items())),
               "strokes": max(counts.values())}
              for bell, counts in sorted(per_bell.items())]
-    unmapped = sorted(c for c, v in per_ch.items() if v["bell"] is None)
+    unmapped = sorted(c for c, v in per_ch.items() if v["unmapped"])
     span = ring.last.seq - ring.first.seq + 1
     times = [s.at_ms for s in ring.strokes if s.at_ms is not None]
     return {
@@ -77,7 +85,7 @@ def summarise(ring, mapper, ch_label, events_in_span):
         "end_ms": max(times) if times else None,
         "duration_s": (ring.last.tick_ms - ring.first.tick_ms) / C.MS_PER_S,
         "strokes": (sum(b["strokes"] for b in bells)
-                    + sum(per_ch[c]["strokes"] for c in unmapped)),
+                    + sum(per_ch[c]["unmapped"] for c in unmapped)),
         "events": len(ring.strokes),
         "bells": bells,
         "channels": [per_ch[k] for k in sorted(per_ch)],

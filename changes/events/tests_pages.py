@@ -94,6 +94,53 @@ class RingTests(SimpleTestCase):
         self.assertEqual((d["bells"][0]["strokes"], d["strokes"], d["events"]),
                          (41, 41, 68))
 
+    # A channel's mapping changing mid-ring (sandbells2 3 Nov: ch 4 bound to
+    # bell 8 after 46 strokes showed 46 + 2 x 107 = 260 for 153 strokes).
+    BEFORE, AFTER, GAP = 46, 107, 3200
+
+    def changed_mid_ring(self, *rows):
+        """ch 4 strokes, BEFORE then AFTER; rows (bell, valid_from_ms) with
+        "bind" = between the two parts."""
+        bind = self.BEFORE * self.GAP - self.GAP // 2
+        mapper = ChannelMapper([(SRC, 4, bell, bind if t == "bind" else t) for bell, t in rows])
+        ring = group_rings([st(i, (i - 1) * self.GAP, ch=4)
+                            for i in range(1, self.BEFORE + self.AFTER + 1)])[0]
+        return summarise(ring, mapper, ch_label, events_in_span=self.BEFORE + self.AFTER)
+
+    def per_ch(self, d):
+        return [(c["ch"], c["bell"], c["strokes"], c["unmapped"]) for c in d["channels"]]
+
+    def test_channel_bound_mid_ring_counts_each_stroke_once(self):
+        d = self.changed_mid_ring((TENOR, "bind"))
+        self.assertEqual((d["strokes"], d["events"]), (153, 153))
+        self.assertEqual(d["bells"], [{"bell": TENOR, "chs": [4], "per_ch": {4: 107},
+                                       "strokes": 107}])
+        self.assertEqual(self.per_ch(d), [(4, TENOR, 153, 46)])   # 46 from before binding
+        self.assertEqual(d["unmapped_chs"], [4])
+
+    def test_channel_unbound_mid_ring(self):
+        d = self.changed_mid_ring((TENOR, 0), (None, "bind"))
+        self.assertEqual(d["strokes"], 153)
+        self.assertEqual([(b["bell"], b["strokes"]) for b in d["bells"]], [(TENOR, 46)])
+        self.assertEqual(self.per_ch(d), [(4, None, 153, 107)])
+        self.assertEqual(d["unmapped_chs"], [4])
+
+    def test_channel_rebound_to_another_bell_mid_ring(self):
+        d = self.changed_mid_ring((7, 0), (TENOR, "bind"))
+        self.assertEqual(d["strokes"], 153)
+        self.assertEqual([(b["bell"], b["per_ch"], b["strokes"]) for b in d["bells"]],
+                         [(7, {4: 46}, 46), (TENOR, {4: 107}, 107)])
+        self.assertEqual(self.per_ch(d), [(4, TENOR, 153, 0)])
+        self.assertEqual(d["unmapped_chs"], [])
+
+    def test_no_mapping_change_totals_as_before(self):
+        mapped = self.changed_mid_ring((TENOR, 0))
+        self.assertEqual((mapped["strokes"], self.per_ch(mapped), mapped["unmapped_chs"]),
+                         (153, [(4, TENOR, 153, 0)], []))
+        unmapped = self.changed_mid_ring()
+        self.assertEqual((unmapped["strokes"], unmapped["bells"], self.per_ch(unmapped)),
+                         (153, [], [(4, None, 153, 153)]))
+
     def test_summary_missing(self):
         ring = group_rings([st(1, 0), st(10, 100)])[0]
         self.assertEqual(summarise(ring, ChannelMapper(), ch_label, 3)["seq_missing"], 7)

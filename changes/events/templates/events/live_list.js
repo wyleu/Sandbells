@@ -98,13 +98,14 @@
       var heads = Object.keys(b.per_ch).map(function (ch) {
         return "ch" + ch + " " + b.per_ch[ch];
       });
-      parts.push("Bell " + b.bell + (heads.length > 1 ? ": " + heads.join(" · ") : ""));
+      parts.push("Bell " + b.bell + ": " + (heads.length > 1 ? heads.join(", ") : b.strokes));
     });
     r.channels.forEach(function (c) {
-      if (c.bell === null) parts.push(c.label + ": " + c.strokes);
+      if (c.unmapped) parts.push(c.label + ": " + c.unmapped);   // its strokes while unmapped
     });
-    el("live-heads").textContent = parts.join("   ") +
-      (r.start_hms ? "   (from " + r.start_hms + ")" : "");
+    // HTML folds runs of spaces into one, so the parts need a visible separator
+    el("live-heads").textContent = parts.join(" · ") +
+      (r.start_hms ? " (from " + r.start_hms + ")" : "");
   }
 
   function since(ms) {

@@ -116,6 +116,20 @@ class RingPageTests(TestCase):
         self.assertContains(r, "createBeat")              # beat.js inlined
         self.assertContains(r, 'class="navbtn days on"')
 
+    def test_channel_bound_mid_ring_days_and_ring_page_count_once(self):
+        add_strokes([(i, THU + (i - 1) * 3200, 4) for i in range(1, 154)])
+        ChannelMap.objects.create(src=SRC, ch=4, bell=TENOR,
+                                  valid_from=LT.ms_to_local(THU + 46 * 3200 - 1600))
+        with at_now():
+            days = self.client.get(reverse("events:days"), {"date": "2026-10-22"})
+        self.assertEqual([r["strokes"] for r in days.context["rings"]], [153])
+        self.assertEqual([(b["name"], b["strokes"]) for b in days.context["rings"][0]["bell_rows"]],
+                         [("Bell 8", 107), ("ch 4", 46)])
+        r = self.get()
+        self.assertContains(r, "Bell 8: 107")
+        self.assertContains(r, "ch 4: 46")
+        self.assertContains(r, "strokes 153")
+
     def test_unmapped_bell_shown_as_dash(self):
         add_strokes([(7, THU, 4)])
         r = self.get(seq=7)
