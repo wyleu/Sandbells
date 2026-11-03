@@ -63,32 +63,36 @@
                  --clk-line: #733; --clk-done: #622; --clk-next: #e88; }
   #live-events[data-link="ok"] { --clk: #5c5; --clk-bg: #0d200d; --clk-bg2: #143a14;
                  --clk-line: #363; --clk-done: #262; --clk-next: #8c8; }
+  #live-events[data-link="midi"] { --clk: #0dd; --clk-bg: #062626; --clk-bg2: #0a3838;
+                 --clk-line: #366; --clk-done: #265; --clk-next: #8dd; }
   #live-events[data-link="stale"] { --clk: #aaa; --clk-bg: #222; --clk-bg2: #333;
                  --clk-line: #555; --clk-done: #444; --clk-next: #999; }
   .live-top { display: flex; align-items: flex-start; }
   /* Concentrator link strip: LED mimic + verdict, readable at a distance. */
-  #link-widget { display: flex; flex-wrap: wrap; align-items: center; gap: 0.2rem 1rem;
-                 border: 3px solid #333; border-radius: 8px; padding: 0.3rem 0.6rem;
+  #link-widget { display: flex; flex-wrap: wrap; align-items: center; gap: 0.1rem 0.6rem;
+                 border: 2px solid #333; border-radius: 6px; padding: 0.15rem 0.4rem;
                  margin: 0.2rem 0 0.4rem; }
   #link-widget.ok { border-color: #2a6; }
   #link-widget.stale { border-color: #777; background: #222; }
   #link-widget.lost { border-color: #f33; background: #2a0b0b; }
+  #link-widget.midi { border-color: #0cc; background: #062626; }
   .lw-leds { display: flex; gap: 0.35rem; }
-  .lw-led { width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #222;
+  .lw-led { width: 1rem; height: 1rem; border-radius: 50%; background: #222;
             border: 1px solid #555; }
-  .lw-led.edge { width: 1.8rem; height: 1.8rem; }
+  .lw-led.edge { width: 1.3rem; height: 1.3rem; }
   .lw-cell { display: flex; flex-direction: column; align-items: center; min-width: 3.6rem; }
   .lw-kind { font-size: 0.95rem; opacity: 0.85; white-space: nowrap; }
   .lw-kind.bad, .lw-note.bad { color: #f66; font-weight: 700; }
   .lw-kind.trig, .lw-note.trig { color: #a8f; }
-  #lw-chans { flex-basis: 100%; font-size: 1.1rem; }
+  #lw-chans { flex-basis: 100%; font-size: 0.9rem; }
   #live-table tr.info.fault td { color: #f88; }
-  #lw-head { font-size: 1.9rem; font-weight: 700; }
+  #lw-head { font-size: 1.15rem; font-weight: 700; }   /* small: room for the strokes */
   #link-widget.ok #lw-head { color: #6d6; }
   #link-widget.stale #lw-head { color: #aaa; }
   #link-widget.lost #lw-head { color: #f55; }
-  #lw-why, #lw-leds { font-size: 1.1rem; opacity: 0.8; }
-  .lw-lines { flex-basis: 100%; font-size: 1.05rem; opacity: 0.85; }
+  #link-widget.midi #lw-head { color: #0ff; }
+  #lw-why, #lw-leds { font-size: 0.9rem; opacity: 0.8; }
+  .lw-lines { flex-basis: 100%; font-size: 0.9rem; opacity: 0.85; }
   .lw-time.ok { color: #7d7; } .lw-time.warn { color: #ec6; } .lw-time.bad { color: #f66; }
   #live-table tr.info td { font-size: 1.05rem; color: #9ab; }
   #live-clock { margin-left: calc(-0.5rem - 3px); text-align: left; color: var(--clk);
@@ -117,11 +121,11 @@
     .live-big small { font-size: 0.85rem; }
     #live-heads { font-size: 0.95rem; }
     #link-widget { padding: 0.15rem 0.4rem; gap: 0.1rem 0.6rem; }
-    .lw-led { width: 1rem; height: 1rem; } .lw-led.edge { width: 1.3rem; height: 1.3rem; }
+    .lw-led { width: 0.75rem; height: 0.75rem; } .lw-led.edge { width: 1rem; height: 1rem; }
     .lw-cell { min-width: 2.8rem; }
     .lw-kind { font-size: 0.75rem; }
-    #lw-head { font-size: 1.3rem; }
-    #lw-why, #lw-leds, .lw-lines, #lw-chans { font-size: 0.85rem; }
+    #lw-head { font-size: 0.95rem; }
+    #lw-why, #lw-leds, .lw-lines, #lw-chans { font-size: 0.75rem; }
     #live-table { font-size: 1.3rem; margin-top: 0.2rem; }
     #live-table .ch { font-size: 0.85rem; }
     #live-table thead th { font-size: 0.8rem; }

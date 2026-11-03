@@ -447,6 +447,7 @@ class StampPairer:
         self.clocks = 0              # clock messages
         self.orphans = 0             # stroke stamps with no NoteOn waiting
         self.last_pico_ms = None
+        self.last_stamp_ms = None    # this Pi's wall ms when the last stamp/clock arrived
         self.wall_minus_tick = None  # utc ms - monotonic ms at the last read
 
     # ---- in -------------------------------------------------------------
@@ -476,6 +477,7 @@ class StampPairer:
 
     def _stamp(self, stamp, tick_ms):
         self.last_pico_ms = stamp.pico_ms
+        self.last_stamp_ms = tick_ms + self.wall_minus_tick
         self.clock.add(stamp, tick_ms)
         if stamp.ch == C.MIDI_STAMP_CH_CLOCK:
             self.clocks += 1
@@ -535,6 +537,7 @@ class StampPairer:
                 "reboots": c.reboots, "window_resets": c.resets,
                 "seq_gaps": c.seq_gaps, "seq_missing": c.seq_missing, "seq_odd": c.seq_odd,
                 "last_seq": c.last_seq, "last_pico_ms": self.last_pico_ms,
+                "last_stamp_ms": self.last_stamp_ms,
                 "wait_ms": self.wait_ms, "held": len(self.pending)}
 
 

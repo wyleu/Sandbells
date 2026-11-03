@@ -136,9 +136,13 @@ once a second): ingest_udp's counters plus a `midi` section:
 `errors`, `recent_errors`, `parser_skipped`, `sysex_skipped` (SysEx that
 were not stamps), and `stamp` (below).
 
-`link.json` is not written: MIDI has no heartbeats, so the Strokes page's
-link widget still judges the Wi-Fi link (it shows LOST with Wi-Fi off; the
-strokes still appear).
+`link.json` is not written: MIDI has no heartbeats.  The Strokes page's
+link widget shows **MIDI** (cyan) instead of the Wi-Fi verdict while this
+file is fresh (rewritten within 15 s), says `connected`, and a stamp/clock
+SysEx (`stamp.last_stamp_ms`) or a note (`last_note_ms`) arrived within
+`MIDI_LIVE_MS` (25 s: the Pico's 10 s clock, two missed); otherwise the
+Wi-Fi verdict (CONNECTED / STALE / LOST) as before.  The Ingest page has
+a "USB MIDI" table from this file.
 
 ## Install on sandbells2
 

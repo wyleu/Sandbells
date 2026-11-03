@@ -209,19 +209,53 @@ class StrokesPageLinkWidgetTests(TestCase):
 
 
 class LinkApiTests(SimpleTestCase):
-    def get(self, doc=None, age_s=0):
+    def get(self, doc=None, age_s=0, midi=None, midi_age_s=0):
         import os
         import tempfile
         import time
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "link.json")
-            if doc is not None:
-                with open(path, "w") as f:
-                    json.dump(doc, f)
-                t = time.time() - age_s
-                os.utime(path, (t, t))
-            with mock.patch.dict("os.environ", {C.LINK_STATE_ENV: path}):
+            mpath = os.path.join(d, "midi_status.json")   # never this Pi's real one
+            for p, body, age in ((path, doc, age_s), (mpath, midi, midi_age_s)):
+                if body is not None:
+                    with open(p, "w") as f:
+                        f.write(body if isinstance(body, str) else json.dumps(body))
+                    t = time.time() - age
+                    os.utime(p, (t, t))
+            with mock.patch.dict("os.environ", {C.LINK_STATE_ENV: path,
+                                                C.MIDI_STATUS_ENV: mpath}):
                 return self.client.get(reverse("events:api_link")).json()
+
+    def midi(self, connected=True, stamp_ago_ms=3000, note_ago_ms=None):
+        import time
+        now = int(time.time() * 1000)
+        return {"state": "running", "midi": {
+            "port": "midi:/dev/snd/midiC3D0", "connected": connected, "strokes": 176,
+            "last_note_ms": None if note_ago_ms is None else now - note_ago_ms,
+            "stamp": {"stamped": 176, "unstamped": 0, "clocks": 30,
+                      "last_stamp_ms": None if stamp_ago_ms is None else now - stamp_ago_ms}}}
+
+    def test_midi_live_is_midi_whatever_the_wifi_says(self):
+        out = self.get(None, midi=self.midi())
+        self.assertEqual(out["verdict"], C.LINK_MIDI)
+        self.assertIn("midiC3D0", out["why"])
+        self.assertIn("Wi-Fi: no_ingest", out["why"])
+        self.assertEqual(out["midi"]["stamp"]["clocks"], 30)
+        self.assertEqual(self.get(self.doc(), midi=self.midi())["verdict"], C.LINK_MIDI)
+
+    def test_midi_a_recent_note_alone_is_enough(self):
+        out = self.get(None, midi=self.midi(stamp_ago_ms=None, note_ago_ms=1000))
+        self.assertEqual(out["verdict"], C.LINK_MIDI)
+
+    def test_midi_not_live_falls_back_to_the_wifi_verdict(self):
+        old = C.MIDI_LIVE_MS + 1000
+        for midi, age_s in ((self.midi(connected=False), 0),                  # unplugged
+                            (self.midi(stamp_ago_ms=None), 0),                # nothing heard
+                            (self.midi(stamp_ago_ms=old, note_ago_ms=old), 0),  # heard long ago
+                            (self.midi(), C.INGEST_STATUS_STALE_MS / 1000 + 5),  # file not rewritten
+                            ("{not json", 0), (None, 0)):                     # garbage / missing
+            self.assertEqual(self.get(self.doc(), midi=midi, midi_age_s=age_s)["verdict"], "ok")
+            self.assertEqual(self.get(None, midi=midi, midi_age_s=age_s)["verdict"], "no_ingest")
 
     def doc(self, state=C.LINK_CONNECTED, hb_ago_ms=2000, **ingest):
         import time

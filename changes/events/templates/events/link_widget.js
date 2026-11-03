@@ -1,6 +1,7 @@
 /* link_widget.js -- page 3 "Concentrator link" strip: the six panel LEDs as
  * the Pico last reported them (sand.panel/v1 heartbeat, kept by the ingest),
- * a connected / STALE / LOST verdict, time since the last packet and
+ * a connected / STALE / LOST verdict (or MIDI, cyan, when the Pico's USB
+ * MIDI is live: api.midi_verdict), time since the last packet and
  * heartbeat, reconnects, last drop reason and the time-sync state (with the
  * stratum sandmon answered, so a GPS NO Lock shows here).  Polls
  * /events/api/link/ (a tmpfs file, no DB).  Goes grey after stale_ms with no
@@ -94,8 +95,9 @@
     var pico = data.pico || null;
     var body = pico ? pico.body || {} : null;
     var net = body ? body.net || {} : {};
-    var headline = { ok: "CONNECTED", stale: "STALE", lost: "LOST",
+    var headline = { ok: "CONNECTED", stale: "STALE", lost: "LOST", midi: "MIDI",
                      no_ingest: "INGEST DOWN" }[data.verdict] || "?";
+    if (data.verdict === "midi") return midiView(data);
     var parts = ["packet " + ago(data.rx_age_ms) + " ago",
                  "heartbeat " + ago(data.hb_age_ms) + " ago",
                  "reconnects " + (ing.reconnects || 0)];
@@ -117,7 +119,18 @@
     };
   }
 
-  var api = { cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
+  /* MIDI: the Wi-Fi heartbeat's LEDs and time line are old, so not shown */
+  function midiView(data) {
+    var m = data.midi || {}, st = m.stamp || {};
+    return {
+      cls: "midi", headline: "MIDI", why: data.why || "",
+      detail: "strokes " + (m.strokes || 0) + " · stamped " + (st.stamped || 0) +
+              " · unstamped " + (st.unstamped || 0) + " · clocks " + (st.clocks || 0),
+      drop: "", time: "", timeCls: "", leds: [], states: [], kinds: [], notes: []
+    };
+  }
+
+  var api = { midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
               syncClass: syncClass, channels: channels };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
 

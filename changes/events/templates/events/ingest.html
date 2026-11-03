@@ -68,6 +68,21 @@ ingest_udp's tmpfs status file and the DB.  Nothing asks a Pico anything.{% endc
   </table>
   {% else %}<p class="muted">No counters: no status file from ingest_udp.</p>{% endif %}
 
+  <h2>USB MIDI (ingest_midi)</h2>
+  {% if midi %}
+  <table>
+    <tr><th>status file</th><td class="{% if midi_stale %}bad{% else %}muted{% endif %}">written {{ midi_age_s }} s ago{% if midi_stale %}: ingest_midi not running?{% endif %}</td></tr>
+    <tr><th>port</th><td>{{ midi.port|default:"—" }} <span class="muted">{{ midi.transport|default:"" }}</span></td></tr>
+    <tr><th>connected</th><td class="{% if midi.connected %}good{% else %}bad{% endif %}">{{ midi.connected|yesno:"yes,no" }}</td></tr>
+    <tr><th>strokes</th><td class="num">{{ midi.strokes }}</td></tr>
+    <tr><th>stamped · unstamped</th><td class="num">{{ midi.stamp.stamped|default:0 }} · <span class="{% if midi.stamp.unstamped %}warn{% endif %}">{{ midi.stamp.unstamped|default:0 }}</span></td></tr>
+    <tr><th>clocks</th><td class="num">{{ midi.stamp.clocks|default:0 }}{% if midi.last_stamp_when.ms %} <span class="muted">(last stamp {{ midi.last_stamp_when.ago_s }} s ago)</span>{% endif %}</td></tr>
+    <tr><th>offset spread</th><td class="num">{{ midi.stamp.offset_spread|default:"—" }} ms</td></tr>
+    <tr><th>last note</th><td>{% if midi.last_note_when.ms %}{{ midi.last_note_when.hms }} <span class="muted">({{ midi.last_note_when.ago_s }} s ago)</span>{% else %}—{% endif %}</td></tr>
+    <tr><th>errors · disconnects</th><td class="num{% if midi.errors %} warn{% endif %}">{{ midi.errors }} · {{ midi.disconnects }}</td></tr>
+  </table>
+  {% else %}<p class="muted">No MIDI status file at {{ midi_path }} (ingest_midi not running, or the file is not readable).</p>{% endif %}
+
   <h2>Last datagram</h2>
   {% if last.ms %}
   <table>

@@ -15,7 +15,9 @@ from django.http import JsonResponse
 from . import constants as C
 from . import localtime as LT
 from .mapping import ChannelMapper, ch_label
+from .ingeststatus import read_ingest_status
 from .linkstate import read_link_state
+from .midiingest import midi_status_path
 from .models import receiving_host
 from .queries import (current_ring, events_after, ring_json,
                       rings_starting_between, stroke_intervals)
@@ -120,6 +122,12 @@ def link(request):
            "file_age_ms": file_age, "stale_ms": C.LINK_STALE_MS,
            "lost_ms": C.LINK_LOST_MS}
     out.update(link_verdict(doc, file_age, now))
+    mdoc, mage = read_ingest_status(midi_status_path())
+    out["midi"] = (mdoc or {}).get("midi")
+    midi = midi_verdict(mdoc, mage, now)
+    if midi:                          # USB MIDI is live: say so, not the Wi-Fi verdict
+        out.update(midi, why="%s (Wi-Fi: %s)" % (midi["why"], out["verdict"]))
+        out["verdict"] = C.LINK_MIDI
     out["ingest"] = (doc or {}).get("ingest")
     out["pico"] = (doc or {}).get("pico")
     return JsonResponse(out)
@@ -127,6 +135,23 @@ def link(request):
 
 def _age(now, ms):
     return None if ms is None else max(0, now - ms)
+
+
+def midi_verdict(doc, file_age, now):
+    """ingest_midi's status doc -> {"why", "midi_age_ms"} when USB MIDI is
+    live (constants: MIDI_LIVE_MS), else None."""
+    if doc is None or file_age is None or file_age > C.INGEST_STATUS_STALE_MS:
+        return None
+    m = doc.get("midi") or {}
+    if not m.get("connected"):
+        return None
+    heard = [t for t in ((m.get("stamp") or {}).get("last_stamp_ms"), m.get("last_note_ms"))
+             if t is not None]
+    age = _age(now, max(heard)) if heard else None
+    if age is None or age > C.MIDI_LIVE_MS:
+        return None
+    return {"why": "USB MIDI %s, heard %d s ago" % (m.get("port"), age // C.MS_PER_S),
+            "midi_age_ms": age}
 
 
 def link_verdict(doc, file_age, now):

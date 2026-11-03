@@ -236,7 +236,9 @@ class UnitProbeTests(SimpleTestCase):
 class IngestPageTests(TestCase, TmpDir):
     def setUp(self):
         self.path = os.path.join(self.tmpdir(), "status.json")
-        env = mock.patch.dict(os.environ, {C.INGEST_STATUS_ENV: self.path})
+        self.midi_path = os.path.join(os.path.dirname(self.path), "midi_status.json")
+        env = mock.patch.dict(os.environ, {C.INGEST_STATUS_ENV: self.path,
+                                           C.MIDI_STATUS_ENV: self.midi_path})
         env.start()
         self.addCleanup(env.stop)
         run = mock.patch("events.ingestpage.subprocess.run", side_effect=no_systemd)
@@ -263,6 +265,20 @@ class IngestPageTests(TestCase, TmpDir):
 
     def test_url(self):
         self.assertEqual(reverse("events:ingest"), "/events/ingest/")
+
+    def test_midi_section_shows_the_midi_status(self):
+        r = self.get()
+        self.assertContains(r, "No MIDI status file")
+        with open(self.midi_path, "w") as f:
+            json.dump({"midi": {"port": "midi:/dev/snd/midiC3D0", "connected": True,
+                                "strokes": 176, "errors": 0, "disconnects": 2,
+                                "stamp": {"stamped": 175, "unstamped": 1, "clocks": 30,
+                                          "offset_spread": 55}}}, f)
+        r = self.get()
+        self.assertFalse(r.context["midi_stale"])
+        for text in ("midi:/dev/snd/midiC3D0", ">yes<", ">176<", "175 ·", ">1<",
+                     ">30", "55 ms", "0 · 2"):
+            self.assertContains(r, text)
 
     def test_fresh_status_file_is_ok_with_counters_and_last_datagram(self):
         self.write_status()

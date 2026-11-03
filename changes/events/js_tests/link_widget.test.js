@@ -69,3 +69,15 @@ test("channels: older firmware (no chan) falls back to panel_state names", () =>
   assert.deepEqual(c.notes, []);
   assert.deepEqual(lw.channels(null), { kinds: ["", "", "", ""], notes: [] });
 });
+
+test("view: midi is cyan MIDI with the USB counters, no old Wi-Fi LEDs or time line", () => {
+  const v = lw.view({ verdict: "midi", why: "USB MIDI midi:/dev/snd/midiC3D0, heard 3 s ago (Wi-Fi: lost)",
+    midi: { strokes: 176, stamp: { stamped: 175, unstamped: 1, clocks: 30 } },
+    pico: { body: { panel: [[0, 32, 0]], sync: "synced" } } });
+  assert.equal(v.cls, "midi");
+  assert.equal(v.headline, "MIDI");
+  assert.match(v.why, /midiC3D0/);
+  assert.equal(v.detail, "strokes 176 · stamped 175 · unstamped 1 · clocks 30");
+  assert.deepEqual(v.leds, []);
+  assert.equal(v.time, "");
+});

@@ -240,6 +240,12 @@ class PairerTests(SimpleTestCase):
         self.assertEqual((c["stamped"], c["unstamped"], c["clocks"], c["held"]), (1, 0, 1, 0))
         self.assertEqual((c["offset_tick_ms"], c["offset_ms"]), (-490000, self.WALL - 490000))
 
+    def test_last_stamp_ms_is_this_pis_wall_time_of_the_last_clock(self):
+        p, _, _ = self.pairer()
+        self.assertIsNone(p.counters()["last_stamp_ms"])
+        self.at(p, 10000, stamp(0, 0, 500000))
+        self.assertEqual(p.counters()["last_stamp_ms"], 10000 + self.WALL)
+
     def test_note_and_stamp_in_one_read(self):
         p, ing, _ = self.pairer()
         self.at(p, 3000, on(65), stamp(1, 1, 1000), off(65))
@@ -626,6 +632,10 @@ class EndToEndTests(TestCase, TmpDir):
         ev = r.json()["events"]
         self.assertEqual([(e["src"], e["ch"], e["bell"]) for e in ev],
                          [(C.MIDI_SRC, 1, 3), (C.MIDI_SRC, 2, None)])
+        # the home page's bell feed (bell_feed.js) asks with type= (every type)
+        r = self.client.get(reverse("events:api_since"), {"type": "", "limit": 50, "after": 0})
+        self.assertIn((C.TYPE_STROKE, C.MIDI_SRC, 3),
+                      [(e["type"], e["src"], e["bell"]) for e in r.json()["events"]])
 
 
 class IngestMidiCommandTests(TestCase, TmpDir):

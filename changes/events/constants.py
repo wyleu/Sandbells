@@ -233,6 +233,13 @@ LINK_POLL_MS = 2000             # widget poll of /events/api/link/
 LINK_STALE_MS = 15000           # no Pico heartbeat this long: grey (3 missed)
 LINK_LOST_MS = 30000            # ...this long, or ingest down: red LOST
 INGEST_FILE_STALE_MS = 15000    # link file not rewritten: ingest not running
+# MIDI (cyan) instead of the Wi-Fi verdict: midi_status.json rewritten within
+# INGEST_STATUS_STALE_MS, it says connected, and a stamp/clock SysEx or a note
+# arrived within MIDI_LIVE_MS.  The Pico sends a clock every
+# MIDI_CLOCK_EVERY_MS when quiet, so MIDI_LIVE_MS allows two to go missing.
+LINK_MIDI = "midi"
+MIDI_CLOCK_EVERY_MS = 10000     # sandswing midi_stamp.py clock interval
+MIDI_LIVE_MS = 2 * MIDI_CLOCK_EVERY_MS + 5000
 
 # ---- ingest status file + page (ingeststatus.py, /events/ingest/) ----------
 # ingest_udp's own counters for the Ingest page: one small JSON file next to

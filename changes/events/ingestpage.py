@@ -18,6 +18,7 @@ import time
 from . import constants as C
 from . import localtime as LT
 from .ingeststatus import ingest_status_path, read_ingest_status
+from .midiingest import midi_status_path
 
 V_OK, V_QUIET, V_STALE, V_DOWN = "OK", "QUIET", "STALE", "DOWN"
 NO_SYSTEMD = "no systemd"
@@ -150,7 +151,16 @@ def page_context(now_ms=None, run=None, proc_udp=C.PROC_NET_UDP):
     if stroke:
         stroke["stored"] = _when(now, stroke["received_ms"])
         stroke["stamped"] = _when(now, stroke["utc_ms"])
+    mdoc, mage = read_ingest_status(midi_status_path())
+    midi = dict((mdoc or {}).get("midi") or {})
+    if midi:
+        midi["stamp"] = midi.get("stamp") or {}
+        midi["last_note_when"] = _when(now, midi.get("last_note_ms"))
+        midi["last_stamp_when"] = _when(now, midi["stamp"].get("last_stamp_ms"))
     return {
+        "midi": midi, "midi_path": midi_status_path(),
+        "midi_age_s": None if mage is None else mage // C.MS_PER_S,
+        "midi_stale": mage is None or mage > C.INGEST_STATUS_STALE_MS,
         "verdict": v, "why": why, "file_path": ingest_status_path(),
         "file_age_s": None if age is None else age // C.MS_PER_S,
         "stale_s": C.INGEST_STATUS_STALE_MS // C.MS_PER_S,
