@@ -326,7 +326,8 @@ class EndToEndTests(TestCase, TmpDir):
         self.assertEqual(m["last_note"], {"kind": ON, "channel": 1, "note": 66, "velocity": 100})
         self.assertIsNotNone(m["last_note_ms"])
         self.assertEqual((m["connects"], m["disconnects"], m["sysex_skipped"]), (1, 1, 1))
-        self.assertIn("end of file", m["recent_errors"][-1]["error"])
+        # EOF or the periodic card check may see the unplug first (a slower Pi: the card check)
+        self.assertRegex(m["recent_errors"][-1]["error"], "end of file|card gone")
         self.assertEqual(doc["counters"]["written"], 5)           # 3 strokes + 2 ingest notes
 
     def test_unplug_waits_and_reconnects(self):
