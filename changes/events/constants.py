@@ -251,10 +251,81 @@ UDP_URL_FORMAT = "udp://%s:%d"   # the link state's "url" while ingest_udp liste
 INGEST_STATE_RUNNING = "running"
 INGEST_STATE_STOPPED = "stopped"
 INGEST_QUIET_MS = 15000         # running but no datagram this long: QUIET
-INGEST_UNITS = ("sandbells-ingest-udp.service", "sandbells-ingest.service")
+INGEST_UNITS = ("sandbells-ingest-udp.service", "sandbells-ingest.service",
+                "sandbells-ingest-midi.service")
 INGEST_UNIT_MODES = {"sandbells-ingest-udp.service": "udp (manage.py ingest_udp)",
+                     "sandbells-ingest-midi.service": "usb midi (manage.py ingest_midi)",
                      "sandbells-ingest.service": "websocket (manage.py ingest_events)"}
 SYSTEMCTL = "systemctl"
 SYSTEMCTL_TIMEOUT_S = 2.0       # per call; the page never waits longer
 PROC_NET_UDP = "/proc/net/udp"  # is the port bound (by anyone)?
 INGEST_PAGE_REFRESH_S = 5       # the page reloads itself (no JS)
+
+# ---- ingest: USB MIDI from the Pico (manage.py ingest_midi, midiparse.py, midiingest.py) --
+# With no usable Wi-Fi the Pico's USB plugs into this Pi; each bell stroke
+# arrives as a USB MIDI NoteOn (sandswing ring.py: NoteOn vel 100 on the
+# stroke, NoteOff vel 0 on the release).  MIDI has no timestamp: the stroke
+# is stamped with this Pi's clock when the bytes are read (utc_ms from
+# time.time, tick_ms from time.monotonic).  Stored as sand.event/v1 strokes
+# through the same Ingest / EventStore as ingest_udp, src MIDI_SRC.
+MIDI_SRC = "midi"               # Event.src of MIDI strokes (udp/ws ones: "sandswing")
+MIDI_DEVICE_ID = "sandswing-pico"   # Event.device_id ('id' on the wire), as sandswing's
+MIDI_BODY_VIA = "via"           # body field naming the transport ...
+MIDI_BODY_NOTE = "note"         # ... the MIDI note number ...
+MIDI_BODY_VEL = "vel"           # ... and its velocity
+MIDI_CHANNEL = 1                # 1-based; sandswing ring.open_midi: adafruit out_channel=0
+MIDI_CHANNEL_ANY = 0            # --channel 0: accept NoteOns on any channel
+MIDI_CHANNELS = 16
+# note -> sandswing channel (body "ch", 1-based), from sandswing ring.NOTES
+# (65, 64, 62, 60, 58, 57, 55, 53) for channels 1..8: the note a channel's
+# bell (or its trigger plug, sandswing 0cfd112) plays.  The bell number then
+# comes from ChannelMap, as for udp strokes (MAP_SRC_FALLBACK).
+MIDI_NOTE_TO_CH = {65: 1, 64: 2, 62: 3, 60: 4, 58: 5, 57: 6, 55: 7, 53: 8}
+MIDI_UNMAPPED_LOG_EVERY = 100   # an unmapped note is logged the first time and every this many
+# Which ALSA card is the Pico: the first card whose /proc/asound/cards lines
+# (or its midiN files) contain one of these.  The Pico 2 W shows as
+# card 'Pico 2 W', seq port 'Pico 2 W CircuitPython usb_midi'.
+MIDI_CARD_MATCH = ("Pico 2 W", "CircuitPython")
+MIDI_CARD_ENV = "SANDBELLS_MIDI_CARD"       # override: one substring to match instead
+MIDI_DEVICE_ENV = "SANDBELLS_MIDI_DEVICE"   # override: this rawmidi device, no search
+MIDI_PROC_CARDS = "/proc/asound/cards"
+MIDI_PROC_CARD_DIR = "/proc/asound/card%d"
+MIDI_PROC_MIDI_GLOB = "midi*"               # /proc/asound/cardN/midiD: one per rawmidi device
+MIDI_DEV_FORMAT = "/dev/snd/midiC%dD%d"
+MIDI_URL_FORMAT = "midi:%s"                 # status "port": midi:/dev/snd/midiC3D0, midi:seq:Pico 2 W
+# How the bytes are read.  raw: the rawmidi device with plain os.read (no
+# package).  seq: `aseqdump -p <card>` (alsa-utils): an ALSA sequencer
+# subscriber, so it shares the port with PipeWire's MIDI bridge, which holds
+# the rawmidi input open (raw then gets EBUSY).  auto: raw, else seq on EBUSY.
+MIDI_TRANSPORT_RAW = "raw"
+MIDI_TRANSPORT_SEQ = "seq"
+MIDI_TRANSPORT_AUTO = "auto"
+MIDI_TRANSPORTS = (MIDI_TRANSPORT_AUTO, MIDI_TRANSPORT_RAW, MIDI_TRANSPORT_SEQ)
+MIDI_SEQ_DUMP = "aseqdump"
+MIDI_SEQ_LINEBUF = ("stdbuf", "-oL")        # aseqdump's stdout into a pipe: line buffered
+MIDI_READ_B = 256               # one os.read
+MIDI_IDLE_S = 1.0               # select timeout: flush / summary / status this often when quiet
+MIDI_RECONNECT_S = 3.0          # no port / unplugged: look again this often (never a busy loop)
+MIDI_STOP_WAIT_S = 2.0          # aseqdump: wait this long for it to exit, then kill
+# status file (same tmpfs as status.json; separate, so ingest_udp and
+# ingest_midi can run side by side)
+INGEST_MODE_MIDI = "midi"
+MIDI_STATUS_PATH = "/run/sandbells-ingest/midi_status.json"
+MIDI_STATUS_ENV = "SANDBELLS_MIDI_STATUS"
+MIDI_STATUS_RECENT_ERRORS = 10
+# MIDI 1.0 bytes (midiparse.py)
+MIDI_STATUS_BIT = 0x80          # a byte >= this is a status byte, below it data
+MIDI_TYPE_MASK = 0xF0
+MIDI_CHANNEL_MASK = 0x0F
+MIDI_NOTE_OFF = 0x80
+MIDI_NOTE_ON = 0x90
+MIDI_SYSEX_START = 0xF0
+MIDI_SYSEX_END = 0xF7
+MIDI_REALTIME_MIN = 0xF8        # 0xF8-0xFF: one byte, anywhere, running status kept
+MIDI_DATA_LEN = {0x80: 2, 0x90: 2, 0xA0: 2, 0xB0: 2, 0xC0: 1, 0xD0: 1, 0xE0: 2}
+MIDI_COMMON_DATA_LEN = {0xF1: 1, 0xF2: 2, 0xF3: 1, 0xF4: 0, 0xF5: 0, 0xF6: 0}
+MIDI_ON = "on"
+MIDI_OFF = "off"
+# a ChannelMap lookup for a MIDI stroke uses the Pico's own src's rows
+# (same Pico, same channels), so bells show the same as over udp.
+MAP_SRC_FALLBACK = {MIDI_SRC: DEFAULT_SRC}

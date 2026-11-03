@@ -2,6 +2,8 @@
 
 Rows are (src, ch, bell, valid_from_ms); the latest row at or before the
 stroke time wins.  bell None = unmapped.  Many channels may share a bell.
+A src with no rows of its own for that ch uses its MAP_SRC_FALLBACK src's
+(MIDI strokes, src "midi", use the Pico's "sandswing" rows).
 """
 
 from bisect import bisect_right
@@ -26,6 +28,8 @@ class ChannelMapper:
     def bell_for(self, src, ch, at_ms):
         """Bell number or None.  at_ms None: the latest mapping."""
         entry = self._by_key.get((src, ch))
+        if entry is None and src in C.MAP_SRC_FALLBACK:
+            entry = self._by_key.get((C.MAP_SRC_FALLBACK[src], ch))
         if entry is None or ch is None:
             return None
         froms, bells = entry

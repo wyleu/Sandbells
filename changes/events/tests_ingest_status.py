@@ -202,7 +202,7 @@ def fake_systemctl(answers):
 class UnitProbeTests(SimpleTestCase):
     def test_no_systemd(self):
         u = ingestpage.units(run=no_systemd)
-        self.assertEqual([x["enabled"] for x in u], [ingestpage.NO_SYSTEMD] * 2)
+        self.assertEqual([x["enabled"] for x in u], [ingestpage.NO_SYSTEMD] * len(C.INGEST_UNITS))
         self.assertIsNone(u[0]["installed"])
 
     def test_timeout(self):
@@ -215,9 +215,11 @@ class UnitProbeTests(SimpleTestCase):
             ("is-enabled", "sandbells-ingest-udp.service"): "enabled",
             ("is-active", "sandbells-ingest-udp.service"): "active",
             ("is-active", "sandbells-ingest.service"): "inactive"}))
-        udp, ws = u
+        udp, ws, midi = u
         self.assertEqual((udp["installed"], udp["enabled"], udp["active"]), (True, "enabled", "active"))
         self.assertEqual((ws["installed"], ws["enabled"], ws["active"]), (False, "not-found", "inactive"))
+        self.assertEqual((midi["unit"], midi["installed"]), ("sandbells-ingest-midi.service", False))
+        self.assertIn("ingest_midi", midi["mode"])
 
     def test_udp_bound_from_proc(self):
         d = tempfile.mkdtemp()

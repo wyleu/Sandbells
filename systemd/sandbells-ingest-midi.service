@@ -1,0 +1,43 @@
+[Unit]
+Description=Sandbells event ingest over USB MIDI (concentrator's USB plugged into this Pi; no Wi-Fi)
+After=sound.target
+Wants=sound.target
+
+[Service]
+Type=simple
+User=sandbells
+Group=sandbells
+# /dev/snd/midiC*D* and the ALSA sequencer are group "audio"
+SupplementaryGroups=audio
+WorkingDirectory=/home/sandbells/Code/Sandbells/changes
+Environment=PYTHONUNBUFFERED=1
+# Status file midi_status.json (events.constants.MIDI_STATUS_PATH) on the
+# same tmpfs as ingest_udp's status.json / link.json.  Preserve: stopping
+# this unit must not take ingest_udp's files with it.  (Stopping
+# sandbells-ingest-udp still removes the directory; restart this one after.)
+RuntimeDirectory=sandbells-ingest
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+# Finds the Pico by its ALSA card name ('Pico 2 W' or 'CircuitPython',
+# events.constants.MIDI_CARD_MATCH) and reads /dev/snd/midiC<card>D0; if
+# PipeWire holds that (EBUSY), reads it through the ALSA sequencer
+# (aseqdump, package alsa-utils) instead.  Unplugged: looks again every 3 s.
+# Overrides:  Environment=SANDBELLS_MIDI_CARD=<name>  or
+#             Environment=SANDBELLS_MIDI_DEVICE=/dev/snd/midiC3D0
+# Can run beside sandbells-ingest-udp (its strokes are src "midi").
+ExecStart=/home/sandbells/Code/Sandbells/Bellvirtenv/bin/python manage.py ingest_midi
+
+# SIGTERM -> flush buffered events, then exit
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Restart=always
+RestartSec=5
+
+# Pi 3 friendly scheduling (as gunicorn.service)
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target
