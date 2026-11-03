@@ -3,7 +3,13 @@
    The alarm red is kept for "not coming" and is not used here, not even for
    STOP.  No animations, no images: it has to be light on the Pi's Luakit. */
 
-html, body { margin: 0; }
+/* One screen: the top line and the stop bar above, the commands sent
+   below, always in sight; only the cards in between scroll. */
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; overflow: hidden; }
+#sandtest-root { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+#st-card-log { flex: 0 0 auto; max-height: 6.5rem; overflow-y: auto;
+               margin: 0.3rem 0.8rem 0.4rem; padding-top: 0.3rem; padding-bottom: 0.3rem; }
 
 body {
   font-family: system-ui, sans-serif;
@@ -39,11 +45,9 @@ header#st-header {
 .pill-ok { color: #9be39b; background: #1b3a22; border-color: #2f6b3d; }
 .pill-busy { color: #ffd978; background: #40341a; border-color: #8a7330; }
 
-/* the stop bar stays on screen while the cards scroll */
+/* the stop bar: under the top line, never scrolled away (body is a column) */
 #st-stopbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 0.9rem;
@@ -104,7 +108,7 @@ button.stop-play:hover { background: #ffd978; border-color: #fff; }
   padding: 0.5rem 0.8rem 0.7rem;
 }
 .card h2 { margin: 0 0 0.4rem; font-size: 1.05rem; color: #ffd978; font-weight: 600; }
-#st-card-heads, #st-card-log { grid-column: 1 / -1; }
+#st-card-heads { grid-column: 1 / -1; }
 
 dl.kv { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 1rem; margin: 0; }
 dl.kv dt { color: #bfae85; }

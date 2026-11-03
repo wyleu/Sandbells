@@ -128,6 +128,8 @@ class RingPageTests(TestCase):
                           'id="live-since"', 'class="navbtn strokes on"'):
             self.assertNotContains(r, live_only)
         self.assertContains(r, "16:30:00<small>to 16:30:04")       # the ring's span, top left
+        body = r.content.decode()                                  # back to the day, in the panel
+        self.assertLess(body.index('class="live-big"'), body.index("?date=2026-10-22"))
 
     @skipUnless(NODE, "node not installed")
     def test_page_draws_every_stroke_and_the_bell_line_and_fetches_nothing(self):

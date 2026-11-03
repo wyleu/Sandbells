@@ -140,7 +140,8 @@
        data-timeout="{{ timeout_ms }}" data-tz="{{ tz }}">
   <div class="live-top">
     {% if ring %}
-    <div class="live-big">{{ ring.summary.start_hms }}<small>to {{ ring.summary.end_hms }} · {{ ring.day_label }}</small></div>
+    <div class="live-big">{{ ring.summary.start_hms }}<small>to {{ ring.summary.end_hms }}
+      <a class="navbtn" href="{% url 'events:days' %}?date={{ ring.day_iso }}" title="back to the rings of that day">&larr; {{ ring.day_label }}</a></small></div>
     {% else %}
     <div id="live-clock" data-tz="{{ tz }}">
       <div><span id="clock-hms">--:--:--</span><small id="clock-zone"></small></div>

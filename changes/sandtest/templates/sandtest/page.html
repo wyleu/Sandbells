@@ -11,13 +11,13 @@
 <body>
   <header id="st-header" class="topbar">
     {% top_menu current="sandtest" %}
-    <span id="st-host" class="pill" title="Where Sandbells sends the commands: SANDTEST_HOST, or sandtest.host in settings.json ({{ host_source }})">rig <strong id="st-host-name">{{ host }}</strong>{% if token_set %} · token set{% endif %}</span>
     <span class="right">{% include "events/mini_clock.html" %}</span>
   </header>
 
   <div id="st-stopbar">
     <button type="button" id="st-stop" class="stop" title="Stop the pattern, release every output and halt the mirror">STOP</button>
     <span id="st-conn" class="pill pill-wait">waiting for the rig…</span>
+    <span id="st-host" class="pill" title="Where Sandbells sends the commands: SANDTEST_HOST, or sandtest.host in settings.json ({{ host_source }})">rig <strong id="st-host-name">{{ host }}</strong>{% if token_set %} · token set{% endif %}</span>
     <span id="st-stopmsg" class="stopmsg" aria-live="assertive"></span>
   </div>
 
@@ -168,12 +168,12 @@
       </div>
       <p class="muted small">The face can only be changed while the mirror is not moving.</p>
     </section>
-
-    <section class="card" id="st-card-log">
-      <h2>Commands sent</h2>
-      <ol id="st-log" class="log"><li class="muted">none yet</li></ol>
-    </section>
   </main>
+
+  <section class="card" id="st-card-log">
+    <h2>Commands sent</h2>
+    <ol id="st-log" class="log"><li class="muted">none yet</li></ol>
+  </section>
 
   <script src="{% static 'js/sandtest.js' %}?v={{ git_hash }}"></script>
 </body>

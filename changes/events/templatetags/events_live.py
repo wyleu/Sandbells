@@ -33,10 +33,11 @@ def live_panel(ring=None):
 
 @register.inclusion_tag("events/top_menu.html")
 def top_menu(current=None):
-    """{% top_menu current=<farm index> %} -- the shared left side of every top
-    line: Sandbells, one button per farm device, sandheads and Strokes (when the farm has a
-    concentrator), Rings by day, Ingest.  current is the farm page index, or "heads",
-    "strokes", "days" or "ingest" on those pages."""
+    """{% top_menu current=<farm index> %} -- the shared menu of every top line:
+    Sandbells, Strokes (when the farm has a concentrator), Rings by day, Ingest, then
+    on the right one button per farm device, Sandtest and sandheads (concentrator).
+    current is the farm page index, or "heads", "strokes", "days" or "ingest" on those
+    pages."""
     from bells.views import load_farm_instances      # here: bells imports events
     instances = load_farm_instances()
     devices = [{"index": i, "name": d["name"], "on": current == i}

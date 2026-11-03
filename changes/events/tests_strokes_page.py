@@ -47,10 +47,20 @@ class StrokesMenuButtonTests(TestCase):
                     reverse("farm_heads"), reverse("events:days")):
             self.assertContains(self.client.get(url), want, count=1, msg_prefix=url)
 
-    def test_button_sits_after_sandheads_before_rings_by_day(self, _):
-        body = self.client.get(reverse("farm_status_index", args=[0])).content.decode()
-        self.assertLess(body.index(">sandheads</a>"), body.index(">Strokes</a>"))
-        self.assertLess(body.index(">Strokes</a>"), body.index(">Rings by day</a>"))
+    def test_menu_order_sandbells_pages_then_the_sand_buttons_on_the_right(self, _):
+        order = [">&#128276; Sandbells</a>", ">Strokes</a>", ">Rings by day</a>", ">Ingest</a>",
+                 '<span class="sandnav">', ">sandbells</a>", ">sandswing</a>", ">Sandtest</a>",
+                 ">sandheads</a>", "</nav>"]
+        for url in (reverse("farm_status_index", args=[0]), reverse("farm_heads"),
+                    reverse("events:days"), reverse("events:strokes"),
+                    reverse("events:ingest"), reverse("sandtest:page")):
+            body = self.client.get(url).content.decode()
+            at = [body.index(s) for s in order]
+            self.assertEqual(at, sorted(at), url)
+        r = self.client.get(reverse("events:strokes"))
+        self.assertContains(r, ".topnav .sandnav {")                  # pushed to the right
+        self.assertContains(r, "margin-left: auto")
+        self.assertContains(r, "white-space: nowrap; font-size: 16px;")  # one line at 1024 px
 
     def test_strokes_page_marks_itself_gold_and_nothing_else(self, _):
         r = self.client.get(reverse("events:strokes"))

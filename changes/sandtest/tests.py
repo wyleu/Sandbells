@@ -13,6 +13,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from pathlib import Path
 from unittest import mock, skipUnless
 
 from django.test import SimpleTestCase, TestCase
@@ -410,6 +411,19 @@ class PageTests(TestCase):
     def test_stop_and_status_are_not_hidden_in_the_page(self):
         body = self.client.get(reverse("sandtest:page")).content.decode()
         self.assertLess(body.index('id="st-stop"'), body.index('id="sandtest-root"'))
+
+    def test_only_the_cards_scroll_menu_stop_bar_and_commands_sent_stay(self):
+        body = self.client.get(reverse("sandtest:page")).content.decode()
+        # the commands sent log is after the scrolling cards, not one of them
+        self.assertLess(body.index("</main>"), body.index('id="st-card-log"'))
+        self.assertLess(body.index('id="st-card-log"'), body.index('id="st-log"'))
+        # the rig pill rides in the stop bar, so the top line keeps to one line at 1024 px
+        self.assertLess(body.index('id="st-stopbar"'), body.index('id="st-host"'))
+        css = (Path(__file__).resolve().parent / "static" / "css" / "sandtest.css").read_text()
+        for rule in ("body { display: flex; flex-direction: column; overflow: hidden; }",
+                     "#sandtest-root { flex: 1 1 auto; min-height: 0; overflow-y: auto; }",
+                     "#st-card-log { flex: 0 0 auto;"):
+            self.assertIn(rule, css)
 
     def test_menu_entry_on_the_page_and_on_other_pages(self):
         r = self.client.get(reverse("sandtest:page"))

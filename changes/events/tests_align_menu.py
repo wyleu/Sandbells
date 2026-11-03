@@ -23,10 +23,10 @@ class SandheadsMenuButtonTests(TestCase):
             self.assertNotContains(r, "{#")
         self.assertNotContains(self.client.get(reverse("events:days")), "with-live")
 
-    def test_button_sits_with_the_device_buttons_before_rings_by_day(self, _):
+    def test_button_sits_with_the_device_buttons_after_rings_by_day(self, _):
         body = self.client.get(reverse("farm_status_index", args=[0])).content.decode()
+        self.assertLess(body.index(">Rings by day</a>"), body.index(">sandswing</a>"))
         self.assertLess(body.index(">sandswing</a>"), body.index(">sandheads</a>"))
-        self.assertLess(body.index(">sandheads</a>"), body.index(">Rings by day</a>"))
         self.assertNotIn(">Alignment</a>", body)
 
     def test_button_is_in_the_same_style_and_does_not_steal_where_you_are(self, _):
