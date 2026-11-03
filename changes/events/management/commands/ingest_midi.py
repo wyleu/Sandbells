@@ -6,8 +6,8 @@
 
 For a concentrator whose Wi-Fi is no use: its USB is plugged into this Pi.
 Each NoteOn on MIDI channel MIDI_CHANNEL (sandswing: 1) is one stroke on
-the channel MIDI_NOTE_TO_CH gives, stamped with this Pi's clock on arrival,
-stored (src "midi") through the same Ingest / EventStore as ingest_udp, so
+the channel MIDI_NOTE_TO_CH gives, timed by the Pico's own stamp SysEx
+when one follows it (else this Pi's clock on arrival), stored (src "midi") through the same Ingest / EventStore as ingest_udp, so
 the Strokes page shows it.  midiingest.py has the details.
 SIGTERM / SIGINT stop the loop; the buffer is flushed before exit.
 

@@ -4,10 +4,19 @@ table, with no Wi-Fi.  Run by manage.py ingest_midi.  No Django import here.
 sandswing sends one USB MIDI NoteOn per bell stroke (ring.py, and a trigger
 plug press since sandswing 0cfd112): channel MIDI_CHANNEL, note per channel
 MIDI_NOTE_TO_CH.  Each NoteOn (velocity > 0) on that channel becomes one
-sand.event/v1 "stroke" {src MIDI_SRC, body {"ch", "note", "vel", "via"}},
-stamped with this Pi's clock at the read (MIDI carries no time), and goes
-through the same Ingest (parse, gap tracker, EventStore batches) as
-ingest_udp.  NoteOffs, other channels and unmapped notes are counted only.
+sand.event/v1 "stroke" {src MIDI_SRC, body {"ch", "note", "vel", "via", ...}}
+and goes through the same Ingest (parse, gap tracker, EventStore batches)
+as ingest_udp.  NoteOffs, other channels and unmapped notes are counted only.
+
+Timing (StampPairer, StampClock): newer sandswing sends right after each
+stroke NoteOn a SysEx with the stroke's own keypad stamp (Pico ms;
+midiparse.StampMessage, sandswing midi_stamp.py), and a clock SysEx every
+10 s when quiet.  A NoteOn is held until its stamp (same bell channel)
+arrives, at most MIDI_STAMP_WAIT_MS.  Stamped: tick_ms = pico_ms + offset,
+offset = min over the window of (arrival monotonic ms - pico ms), utc_ms =
+tick_ms + (wall - monotonic), body + {pico_ms, seq, stamped: true,
+offset_ms (utc_ms - pico_ms)}.  No stamp in time (older firmware, a lost
+SysEx): this Pi's clock at the read, as before, body + {stamped: false}.
 
 Finding the Pico: the first ALSA card in /proc/asound/cards whose lines (or
 its /proc/asound/cardN/midiD files) contain one of MIDI_CARD_MATCH
@@ -39,7 +48,7 @@ from collections import deque, namedtuple
 
 from . import constants as C
 from .ingeststatus import IngestStatus
-from .midiparse import MidiParser, parse_seq_line
+from .midiparse import MidiParser, parse_seq_line, StampMessage
 
 log = logging.getLogger(C.LOGGER_NAME + ".midi")   # under setup_logging()'s handler
 
@@ -232,6 +241,7 @@ class MidiStatus(IngestStatus):
             "unmapped": 0, "other_channel": 0, "last_note_ms": None, "last_note": None,
             "connects": 0, "disconnects": 0, "errors": 0, "recent_errors": [],
             "parser_skipped": 0, "sysex_skipped": 0,
+            "stamp": None,           # StampClock / StampPairer counters (StampPairer.counters)
         }
         self.doc["midi"] = self.midi
 
@@ -277,6 +287,10 @@ class MidiStatus(IngestStatus):
         if p is not None:
             self.midi.update(parser_skipped=p.skipped, sysex_skipped=p.sysex)
 
+    def stamps(self, pairer):
+        if pairer is not None:
+            self.midi["stamp"] = pairer.counters()
+
     def snapshot(self, ingest):
         super().snapshot(ingest)
         self.midi["recent_errors"] = list(self.errors)
@@ -304,49 +318,261 @@ class StrokeMaker:
             return "unmapped"
         return None
 
-    def event(self, msg, utc_ms, tick_ms):
+    def ch_of(self, msg):
+        return self.note_to_ch[msg.note]
+
+    def event(self, msg, utc_ms, tick_ms, extra=None):
+        """extra: more body fields (the stamp's)."""
         self.seq += 1
+        body = {C.BODY_CH: self.note_to_ch[msg.note], C.MIDI_BODY_NOTE: msg.note,
+                C.MIDI_BODY_VEL: msg.velocity, C.MIDI_BODY_VIA: C.MIDI_SRC}
+        body.update(extra or {})
         return json.dumps({
             C.F_SCHEMA: C.SCHEMA_EVENT_V1, C.F_TYPE: C.TYPE_STROKE, C.F_SRC: C.MIDI_SRC,
             C.F_ID: C.MIDI_DEVICE_ID, C.F_BOOT_ID: self.boot_id, C.F_SEQ: self.seq,
             C.F_TICK_MS: tick_ms, C.F_UTC_MS: utc_ms,
-            C.F_BODY: {C.BODY_CH: self.note_to_ch[msg.note], C.MIDI_BODY_NOTE: msg.note,
-                       C.MIDI_BODY_VEL: msg.velocity, C.MIDI_BODY_VIA: C.MIDI_SRC},
+            C.F_BODY: body,
         }, separators=(",", ":"))
 
 
-def handle_notes(msgs, ingest, maker, status, utc_ms, tick_ms, peer=None):
-    """Store the strokes among msgs (all read at utc_ms).  -> strokes stored."""
-    n = 0
-    for msg in msgs:
-        why = maker.why_not(msg)
-        status.note(msg, utc_ms, why is None, why if why != "note_offs" else None)
-        if why is None:
-            ingest.handle_frame(maker.event(msg, utc_ms, tick_ms), peer=peer)
-            n += 1
-        elif why == "unmapped":
-            k = status.midi["unmapped"]
-            if k == 1 or k % C.MIDI_UNMAPPED_LOG_EVERY == 0:
-                log.warning("note %d on channel %d is not in MIDI_NOTE_TO_CH (%d so far)",
-                            msg.note, msg.channel, k)
-    return n
+# ---- the Pico's stamps -> stroke times -------------------------------------------
+class StampClock:
+    """Host monotonic ms <-> Pico ms.  offset = min over the window (last
+    MIDI_STAMP_WINDOW_N samples, none older than MIDI_STAMP_WINDOW_MS) of
+    (arrival - pico_ms): the least-delayed message bounds the true offset
+    from above, and USB / ALSA / this loop only ever add delay.
+
+    A Pico restart (stamp more than MIDI_STAMP_REBOOT_BACK_MS before the last
+    one, or seq starting again) empties the window: its tick scale is a new
+    one.  reset() (a reconnect) empties it too but keeps the last stamp and
+    seq, so a restart behind the reconnect is still counted."""
+
+    def __init__(self, n=C.MIDI_STAMP_WINDOW_N, max_age_ms=C.MIDI_STAMP_WINDOW_MS,
+                 reboot_back_ms=C.MIDI_STAMP_REBOOT_BACK_MS):
+        self.n, self.max_age_ms, self.reboot_back_ms = n, max_age_ms, reboot_back_ms
+        self.samples = deque()       # (arrival ms, arrival - pico_ms)
+        self.offset = None           # host monotonic ms - pico ms
+        self.spread = None           # max - min of the window's (arrival - pico_ms)
+        self.last_pico = None
+        self.last_seq = None         # last stroke seq seen (a clock's says it too)
+        self.reboots = 0
+        self.resets = 0              # window emptied by a reconnect
+        self.seq_gaps = 0            # times stroke stamps were missing ...
+        self.seq_missing = 0         # ... and how many
+        self.seq_odd = 0             # a repeated or older seq (not counted as missing)
+
+    def reset(self):
+        if self.samples:
+            self.resets += 1
+        self.samples.clear()
+        self.offset = self.spread = None
+
+    def _rebooted(self, stamp):
+        """A Pico restart: its seq started again (a clock with seq 0, or a
+        stroke stamp 1, after strokes), or its ms went back by more than
+        reboot_back_ms where they cannot (a clock is "now": never before an
+        earlier stamp; a stroke stamp can be, if its edge waited in the
+        Pico's queue past a clock, but then its seq still follows on)."""
+        last, seq = self.last_seq, stamp.seq
+        clock = stamp.ch == C.MIDI_STAMP_CH_CLOCK
+        if last not in (None, 0):
+            if clock and seq == 0:
+                return True
+            if not clock and seq == 1 and last != C.MIDI_STAMP_SEQ_MAX:
+                return True
+        if self.last_pico is None or stamp.pico_ms >= self.last_pico - self.reboot_back_ms:
+            return False
+        follows = last is not None and seq == last % C.MIDI_STAMP_SEQ_MAX + 1
+        return clock or not follows
+
+    def _seq(self, stamp):
+        """Seq bookkeeping; a stroke stamp should be last + 1, a clock's = last."""
+        last, seq = self.last_seq, stamp.seq
+        clock = stamp.ch == C.MIDI_STAMP_CH_CLOCK
+        if last is None:                             # first sight: strokes before it unknown
+            self.last_seq = seq
+            return
+        if clock:
+            missing = (seq - last) % C.MIDI_STAMP_SEQ_MAX
+        else:
+            missing = (seq - (last % C.MIDI_STAMP_SEQ_MAX + 1)) % C.MIDI_STAMP_SEQ_MAX
+        if missing == 0:
+            self.last_seq = seq
+        elif missing < C.MIDI_STAMP_SEQ_MAX // 2:
+            self.seq_gaps += 1
+            self.seq_missing += missing
+            self.last_seq = seq
+        else:
+            self.seq_odd += 1                        # repeated / older: keep last
+
+    def add(self, stamp, arrival_ms):
+        """One stamp read at arrival_ms (host monotonic).  -> True if it
+        showed a Pico restart (the window was emptied first)."""
+        rebooted = self._rebooted(stamp)
+        if rebooted:
+            self.reboots += 1
+            self.samples.clear()
+            self.last_seq = None
+            log.warning("Pico restarted (stamp %d ms after %s, seq %d): stamp offset starts again",
+                        stamp.pico_ms, self.last_pico, stamp.seq)
+        self._seq(stamp)
+        self.last_pico = stamp.pico_ms
+        self.samples.append((arrival_ms, arrival_ms - stamp.pico_ms))
+        while len(self.samples) > self.n or (
+                arrival_ms - self.samples[0][0] > self.max_age_ms):
+            self.samples.popleft()
+        ds = [d for _, d in self.samples]
+        self.offset, self.spread = min(ds), max(ds) - min(ds)
+        return rebooted
+
+    def host_ms(self, pico_ms):
+        """pico_ms on the host monotonic ms scale (None: no offset yet)."""
+        return None if self.offset is None else pico_ms + self.offset
+
+
+class StampPairer:
+    """NoteOn strokes held until their stamp SysEx (same bell channel) or
+    MIDI_STAMP_WAIT_MS, then handed to Ingest.  One pending stroke per
+    channel: a second NoteOn on it sends the first on unstamped."""
+
+    def __init__(self, ingest, maker, status, wait_ms=C.MIDI_STAMP_WAIT_MS, clock=None,
+                 peer=None):
+        self.ingest, self.maker, self.status = ingest, maker, status
+        self.wait_ms = wait_ms
+        self.clock = clock or StampClock()
+        self.peer = peer
+        self.pending = {}            # bell ch -> (NoteMessage, utc_ms, tick_ms) at arrival
+        self.stamped = 0
+        self.unstamped = 0
+        self.clocks = 0              # clock messages
+        self.orphans = 0             # stroke stamps with no NoteOn waiting
+        self.last_pico_ms = None
+        self.wall_minus_tick = None  # utc ms - monotonic ms at the last read
+
+    # ---- in -------------------------------------------------------------
+    def handle(self, msgs, utc_ms, tick_ms):
+        """msgs (NoteMessage / StampMessage), all read at utc_ms / tick_ms
+        (this Pi's wall and monotonic ms).  -> strokes handed to Ingest."""
+        self.wall_minus_tick = utc_ms - tick_ms
+        n = 0
+        for msg in msgs:
+            if isinstance(msg, StampMessage):
+                n += self._stamp(msg, tick_ms)
+                continue
+            why = self.maker.why_not(msg)
+            self.status.note(msg, utc_ms, why is None, why if why != "note_offs" else None)
+            if why is None:
+                ch = self.maker.ch_of(msg)
+                if ch in self.pending:                 # its stamp never came
+                    n += self._store(ch)
+                self.pending[ch] = (msg, utc_ms, tick_ms)
+            elif why == "unmapped":
+                k = self.status.midi["unmapped"]
+                if k == 1 or k % C.MIDI_UNMAPPED_LOG_EVERY == 0:
+                    log.warning("note %d on channel %d is not in MIDI_NOTE_TO_CH (%d so far)",
+                                msg.note, msg.channel, k)
+        # after the messages: a stamp read late with its note still pairs
+        return n + self.expire(tick_ms)
+
+    def _stamp(self, stamp, tick_ms):
+        self.last_pico_ms = stamp.pico_ms
+        self.clock.add(stamp, tick_ms)
+        if stamp.ch == C.MIDI_STAMP_CH_CLOCK:
+            self.clocks += 1
+            return 0
+        if stamp.ch not in self.pending:
+            self.orphans += 1                          # late (after the wait), or its NoteOn lost
+            return 0
+        return self._store(stamp.ch, stamp)
+
+    # ---- out ------------------------------------------------------------
+    def _store(self, ch, stamp=None):
+        msg, utc_ms, tick_ms = self.pending.pop(ch)
+        extra = {C.MIDI_BODY_STAMPED: False}
+        host = None if stamp is None else self.clock.host_ms(stamp.pico_ms)
+        if host is not None:
+            tick_ms = host
+            utc_ms = host + self.wall_minus_tick
+            extra = {C.MIDI_BODY_PICO_MS: stamp.pico_ms, C.MIDI_BODY_STAMP_SEQ: stamp.seq,
+                     C.MIDI_BODY_STAMPED: True, C.MIDI_BODY_OFFSET_MS: utc_ms - stamp.pico_ms}
+            self.stamped += 1
+        else:
+            self.unstamped += 1
+        self.ingest.handle_frame(self.maker.event(msg, utc_ms, tick_ms, extra), peer=self.peer)
+        return 1
+
+    def expire(self, tick_ms):
+        """Strokes held longer than wait_ms go on unstamped.  -> how many."""
+        n = 0
+        for ch in sorted(self.pending, key=lambda c: self.pending[c][2]):
+            if tick_ms - self.pending[ch][2] >= self.wait_ms:
+                n += self._store(ch)
+        return n
+
+    def flush(self):
+        """All held strokes on, unstamped (unplug, stop)."""
+        n = 0
+        for ch in sorted(self.pending, key=lambda c: self.pending[c][2]):
+            n += self._store(ch)
+        return n
+
+    def wait_s(self, tick_ms, idle_s):
+        """select timeout: idle_s, or less when a held stroke falls due."""
+        if not self.pending:
+            return idle_s
+        due = min(t for _, _, t in self.pending.values()) + self.wait_ms
+        return max(0.0, min(idle_s, (due - tick_ms) / C.MS_PER_S))
+
+    def counters(self):
+        """The status file's midi.stamp section."""
+        c = self.clock
+        wall_off = (None if c.offset is None or self.wall_minus_tick is None
+                    else c.offset + self.wall_minus_tick)
+        return {"stamped": self.stamped, "unstamped": self.unstamped,
+                "clocks": self.clocks, "orphans": self.orphans,
+                "offset_ms": wall_off, "offset_tick_ms": c.offset,
+                "offset_spread": c.spread, "offset_samples": len(c.samples),
+                "reboots": c.reboots, "window_resets": c.resets,
+                "seq_gaps": c.seq_gaps, "seq_missing": c.seq_missing, "seq_odd": c.seq_odd,
+                "last_seq": c.last_seq, "last_pico_ms": self.last_pico_ms,
+                "wait_ms": self.wait_ms, "held": len(self.pending)}
+
+
+def handle_notes(msgs, ingest, maker, status, utc_ms, tick_ms, peer=None, pairer=None):
+    """Store the strokes among msgs (all read at utc_ms).  -> strokes stored.
+    Without a pairer every NoteOn goes at once, unstamped (stamps ignored)."""
+    if pairer is None:
+        pairer = StampPairer(ingest, maker, status, peer=peer)
+        n = pairer.handle(msgs, utc_ms, tick_ms)
+        return n + pairer.flush()
+    return pairer.handle(msgs, utc_ms, tick_ms)
 
 
 def serve(source, ingest, stop, maker, status, find=None, idle_s=C.MIDI_IDLE_S,
           check_s=C.MIDI_RECONNECT_S, wall=time.time, tick=time.monotonic,
-          clock=time.monotonic):
+          clock=time.monotonic, pairer=None):
     """Read source until stop or Disconnected (re-raised).  Quiet second ->
-    ingest.idle().  Every check_s: find() must still see the port."""
+    ingest.idle().  Every check_s: find() must still see the port.  Held
+    strokes (pairer) go on when their stamp comes or their wait ends; the
+    caller flushes the rest."""
     checked = clock()
     parser = getattr(source, "parser", None)
+    if pairer is None:
+        pairer = StampPairer(ingest, maker, status)
+    pairer.peer = source.label
     while not stop.is_set():
-        r, _, _ = select.select([source], [], [], idle_s)
+        r, _, _ = select.select([source], [], [],
+                                pairer.wait_s(int(tick() * C.MS_PER_S), idle_s))
+        utc_ms, tick_ms = int(wall() * C.MS_PER_S), int(tick() * C.MS_PER_S)
         if r:
-            utc_ms, tick_ms = int(wall() * C.MS_PER_S), int(tick() * C.MS_PER_S)
             msgs = source.read()                      # Disconnected goes up
-            handle_notes(msgs, ingest, maker, status, utc_ms, tick_ms, peer=source.label)
+            pairer.handle(msgs, utc_ms, tick_ms)
             status.parser(parser)
+            status.stamps(pairer)
             ingest.maybe_summary()
+        elif pairer.pending:
+            pairer.expire(tick_ms)
+            status.stamps(pairer)
         else:
             ingest.idle()
         if find is not None and clock() - checked >= check_s:
@@ -363,6 +589,7 @@ def run(ingest, stop, status, find=find_port, opener=open_source,
     return after the first disconnect (tests, a manual check).  Flushes on
     the way out."""
     maker = maker or StrokeMaker()
+    pairer = StampPairer(ingest, maker, status)
     waiting_logged = False
     try:
         while not stop.is_set():
@@ -390,18 +617,21 @@ def run(ingest, stop, status, find=find_port, opener=open_source,
             waiting_logged = False
             log.info("MIDI connected: %s (%s)", source.label, source.transport)
             ingest.new_connection()
+            pairer.clock.reset()          # the Pico may have restarted behind the unplug
             status.connected(source)
             ingest.note("connected", via=C.MIDI_SRC, port=source.label)
             status.maybe_write(ingest, force=True)
             try:
                 serve(source, ingest, stop, maker, status, find=find, idle_s=idle_s,
-                      check_s=reconnect_s)
+                      check_s=reconnect_s, pairer=pairer)
             except Disconnected as e:
                 log.warning("MIDI disconnected: %s", e)
                 status.disconnected(e)
                 ingest.note("disconnected", via=C.MIDI_SRC, port=source.label, why=str(e))
             finally:
                 source.close()
+                pairer.flush()            # held strokes: unstamped, never lost
+                status.stamps(pairer)
                 ingest.flush()
                 status.maybe_write(ingest, force=True)
             if once:

@@ -326,6 +326,44 @@ MIDI_DATA_LEN = {0x80: 2, 0x90: 2, 0xA0: 2, 0xB0: 2, 0xC0: 1, 0xD0: 1, 0xE0: 2}
 MIDI_COMMON_DATA_LEN = {0xF1: 1, 0xF2: 2, 0xF3: 1, 0xF4: 0, 0xF5: 0, 0xF6: 0}
 MIDI_ON = "on"
 MIDI_OFF = "off"
+# The Pico's stroke stamp (sandswing src/midi_stamp.py, docs/midi-stamp.md):
+# right after each stroke NoteOn one SysEx with the stroke's keypad stamp,
+#     F0 7D 53 01 sh sl cc t4 t3 t2 t1 t0 F7
+# 7D the non-commercial manufacturer ID, 53 'S', 01 the layout version,
+# seq 14 bits (strokes 1..16383 then 1; 0 = none yet), cc the bell channel
+# 1-8 (0 = a clock message: the Pico's ms now, sent when quiet), t the ms on
+# the Pico's tick scale, 35 bits, 7 per byte, most significant first.
+# Any other SysEx is skipped (counted in sysex_skipped).
+MIDI_STAMP = "stamp"            # StampMessage.kind
+MIDI_STAMP_MFR_ID = 0x7D
+MIDI_STAMP_TAG = 0x53           # 'S'
+MIDI_STAMP_VERSION = 1
+MIDI_STAMP_LEN = 13             # F0 .. F7
+MIDI_STAMP_SEQ_BYTES = 2
+MIDI_STAMP_T_BYTES = 5
+MIDI_STAMP_SEQ_MAX = 16383      # 14 bits; a stroke seq after this is 1
+MIDI_STAMP_CH_CLOCK = 0
+MIDI_SEVEN_BITS = 7
+MIDI_SYSEX_KEEP_B = 32          # a SysEx longer than this is not ours: not kept, just skipped
+# aseqdump prints a SysEx as "System exclusive" then its bytes in hex (F0 .. F7)
+MIDI_SEQ_SYSEX_WORDS = "System exclusive"
+# Pairing: a NoteOn stroke is held until its stamp arrives (same bell
+# channel), at most this long; then stored unstamped at its arrival time.
+MIDI_STAMP_WAIT_MS = 50
+# Offset (host ms - Pico ms) = the minimum over a sliding window of
+# (arrival - stamp): the least-delayed sample.  Window: the last N samples,
+# none older than MAX_AGE.  The host side of the offset is time.monotonic
+# (an NTP step on the wall clock cannot jump it); utc_ms adds wall - monotonic.
+MIDI_STAMP_WINDOW_N = 64
+MIDI_STAMP_WINDOW_MS = 300000   # 5 min (clock messages every 10 s keep it fed when quiet)
+# A stamp more than this before the last one: the Pico restarted (its tick
+# scale began again), not a late message -> the window starts afresh.
+MIDI_STAMP_REBOOT_BACK_MS = 1000
+# Stroke stamp body fields (besides ch / note / vel / via)
+MIDI_BODY_PICO_MS = "pico_ms"
+MIDI_BODY_STAMP_SEQ = "seq"
+MIDI_BODY_STAMPED = "stamped"
+MIDI_BODY_OFFSET_MS = "offset_ms"
 # a ChannelMap lookup for a MIDI stroke uses the Pico's own src's rows
 # (same Pico, same channels), so bells show the same as over udp.
 MAP_SRC_FALLBACK = {MIDI_SRC: DEFAULT_SRC}
