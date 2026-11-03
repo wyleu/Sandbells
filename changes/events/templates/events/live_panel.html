@@ -13,6 +13,7 @@
   #live-events > #link-widget { grid-area: link; align-self: start; margin-top: 0; }
   #live-events > .live-head { grid-area: head; align-self: start; }
   #live-events > #live-table { grid-area: list; align-self: start; }
+  #live-events.ring { overflow: visible; }      /* ring page: every stroke, the page scrolls */
   .live-head { display: flex; flex-wrap: wrap; gap: 0.2rem 1.5rem; align-items: baseline; }
   .live-big { font-size: 2.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
   .live-big small { font-size: 1rem; font-weight: normal; opacity: 0.65; margin-left: 0.3rem; }
@@ -131,18 +132,23 @@
     #live-table thead th { font-size: 0.8rem; }
   }
 </style>
-<aside id="live-events" data-link="stale"
+<aside id="live-events" data-link="stale"{% if ring %} class="ring" data-static="ring-data"{% endif %}
        data-url="{{ since_url }}" data-type="{{ type }}" data-first="{{ first_load }}"
        data-batch="{{ batch }}" data-rows="{{ dom_rows }}" data-poll="{{ poll_ms }}"
        data-retry-max="{{ retry_max_ms }}" data-fails-warn="{{ fails_warn }}"
        data-idle="{{ idle_ms }}" data-ring-gap="{{ ring_gap_ms }}"
        data-timeout="{{ timeout_ms }}" data-tz="{{ tz }}">
   <div class="live-top">
+    {% if ring %}
+    <div class="live-big">{{ ring.summary.start_hms }}<small>to {{ ring.summary.end_hms }} · {{ ring.day_label }}</small></div>
+    {% else %}
     <div id="live-clock" data-tz="{{ tz }}">
       <div><span id="clock-hms">--:--:--</span><small id="clock-zone"></small></div>
       <div class="clock-q"><span id="clock-segs"></span><span id="clock-next"></span></div>
     </div>
+    {% endif %}
   </div>
+  {% if not ring %}
   <div id="link-widget" class="lw stale" data-url="{{ link_url }}"
        data-poll="{{ link_poll_ms }}" data-timeout="{{ timeout_ms }}">
     <div class="lw-leds" title="concentrator panel LEDs (last heartbeat)">
@@ -158,12 +164,21 @@
     <div class="lw-lines"><span id="lw-time" class="lw-time"></span></div>
     <div id="lw-chans" title="survey: why a socket is a fault or a trigger"></div>
   </div>
+  {% endif %}
   <div class="live-head">
     <div class="live-big"><span id="live-ring-count">—</span><small id="live-ring-label">strokes this ring</small></div>
+    {% if ring %}
+    <div class="live-big">{{ ring.summary.duration }}<small>long</small></div>
+    {% if ring.summary.seq_missing %}<div id="live-warn">{{ ring.summary.seq_missing }} strokes missing (seq gaps)</div>{% endif %}
+    {% if ring.truncated %}<div id="live-idle">Last {{ ring.max_rows }} strokes shown.</div>{% endif %}
+    {% else %}
     <div class="live-big"><span id="live-since">—</span><small>since last stroke</small></div>
+    {% endif %}
     <div id="live-heads"></div>
+    {% if not ring %}
     <div id="live-idle" hidden></div>
     <div id="live-warn" hidden></div>
+    {% endif %}
   </div>
   <table id="live-table">
     <thead><tr><th>time</th><th>bell</th>
@@ -172,9 +187,12 @@
     <tbody id="live-rows"></tbody>
   </table>
 </aside>
+{% if ring %}{{ ring.data|json_script:"ring-data" }}{% endif %}
 <script>
 {% include "events/beat.js" %}
 {% include "events/live_list.js" %}
+{% if not ring %}
 {% include "events/clock.js" %}
 {% include "events/link_widget.js" %}
+{% endif %}
 </script>

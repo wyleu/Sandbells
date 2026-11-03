@@ -1,4 +1,5 @@
-"""{% live_panel %} -- the live stroke list panel of the Strokes page (/events/strokes/)."""
+"""{% live_panel %} -- the live stroke list panel of the Strokes page (/events/strokes/).
+{% live_panel ring %} -- the same panel showing one stored ring (the ring page)."""
 
 from django import template
 from django.urls import reverse
@@ -9,15 +10,17 @@ register = template.Library()
 
 
 @register.inclusion_tag("events/live_panel.html")
-def live_panel():
+def live_panel(ring=None):
+    """ring (views.ring_page): that ring's strokes, drawn once, no polling."""
     return {
+        "ring": ring,
         "since_url": reverse("events:api_since"),
         "link_url": reverse("events:api_link"),
         "link_poll_ms": C.LINK_POLL_MS,
         "type": "",                     # every stored event: strokes + link/ingest
         "first_load": C.LIVE_FIRST_LOAD,
         "batch": C.LIVE_LIMIT_DEFAULT,
-        "dom_rows": C.LIVE_DOM_ROWS,
+        "dom_rows": C.RING_TABLE_MAX_ROWS if ring else C.LIVE_DOM_ROWS,
         "poll_ms": C.LIVE_POLL_MS,
         "retry_max_ms": C.LIVE_RETRY_MAX_MS,
         "fails_warn": C.LIVE_FAILS_WARN,

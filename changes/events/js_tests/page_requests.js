@@ -3,7 +3,10 @@
 // every script on it (inline, and <script src="/static/..."> found under the
 // static dirs given as arguments) against a small fake DOM, fake timers and a
 // fake fetch / WebSocket / XMLHttpRequest / EventSource, for SECONDS of page
-// time, and prints JSON: every URL fetched, every socket opened, script errors.
+// time, and prints JSON: every URL fetched, every socket opened, script errors,
+// and what the stroke list drew (rows, the count and per-bell line).
+// <script type="application/json" id=...> (Django json_script) is data, not
+// run: its text is that element's textContent.
 // Usage:  node page_requests.js [static_dir ...] < page.html
 "use strict";
 const fs = require("node:fs");
@@ -61,7 +64,11 @@ const document = {
   visibilityState: "visible", hidden: false,
   getElementById(id) {
     if (!(id in idTags)) return null;
-    return byId[id] || (byId[id] = makeEl(idTags[id]));
+    if (!byId[id]) {
+      byId[id] = makeEl(idTags[id]);
+      if (id in jsonText) byId[id].textContent = jsonText[id];
+    }
+    return byId[id];
   },
   createElement(tag) { return makeEl({}); },
   createTextNode(t) { return makeEl({}); },
@@ -141,10 +148,12 @@ sandbox.addEventListener = () => {};
 vm.createContext(sandbox);
 
 // ---- the page's scripts, in order
-const scripts = [], srcs = [];
+const scripts = [], srcs = [], jsonText = {};
 html.replace(/<script([^>]*)>([\s\S]*?)<\/script>/g, (_, attrs, body) => {
-  const src = attrsOf(attrs).src;
-  if (src) {
+  const a = attrsOf(attrs), src = a.src;
+  if (a.type === "application/json") {
+    jsonText[a.id] = body;
+  } else if (src) {
     srcs.push(src);
     const rel = src.split("?")[0].replace(/^\/static\//, "");
     const file = staticDirs.map((d) => path.join(d, rel)).find((f) => fs.existsSync(f));
@@ -176,5 +185,8 @@ process.on("unhandledRejection", (e) => errors.push("unhandled: " + e));
     run("timer", t.fn);
   }
   const rows = byId["live-rows"] ? byId["live-rows"].children.length : 0;
-  process.stdout.write(JSON.stringify({ fetches, sockets, srcs, errors, rows }));
+  const text = (id) => (byId[id] ? byId[id].textContent : null);
+  const firstRow = rows ? byId["live-rows"].children[0].children.map((td) => td.textContent) : [];
+  process.stdout.write(JSON.stringify({ fetches, sockets, srcs, errors, rows, firstRow,
+                                        count: text("live-ring-count"), heads: text("live-heads") }));
 })();

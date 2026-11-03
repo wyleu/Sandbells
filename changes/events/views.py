@@ -1,7 +1,7 @@
 """views.py -- server-rendered pages (no JS libraries).  UK local time.
 
   /events/days/[?date=YYYY-MM-DD]          days with strokes, rings of one day
-  /events/ring/<src>/<boot_id>/<seq>/      strokes of one ring (table)
+  /events/ring/<src>/<boot_id>/<seq>/      strokes of one ring (the Strokes page's list)
   /events/strokes/                         the live stroke list, full width
   /events/ingest/                          the ingest: units, counters, last datagram
 """
@@ -14,9 +14,11 @@ from django.shortcuts import render
 from . import constants as C
 from . import ingestpage
 from . import localtime as LT
+from .api import _event_json
 from .mapping import ChannelMapper
-from .models import receiving_host
-from .queries import ring_from, ring_json, rings_starting_between, stroke_days
+from .models import Event, receiving_host
+from .queries import (ring_from, ring_json, rings_starting_between, stroke_days,
+                      stroke_intervals)
 
 
 def _now_ms():
@@ -86,25 +88,23 @@ def _bell_rows(ring):
 
 
 def ring_page(request, src, boot_id, first_seq):
+    """One stored ring, drawn by the Strokes page's own panel and list
+    (live_panel.html, live_list.js) from the same event JSON as
+    /events/api/since/, full width; no polling, no link widget or clock."""
     ring = ring_from(src, boot_id, first_seq)
     if ring is None:
         raise Http404("no ring starts at %s/%s/%d" % (src, boot_id, first_seq))
     mapper = ChannelMapper.from_db()
+    rows = list(Event.objects.defer("raw")
+                .filter(src=src, boot_id=boot_id, type=C.TYPE_STROKE, ch__isnull=False,
+                        seq__gte=ring.first.seq, seq__lte=ring.last.seq)
+                .order_by("-seq")[:C.RING_TABLE_MAX_ROWS])[::-1]   # the last ones, oldest first
+    intervals = stroke_intervals(rows)
     summary = ring_json(ring, mapper)
-    summary["bell_rows"] = _bell_rows(summary)
-    last_tick = {}                       # ch -> tick_ms of its previous stroke
-    rows = []
-    for s in ring.strokes[:C.RING_TABLE_MAX_ROWS]:
-        prev = last_tick.get(s.ch)
-        last_tick[s.ch] = s.tick_ms
-        bell = mapper.bell_for(src, s.ch, s.at_ms)
-        rows.append({"time": LT.local_hms_ms(s.at_ms), "seq": s.seq,
-                     "bell": bell, "ch": s.ch,
-                     "interval_ms": None if prev is None else s.tick_ms - prev})
     day = LT.local_date(ring.first.at_ms)
-    return render(request, "events/ring.html", {
-        "host": receiving_host(), "ring": summary, "rows": rows,
-        "truncated": len(ring.strokes) > C.RING_TABLE_MAX_ROWS,
-        "max_rows": C.RING_TABLE_MAX_ROWS,
+    return render(request, "events/strokes.html", {"ring": {
+        "summary": summary,
+        "data": {"ring": summary, "events": [_event_json(e, mapper, intervals) for e in rows]},
+        "truncated": len(ring.strokes) > len(rows), "max_rows": C.RING_TABLE_MAX_ROWS,
         "day_iso": day.strftime(C.DATE_FORMAT), "day_label": LT.day_label(day),
-    })
+    }})

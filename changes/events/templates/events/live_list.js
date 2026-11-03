@@ -1,7 +1,9 @@
 /* live_list.js -- poll /events/api/since/ (DB, not the Pico) and show the
  * newest strokes first.  Vanilla JS, no libraries.  Included inline by
  * events/live_panel.html (the Strokes page) so no collectstatic is needed.
- * It never asks a device how it is: the stored events are all it uses. */
+ * It never asks a device how it is: the stored events are all it uses.
+ * On the ring page (data-static) it draws that ring's strokes, given in the
+ * page in the same form /events/api/since/ answers, once: no polling. */
 (function () {
   "use strict";
   var box = document.getElementById("live-events");
@@ -190,6 +192,13 @@
         warn();
         schedule(delay);
       });
+  }
+
+  if (d.static) {
+    var fixed = JSON.parse(el(d.static).textContent);
+    fixed.events.forEach(function (e) { addRow(e, false); });   // in order: newest ends on top
+    showRing(fixed.ring);
+    return;
   }
 
   setInterval(clockTick, MS_PER_S);

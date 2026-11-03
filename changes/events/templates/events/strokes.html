@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Strokes · Sandbells</title>
+  <title>{% if ring %}Ring {{ ring.day_label }} {{ ring.summary.start_hms }}{% else %}Strokes{% endif %} · Sandbells</title>
   {% comment %}The live stroke list on its own page, the whole kiosk screen wide.  Inline
   styles, no collectstatic.  Only Sandbells' own feeds (/events/api/since/, /events/api/link/):
   no device /status poll and no socket to a Pico, so this page costs the sandswing nothing.{% endcomment %}
@@ -15,14 +15,17 @@
                             align-items: center; flex-wrap: wrap;
                             padding: 0.45rem 0.8rem; font-size: 1.05rem; }
     body > #live-events { flex: 1 1 auto; }
+    body.ring-page { overflow: auto; }   /* a stored ring: all its strokes, scroll */
     @media (max-width: 900px) { header#strokes-header { font-size: 0.9rem; padding: 0.3rem 0.4rem; } }
   </style>
   {% include "events/menu_style.html" %}
 </head>
-<body class="strokes-page">
+<body class="{% if ring %}ring-page{% else %}strokes-page{% endif %}">
   <header id="strokes-header" class="topbar">
-    {% top_menu current="strokes" %}
+    {% if ring %}{% top_menu current="days" %}
+    <a class="navbtn" href="{% url 'events:days' %}?date={{ ring.day_iso }}">&larr; {{ ring.day_label }}</a>
+    {% else %}{% top_menu current="strokes" %}{% endif %}
   </header>
-  {% live_panel %}
+  {% live_panel ring %}
 </body>
 </html>
