@@ -267,6 +267,15 @@ class LinkApiTests(SimpleTestCase):
         out = self.get(self.doc(hb_ago_ms=C.LINK_LOST_MS + 1000), serial_ago_s=600)
         self.assertEqual((out["verdict"], out["via"]), ("lost", C.LINK_VIA_UDP))
 
+    def test_hb_live_says_whether_the_heartbeat_behind_the_leds_is_fresh(self):
+        out = self.get(self.doc(), midi=self.midi())                   # sandbells2, 10 Nov
+        self.assertEqual((out["verdict"], out["via"], out["hb_live"]), (C.LINK_MIDI, C.LINK_VIA_UDP, True))
+        self.assertIn("Wi-Fi: ok", out["why"])
+        for doc in (self.doc(hb_ago_ms=C.LINK_STALE_MS + 1000), self.doc(hb_ago_ms=None), None):
+            self.assertFalse(self.get(doc, midi=self.midi())["hb_live"], doc)
+        self.assertTrue(self.get(None, midi=self.midi(), serial_ago_s=2)["hb_live"])
+        self.assertFalse(self.get(None, midi=self.midi(), serial_ago_s=600)["hb_live"])
+
     def test_midi_and_serial_midi_verdict_with_serial_heartbeat(self):
         out = self.get(None, midi=self.midi(), serial_ago_s=2)
         self.assertEqual((out["verdict"], out["via"]), (C.LINK_MIDI, C.LINK_VIA_SERIAL))

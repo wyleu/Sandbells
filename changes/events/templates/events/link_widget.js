@@ -127,8 +127,9 @@
     };
   }
 
-  /* MIDI: the Wi-Fi heartbeat's LEDs and time line are old, so not shown;
-   * a fresh USB serial heartbeat (data.via "usb serial") is shown */
+  /* MIDI: the LEDs, heads and time line show while the heartbeat behind
+   * them is fresh (data.hb_live, api.link: Wi-Fi or USB serial); an old one
+   * is not shown */
   function midiView(data) {
     var m = data.midi || {}, st = m.stamp || {};
     var v = {
@@ -137,11 +138,12 @@
               " · unstamped " + (st.unstamped || 0) + " · clocks " + (st.clocks || 0),
       drop: "", time: "", timeCls: "", leds: [], states: [], kinds: [], notes: []
     };
-    var body = data.via === VIA_SERIAL && data.pico ? data.pico.body || null : null;
+    var body = data.hb_live && data.pico ? data.pico.body || null : null;
     if (body) {
       var ch = channels(body);
       v.live = true;
-      v.detail += " · status via usb serial, heartbeat " + ago(data.hb_age_ms) + " ago";
+      v.detail += " · " + (data.via === VIA_SERIAL ? "status via usb serial, " : "") +
+                  "heartbeat " + ago(data.hb_age_ms) + " ago";
       v.time = timeLine(body);
       v.timeCls = syncClass(body);
       v.leds = (body.panel || []).map(cssColour);

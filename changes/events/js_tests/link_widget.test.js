@@ -103,7 +103,7 @@ test("view: via usb serial is live, says so, LEDs and time from the serial heart
 });
 
 test("view: midi with a fresh serial heartbeat shows its LEDs; without one stays dark", () => {
-  const data = { verdict: "midi", via: "usb serial", hb_age_ms: 2000, why: "USB MIDI ...",
+  const data = { verdict: "midi", via: "usb serial", hb_live: true, hb_age_ms: 2000, why: "USB MIDI ...",
     midi: { strokes: 3, stamp: { stamped: 3, unstamped: 0, clocks: 1 } },
     pico: { body: SERIAL_BODY } };
   const v = lw.view(data);
@@ -112,9 +112,23 @@ test("view: midi with a fresh serial heartbeat shows its LEDs; without one stays
   assert.match(v.detail, /status via usb serial, heartbeat 2 s ago$/);
   assert.equal(v.leds.length, 6);
   assert.equal(v.timeCls, "ok");
-  const w = lw.view(Object.assign({}, data, { via: "udp" }));
+  const w = lw.view(Object.assign({}, data, { hb_live: false }));
   assert.equal(w.live, false);
   assert.deepEqual(w.leds, []);
+});
+
+test("view: midi with a fresh Wi-Fi heartbeat lights the LEDs too (sandbells2, 10 Nov)", () => {
+  const v = lw.view({ verdict: "midi", via: "udp", hb_live: true, hb_age_ms: 7932,
+    why: "USB MIDI midi:/dev/snd/midiC3D0, heard 3 s ago (Wi-Fi: ok)",
+    midi: { strokes: 0, stamp: {} },
+    pico: { body: { panel: [[0, 32, 0], [0, 0, 24], [24, 0, 48], [24, 12, 0], [24, 0, 48], [24, 48, 0]],
+                    panel_state: ["ws_client", "empty", "head_new", "empty", "head_new", "heartbeat"],
+                    sync: "synced" } } });
+  assert.equal(v.live, true);
+  assert.deepEqual(v.leds, ["rgb(0,255,0)", "rgb(0,0,255)", "rgb(128,0,255)",
+                            "rgb(255,128,0)", "rgb(128,0,255)", "rgb(128,255,0)"]);
+  assert.match(v.detail, / · heartbeat 7 s ago$/);
+  assert.doesNotMatch(v.detail, /usb serial/);
 });
 
 test("view: only a live verdict lights LEDs (stale / lost keep them dark)", () => {

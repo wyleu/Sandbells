@@ -324,7 +324,8 @@ class FarmSerialStatusTests(SimpleTestCase, TmpDir):
         self.assertEqual(heads["ch2"]["level"], "error")
         self.assertIn("no beam", heads["ch2"]["value"])
         panel = [s for s in doc["sections"] if s["id"] == "panel"][0]["items"]
-        self.assertEqual(panel[0]["color"], "#002800")
+        self.assertEqual(panel[0]["color"], "rgb(0,255,0)")      # scaled like link_widget.js
+        self.assertEqual(panel[1]["color"], C.PANEL_CSS_DARK)     # off
         self.assertIn("USB serial, 2 s ago", doc["summary"])
 
     def test_stale_serial_wifi_first_then_serial_marked_stale(self):
@@ -378,3 +379,34 @@ class IngestPageSerialTests(TestCase, TmpDir):
         for text in ("USB serial status (ingest_serial)", "serial:/dev/ttyACM1", ">yes<",
                      "sandbells-ingest-serial.service"):
             self.assertContains(r, text)
+
+
+class PanelColourTests(SimpleTestCase):
+    """The farm page's Panel LEDs (status_schema.panel_css) and the Strokes
+    page's strip (link_widget.js cssColour) colour an LED the same way."""
+    SAMPLES = [[0, 32, 0], [0, 0, 24], [24, 0, 48], [24, 12, 0], [24, 48, 0], [40, 20, 0],
+               [0, 0, 0], [1, 1, 1], [48, 47, 1], [7, 3, 0]]
+
+    def test_python_rule(self):
+        from bells.status_schema import panel_css
+        self.assertEqual(panel_css([0, 32, 0]), "rgb(0,%d,0)" % C.PANEL_CSS_FULL)
+        self.assertEqual(panel_css([24, 12, 0]), "rgb(255,128,0)")    # 127.5 rounds up
+        self.assertEqual(panel_css([0, 0, 0]), C.PANEL_CSS_DARK)
+        for bad in (None, [], ["x", 1, 2], 5):
+            self.assertEqual(panel_css(bad), C.PANEL_CSS_DARK)
+
+    def test_same_as_link_widget_js(self):
+        import shutil
+        import subprocess
+        from pathlib import Path
+        from unittest import SkipTest
+        from bells.status_schema import panel_css
+        node = shutil.which("node")
+        if not node:
+            raise SkipTest("node not installed")
+        js = Path(__file__).resolve().parent / "templates" / "events" / "link_widget.js"
+        script = ("const lw = require(%s); console.log(JSON.stringify(%s.map(lw.cssColour)));"
+                  % (json.dumps(str(js)), json.dumps(self.SAMPLES)))
+        p = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=30)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(json.loads(p.stdout), [panel_css(c) for c in self.SAMPLES])
