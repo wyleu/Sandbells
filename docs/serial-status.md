@@ -35,3 +35,25 @@ Check:
 
 Overrides in the unit: `Environment=SANDBELLS_SERIAL_DEVICE=/dev/ttyACM1`
 or `Environment=SANDBELLS_SERIAL_MATCH=<USB product substring>`.
+
+## LED echo (sandswing `serial_status.leds`)
+
+The heartbeat's `panel` is a 10 s snapshot.  With the echo on, the Pico also
+sends `{"t":"led","n","p","s"}` on each panel change (at most one per
+0.25 s; a stroke's flash is held at least that long, not lost).
+
+* `ingest_serial` writes the newest to `/run/sandbells-ingest/serial_leds.json`
+  (`SERIAL_LEDS_PATH`, env `SANDBELLS_SERIAL_LEDS`): on each LED line, each
+  heartbeat (which says whether the echo is on) and on a disconnect.
+* `GET /events/api/leds/`: `{live, panel, panel_state, n, led_age_ms,
+  hb_age_ms}`, one small tmpfs read, no DB.  live: port open, the newest
+  heartbeat fresh and saying the echo is on, and a line has come.
+* `/events/api/link/` says `leds_live`; while it is true and the page is
+  visible the link widget polls `api/leds/` every `LINK_LED_POLL_MS`
+  (250 ms) and paints those colours over the heartbeat's.  It stops by
+  itself when the echo is not live.
+* Seen latency: about 0.05 s on the Pico, a few ms through ingest, then up
+  to one poll (0.25 s) plus the request: typically 0.1-0.4 s.
+* Cost on the kiosk Pi: 4 small requests a second while the Strokes page
+  is visible and the echo live (the page already makes about 1.5).  Slower:
+  raise `LINK_LED_POLL_MS` (flashes shorter than it may then be missed).

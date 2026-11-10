@@ -9,7 +9,11 @@
  * events/live_panel.html; pure helpers exported for node tests.
  * When the Wi-Fi heartbeat is not fresh, the Pico's USB serial one stands in
  * (data.via "usb serial", api.serial_link) and the text says "via usb serial";
- * the LEDs show whenever the heartbeat behind them is live (v.live). */
+ * the LEDs show whenever the heartbeat behind them is live (v.live).
+ * LED echo: while /events/api/link/ says leds_live, /events/api/leds/ (the
+ * panel as the Pico paints it, by USB serial) is polled every led-poll ms
+ * (only while the page is visible) and its colours replace the heartbeat's
+ * snapshot (ledEcho); it stops by itself when the echo is no longer live. */
 (function () {
   "use strict";
   var MS_PER_S = 1000, S_PER_MIN = 60;
@@ -154,17 +158,60 @@
     return v;
   }
 
-  var api = { midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
+  /* /events/api/leds/ reply -> {leds, states} to paint, or null (not live) */
+  function ledEcho(d) {
+    if (!d || !d.live || !d.panel) return null;
+    return { leds: d.panel.map(cssColour), states: d.panel_state || [] };
+  }
+
+  var api = { ledEcho: ledEcho, midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
               syncClass: syncClass, channels: channels };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
 
   var box = document.getElementById("link-widget");
   if (!box) return;
-  var cfg = { url: box.dataset.url, poll: +box.dataset.poll, timeout: +box.dataset.timeout };
+  var cfg = { url: box.dataset.url, poll: +box.dataset.poll, timeout: +box.dataset.timeout,
+              ledsUrl: box.dataset.ledsUrl, ledPoll: +box.dataset.ledPoll };
+  var last = null, echo = null, echoOn = false, echoRunning = false;
+  var painted = [];                          // colour last set per LED (style reads back changed)
   var leds = box.querySelectorAll(".lw-led");
   var kindEls = box.querySelectorAll(".lw-kind");
   function el(id) { return document.getElementById(id); }
   function text(id, s) { var e = el(id); if (e && e.textContent !== s) e.textContent = s; }
+
+  /* the six LEDs: the echo while it is live, else the heartbeat's (v.live) */
+  function paintLeds() {
+    var v = last;
+    if (!v) return;
+    var src = echo || (v.live ? v : null);
+    for (var i = 0; i < leds.length; i++) {
+      var c = src && src.leds[i] ? src.leds[i] : DARK;
+      if (painted[i] !== c) { leds[i].style.background = c; painted[i] = c; }
+      var st = src ? src.states[i] : v.states[i];
+      var t = LED_NAMES[i] + ": " + (STATE_WORDS[st] || st || "?");
+      if (leds[i].title !== t) leds[i].title = t;
+    }
+  }
+
+  function ledPoll() {
+    if (!echoOn || document.hidden || !cfg.ledsUrl) {
+      echoRunning = false;
+      if (echo) { echo = null; paintLeds(); }
+      return;
+    }
+    var ctl = window.AbortController ? new AbortController() : null;
+    var guard = ctl ? setTimeout(function () { ctl.abort(); }, cfg.timeout) : null;
+    fetch(cfg.ledsUrl, { cache: "no-store", signal: ctl ? ctl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (d) { clearTimeout(guard); echo = ledEcho(d); if (!echo) echoOn = false; })
+      .catch(function () { clearTimeout(guard); echo = null; echoOn = false; })
+      .then(function () { paintLeds(); setTimeout(ledPoll, cfg.ledPoll); });
+  }
+
+  function echoWanted(on) {
+    echoOn = !!on;
+    if (echoOn && !echoRunning) { echoRunning = true; ledPoll(); }
+  }
 
   function show(v) {
     box.className = "lw " + v.cls;
@@ -176,10 +223,8 @@
     text("lw-drop", v.drop);
     text("lw-time", v.time);
     el("lw-time").className = "lw-time " + v.timeCls;
-    for (var i = 0; i < leds.length; i++) {
-      leds[i].style.background = v.live && v.leds[i] ? v.leds[i] : DARK;
-      leds[i].title = LED_NAMES[i] + ": " + (STATE_WORDS[v.states[i]] || v.states[i] || "?");
-    }
+    last = v;
+    paintLeds();
     for (var j = 0; j < kindEls.length; j++) {
       var kw = v.live && v.kinds ? v.kinds[j] || "" : "";
       if (kindEls[j].textContent !== kw) kindEls[j].textContent = kw;
@@ -205,12 +250,13 @@
     var guard = ctl ? setTimeout(function () { ctl.abort(); }, cfg.timeout) : null;
     fetch(cfg.url, { cache: "no-store", signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (data) { clearTimeout(guard); show(view(data)); })
+      .then(function (data) { clearTimeout(guard); show(view(data)); echoWanted(data.leds_live); })
       .catch(function (e) {
         clearTimeout(guard);
         show({ cls: "lost", live: false, headline: "?", why: "Sandbells not answering: " + e.message,
                detail: "", drop: "", time: "", timeCls: "", leds: [], states: [],
                kinds: [], notes: [] });
+        echoWanted(false);
       })
       .then(function () { setTimeout(poll, cfg.poll); });
   }
