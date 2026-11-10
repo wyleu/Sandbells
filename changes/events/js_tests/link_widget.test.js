@@ -81,3 +81,44 @@ test("view: midi is cyan MIDI with the USB counters, no old Wi-Fi LEDs or time l
   assert.deepEqual(v.leds, []);
   assert.equal(v.time, "");
 });
+
+const SERIAL_BODY = { panel: [[0, 32, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 32, 0], [40, 0, 0]],
+  panel_state: ["no_wifi", "empty", "empty", "empty", "head_new", "heartbeat_nosync"],
+  sync: "synced", time: { peer: { srv: "10.42.0.1", stratum: 1, leap: 0 } },
+  chan: [["empty", null], ["empty", null], ["empty", null], ["head_new", null]] };
+
+test("view: via usb serial is live, says so, LEDs and time from the serial heartbeat", () => {
+  const v = lw.view({ verdict: "ok", via: "usb serial", wifi_verdict: "lost",
+    why: "via usb serial serial:/dev/ttyACM1, heartbeat 4 s ago (Wi-Fi: lost)",
+    hb_age_ms: 4000, rx_age_ms: 60000, ingest: { reconnects: 3 },
+    pico: { body: SERIAL_BODY } });
+  assert.equal(v.cls, "ok");
+  assert.equal(v.live, true);
+  assert.equal(v.headline, "CONNECTED");
+  assert.match(v.detail, /^via usb serial · heartbeat 4 s ago · Wi-Fi lost, packet 1 min 0 s ago$/);
+  assert.equal(v.leds[0], "rgb(0,255,0)");
+  assert.equal(v.leds[5], "rgb(255,0,0)");
+  assert.match(v.time, /synced · 10\.42\.0\.1 stratum 1/);
+  assert.deepEqual(v.kinds, ["empty", "empty", "empty", "new head"]);
+});
+
+test("view: midi with a fresh serial heartbeat shows its LEDs; without one stays dark", () => {
+  const data = { verdict: "midi", via: "usb serial", hb_age_ms: 2000, why: "USB MIDI ...",
+    midi: { strokes: 3, stamp: { stamped: 3, unstamped: 0, clocks: 1 } },
+    pico: { body: SERIAL_BODY } };
+  const v = lw.view(data);
+  assert.equal(v.cls, "midi");
+  assert.equal(v.live, true);
+  assert.match(v.detail, /status via usb serial, heartbeat 2 s ago$/);
+  assert.equal(v.leds.length, 6);
+  assert.equal(v.timeCls, "ok");
+  const w = lw.view(Object.assign({}, data, { via: "udp" }));
+  assert.equal(w.live, false);
+  assert.deepEqual(w.leds, []);
+});
+
+test("view: only a live verdict lights LEDs (stale / lost keep them dark)", () => {
+  assert.equal(lw.view({ verdict: "ok", pico: { body: SERIAL_BODY } }).live, true);
+  assert.equal(lw.view({ verdict: "stale", pico: { body: SERIAL_BODY } }).live, false);
+  assert.equal(lw.view({ verdict: "lost", pico: { body: SERIAL_BODY } }).live, false);
+});

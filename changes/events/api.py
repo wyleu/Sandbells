@@ -18,6 +18,7 @@ from .mapping import ChannelMapper, ch_label
 from .ingeststatus import read_ingest_status
 from .linkstate import read_link_state
 from .midiingest import midi_status_path
+from . import serialingest
 from .models import receiving_host
 from .queries import (current_ring, events_after, ring_json,
                       rings_starting_between, stroke_intervals)
@@ -122,15 +123,48 @@ def link(request):
            "file_age_ms": file_age, "stale_ms": C.LINK_STALE_MS,
            "lost_ms": C.LINK_LOST_MS}
     out.update(link_verdict(doc, file_age, now))
+    out["ingest"] = (doc or {}).get("ingest")
+    out["pico"] = (doc or {}).get("pico")
+    out["via"] = C.LINK_VIA_UDP
+    wifi = out["verdict"]
+    serial = serial_link(now, out)
+    if serial:                        # Wi-Fi heartbeat not fresh: the USB serial one instead
+        out.update(serial)
     mdoc, mage = read_ingest_status(midi_status_path())
     out["midi"] = (mdoc or {}).get("midi")
     midi = midi_verdict(mdoc, mage, now)
     if midi:                          # USB MIDI is live: say so, not the Wi-Fi verdict
-        out.update(midi, why="%s (Wi-Fi: %s)" % (midi["why"], out["verdict"]))
+        why = "%s (Wi-Fi: %s)" % (midi["why"], wifi)
+        if serial:
+            why += "; status via %s, heartbeat %d s ago" % (
+                C.LINK_VIA_SERIAL, serial["hb_age_ms"] // C.MS_PER_S)
+        out.update(midi, why=why)
         out["verdict"] = C.LINK_MIDI
-    out["ingest"] = (doc or {}).get("ingest")
-    out["pico"] = (doc or {}).get("pico")
     return JsonResponse(out)
+
+
+def serial_link(now, udp):
+    """The USB serial heartbeat (ingest_serial, serialingest.latest) in
+    place of the Wi-Fi one, when the Wi-Fi heartbeat is not fresh (verdict
+    not ok, or ok on packets with no heartbeat) and the serial one is
+    (younger than its stale_ms).  -> the fields to change, or None (UDP
+    stays as it was)."""
+    if udp.get("verdict") == "ok" and udp.get("hb_age_ms") is not None:
+        return None
+    try:
+        s = serialingest.latest(now)
+    except Exception:
+        return None
+    if s is None or s["stale"] or s["age_ms"] is None:
+        return None
+    return {"verdict": "ok", "via": C.LINK_VIA_SERIAL, "pico": s["heartbeat"],
+            "hb_age_ms": s["age_ms"], "wifi_verdict": udp.get("verdict"),
+            "wifi_why": udp.get("why"),
+            "serial": {"port": s["port"], "age_ms": s["age_ms"], "period_s": s["period_s"],
+                       "stale_ms": s["stale_ms"]},
+            "why": "via %s %s, heartbeat %d s ago (Wi-Fi: %s)" % (
+                C.LINK_VIA_SERIAL, s["port"] or "", s["age_ms"] // C.MS_PER_S,
+                udp.get("verdict"))}
 
 
 def _age(now, ms):

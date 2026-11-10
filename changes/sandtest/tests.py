@@ -458,5 +458,5 @@ JS_TESTS = Path(__file__).resolve().parent / "js_tests"
 @skipUnless(NODE, "node not installed")
 class SandtestJsTests(SimpleTestCase):
     def test_node_unit_tests(self):
-        p = subprocess.run([NODE, "--test", str(JS_TESTS)], capture_output=True, text=True, timeout=60)
+        p = subprocess.run([NODE, "--test"] + sorted(map(str, JS_TESTS.glob("*.test.js"))), capture_output=True, text=True, timeout=60)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)

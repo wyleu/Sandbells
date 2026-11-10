@@ -6,7 +6,10 @@
  * stratum sandmon answered, so a GPS NO Lock shows here).  Polls
  * /events/api/link/ (a tmpfs file, no DB).  Goes grey after stale_ms with no
  * heartbeat, red after lost_ms or when the ingest is down.  Included inline by
- * events/live_panel.html; pure helpers exported for node tests. */
+ * events/live_panel.html; pure helpers exported for node tests.
+ * When the Wi-Fi heartbeat is not fresh, the Pico's USB serial one stands in
+ * (data.via "usb serial", api.serial_link) and the text says "via usb serial";
+ * the LEDs show whenever the heartbeat behind them is live (v.live). */
 (function () {
   "use strict";
   var MS_PER_S = 1000, S_PER_MIN = 60;
@@ -27,6 +30,7 @@
   };
   var NOTE_KINDS = { fault: "bad", trigger: "trig" };   // why shown for these
   var PANEL_CHANNELS = 4;                              // LEDs 2-5 = ch 1-4
+  var VIA_SERIAL = "usb serial";                       // api.serial_link
   var SYNC_WORDS = { synced: "synced", stale: "holdover", held: "held (ringing)",
                      unsynced: "NOT synced" };
 
@@ -98,9 +102,12 @@
     var headline = { ok: "CONNECTED", stale: "STALE", lost: "LOST", midi: "MIDI",
                      no_ingest: "INGEST DOWN" }[data.verdict] || "?";
     if (data.verdict === "midi") return midiView(data);
-    var parts = ["packet " + ago(data.rx_age_ms) + " ago",
-                 "heartbeat " + ago(data.hb_age_ms) + " ago",
-                 "reconnects " + (ing.reconnects || 0)];
+    var parts = data.via === VIA_SERIAL
+      ? ["via usb serial", "heartbeat " + ago(data.hb_age_ms) + " ago",
+         "Wi-Fi " + (data.wifi_verdict || "?") + ", packet " + ago(data.rx_age_ms) + " ago"]
+      : ["packet " + ago(data.rx_age_ms) + " ago",
+         "heartbeat " + ago(data.hb_age_ms) + " ago",
+         "reconnects " + (ing.reconnects || 0)];
     if (net.drops) parts.push("Pico drops " + net.drops);
     if (body && body.wifi && body.wifi.rssi !== null && body.wifi.rssi !== undefined) {
       parts.push("RSSI " + body.wifi.rssi);
@@ -109,6 +116,7 @@
     var ch = channels(body);
     return {
       cls: data.verdict === "ok" ? "ok" : data.verdict === "stale" ? "stale" : "lost",
+      live: data.verdict === "ok", via: data.via || "",
       headline: headline, why: data.why || "",
       detail: parts.join(" · "),
       drop: drop ? "last drop: " + drop : "",
@@ -119,15 +127,29 @@
     };
   }
 
-  /* MIDI: the Wi-Fi heartbeat's LEDs and time line are old, so not shown */
+  /* MIDI: the Wi-Fi heartbeat's LEDs and time line are old, so not shown;
+   * a fresh USB serial heartbeat (data.via "usb serial") is shown */
   function midiView(data) {
     var m = data.midi || {}, st = m.stamp || {};
-    return {
-      cls: "midi", headline: "MIDI", why: data.why || "",
+    var v = {
+      cls: "midi", live: false, via: data.via || "", headline: "MIDI", why: data.why || "",
       detail: "strokes " + (m.strokes || 0) + " · stamped " + (st.stamped || 0) +
               " · unstamped " + (st.unstamped || 0) + " · clocks " + (st.clocks || 0),
       drop: "", time: "", timeCls: "", leds: [], states: [], kinds: [], notes: []
     };
+    var body = data.via === VIA_SERIAL && data.pico ? data.pico.body || null : null;
+    if (body) {
+      var ch = channels(body);
+      v.live = true;
+      v.detail += " · status via usb serial, heartbeat " + ago(data.hb_age_ms) + " ago";
+      v.time = timeLine(body);
+      v.timeCls = syncClass(body);
+      v.leds = (body.panel || []).map(cssColour);
+      v.states = body.panel_state || [];
+      v.kinds = ch.kinds;
+      v.notes = ch.notes;
+    }
+    return v;
   }
 
   var api = { midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
@@ -153,17 +175,17 @@
     text("lw-time", v.time);
     el("lw-time").className = "lw-time " + v.timeCls;
     for (var i = 0; i < leds.length; i++) {
-      leds[i].style.background = v.cls === "ok" && v.leds[i] ? v.leds[i] : DARK;
+      leds[i].style.background = v.live && v.leds[i] ? v.leds[i] : DARK;
       leds[i].title = LED_NAMES[i] + ": " + (STATE_WORDS[v.states[i]] || v.states[i] || "?");
     }
     for (var j = 0; j < kindEls.length; j++) {
-      var kw = v.cls === "ok" && v.kinds ? v.kinds[j] || "" : "";
+      var kw = v.live && v.kinds ? v.kinds[j] || "" : "";
       if (kindEls[j].textContent !== kw) kindEls[j].textContent = kw;
       kindEls[j].className = "lw-kind" + (kw === "FAULT" ? " bad" : kw === "trigger" ? " trig" : "");
     }
     var notes = el("lw-chans");
     if (notes) {                               // stale/lost: say nothing old
-      var html = (v.cls === "ok" && v.notes ? v.notes : []).map(function (n) {
+      var html = (v.live && v.notes ? v.notes : []).map(function (n) {
         var d = document.createElement("div");
         d.className = "lw-note " + n.cls;
         d.textContent = n.text;
@@ -184,7 +206,7 @@
       .then(function (data) { clearTimeout(guard); show(view(data)); })
       .catch(function (e) {
         clearTimeout(guard);
-        show({ cls: "lost", headline: "?", why: "Sandbells not answering: " + e.message,
+        show({ cls: "lost", live: false, headline: "?", why: "Sandbells not answering: " + e.message,
                detail: "", drop: "", time: "", timeCls: "", leds: [], states: [],
                kinds: [], notes: [] });
       })

@@ -238,6 +238,11 @@ INGEST_FILE_STALE_MS = 15000    # link file not rewritten: ingest not running
 # arrived within MIDI_LIVE_MS.  The Pico sends a clock every
 # MIDI_CLOCK_EVERY_MS when quiet, so MIDI_LIVE_MS allows two to go missing.
 LINK_MIDI = "midi"
+# where the widget's heartbeat (LEDs, sync, heads) came from: the Wi-Fi
+# ingest's link.json, or the USB serial status (ingest_serial) when the
+# Wi-Fi heartbeat is not fresh and the serial one is (api.serial_link)
+LINK_VIA_UDP = "udp"
+LINK_VIA_SERIAL = "usb serial"
 MIDI_CLOCK_EVERY_MS = 10000     # sandswing midi_stamp.py clock interval
 MIDI_LIVE_MS = 2 * MIDI_CLOCK_EVERY_MS + 5000
 
