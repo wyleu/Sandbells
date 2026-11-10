@@ -286,5 +286,5 @@ NODE = shutil.which("node")
 @skipUnless(NODE, "node not installed")
 class PowerJsTests(SimpleTestCase):
     def test_node_unit_tests(self):
-        p = subprocess.run([NODE, "--test", str(HERE / "js_tests")], capture_output=True, text=True, timeout=60)
+        p = subprocess.run([NODE, "--test"] + sorted(map(str, (HERE / "js_tests").glob("*.test.js"))), capture_output=True, text=True, timeout=60)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)

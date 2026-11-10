@@ -187,7 +187,7 @@ class StrokesPageClockTests(TestCase):
 @skipUnless(NODE, "node not installed")
 class ClockJsTests(SimpleTestCase):
     def test_node_unit_tests(self):
-        p = subprocess.run([NODE, "--test", str(JS_TESTS)], capture_output=True,
+        p = subprocess.run([NODE, "--test"] + sorted(map(str, JS_TESTS.glob("*.test.js"))), capture_output=True,
                            text=True, timeout=NODE_TIMEOUT_S)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
 
@@ -208,23 +208,71 @@ class StrokesPageLinkWidgetTests(TestCase):
         self.assertNotContains(r, "link-widget")
 
 
+SERIAL_HB = {"schema": "sand.panel/v1", "type": "heartbeat", "src": "sandswing",
+             "id": "sandswing-pico", "boot_id": "b007", "seq": 9, "via": "usb_cdc",
+             "body": {"panel": [[0, 40, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [40, 0, 0]],
+                      "panel_state": ["no_wifi", "empty", "empty", "empty", "head_new",
+                                      "heartbeat_nosync"],
+                      "sync": "synced", "uid": "7091CDAB9DBD5305",
+                      "chan": [["empty", None], ["empty", None], ["empty", None], ["head_new", None]]},
+             "serial": {"period_s": 10}}
+
+
 class LinkApiTests(SimpleTestCase):
-    def get(self, doc=None, age_s=0, midi=None, midi_age_s=0):
+    def get(self, doc=None, age_s=0, midi=None, midi_age_s=0, serial_ago_s=None):
         import os
         import tempfile
         import time
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "link.json")
             mpath = os.path.join(d, "midi_status.json")   # never this Pi's real one
+            spath = os.path.join(d, "serial_status.json")  # nor its serial one
             for p, body, age in ((path, doc, age_s), (mpath, midi, midi_age_s)):
                 if body is not None:
                     with open(p, "w") as f:
                         f.write(body if isinstance(body, str) else json.dumps(body))
                     t = time.time() - age
                     os.utime(p, (t, t))
+            if serial_ago_s is not None:
+                from events import serialingest
+                st = serialingest.SerialStatus(spath)
+                st.serial["port"] = "serial:/dev/ttyACM1"
+                st.line(json.dumps(SERIAL_HB).encode())
+                st.doc["heartbeat_ms"] -= int(serial_ago_s * C.MS_PER_S)
+                st.maybe_write(None, force=True)
             with mock.patch.dict("os.environ", {C.LINK_STATE_ENV: path,
-                                                C.MIDI_STATUS_ENV: mpath}):
+                                                C.MIDI_STATUS_ENV: mpath,
+                                                C.SERIAL_STATUS_ENV: spath}):
                 return self.client.get(reverse("events:api_link")).json()
+
+    def test_serial_stands_in_when_wifi_heartbeat_is_not_fresh(self):
+        for doc in (None, self.doc(hb_ago_ms=C.LINK_LOST_MS + 1000), self.doc(hb_ago_ms=None),
+                    self.doc(state=C.LINK_DOWN)):
+            out = self.get(doc, serial_ago_s=3)
+            self.assertEqual((out["verdict"], out["via"]), ("ok", C.LINK_VIA_SERIAL), doc)
+            self.assertEqual(out["pico"]["body"]["panel"][0], [0, 40, 0])
+            self.assertEqual(out["pico"]["body"]["sync"], "synced")
+            self.assertTrue(2500 <= out["hb_age_ms"] <= 5000, out["hb_age_ms"])
+            self.assertIn("via usb serial serial:/dev/ttyACM1", out["why"])
+            self.assertIn("Wi-Fi: ", out["why"])
+            self.assertEqual(out["serial"]["period_s"], 10)
+
+    def test_fresh_wifi_heartbeat_unchanged_by_serial(self):
+        out = self.get(self.doc(), serial_ago_s=1)
+        self.assertEqual((out["verdict"], out["via"]), ("ok", C.LINK_VIA_UDP))
+        self.assertEqual(out["pico"]["body"]["sync"], "stale")      # the UDP one
+        self.assertNotIn("serial", out)
+
+    def test_stale_serial_not_used(self):
+        out = self.get(self.doc(hb_ago_ms=C.LINK_LOST_MS + 1000), serial_ago_s=600)
+        self.assertEqual((out["verdict"], out["via"]), ("lost", C.LINK_VIA_UDP))
+
+    def test_midi_and_serial_midi_verdict_with_serial_heartbeat(self):
+        out = self.get(None, midi=self.midi(), serial_ago_s=2)
+        self.assertEqual((out["verdict"], out["via"]), (C.LINK_MIDI, C.LINK_VIA_SERIAL))
+        self.assertIn("Wi-Fi: no_ingest", out["why"])
+        self.assertIn("status via usb serial, heartbeat 2 s ago", out["why"])
+        self.assertEqual(out["pico"]["body"]["panel"][5], [40, 0, 0])
 
     def midi(self, connected=True, stamp_ago_ms=3000, note_ago_ms=None):
         import time

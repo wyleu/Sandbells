@@ -173,6 +173,6 @@ class RedDetectorTests(SimpleTestCase):
 @skipUnless(NODE, "node not installed")
 class AlignJsTests(SimpleTestCase):
     def test_node_unit_tests(self):
-        p = subprocess.run([NODE, "--test", str(HERE / "js_tests")], capture_output=True,
+        p = subprocess.run([NODE, "--test"] + sorted(map(str, (HERE / "js_tests").glob("*.test.js"))), capture_output=True,
                            text=True, timeout=60)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
