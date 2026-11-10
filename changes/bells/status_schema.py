@@ -245,6 +245,7 @@ def _join(*parts: Any) -> str:
 # ---- sandswing over its USB data port (events.serialingest, no Wi-Fi) -------
 SERIAL_SOURCE = "usb serial"
 PANEL_LEDS = ("Link", "LED 2", "LED 3", "LED 4", "LED 5", "Sync")   # sandswing panel.py order
+PANEL_KEY = "led%d"     # the Panel items' keys, led1..led6 (bells/farm_leds.js paints them live)
 
 
 def _ago_text(ms: Any) -> str | None:
@@ -325,7 +326,7 @@ def from_serial_heartbeat(latest: dict, inst: dict | None = None) -> dict:
     panel = []
     states = b.get("panel_state") or []
     for i, rgb in enumerate(b.get("panel") or []):
-        it = _item(f"led{i + 1}", PANEL_LEDS[i] if i < len(PANEL_LEDS) else f"LED {i + 1}",
+        it = _item(PANEL_KEY % (i + 1), PANEL_LEDS[i] if i < len(PANEL_LEDS) else f"LED {i + 1}",
                    states[i] if i < len(states) else None)
         it["color"] = panel_css(rgb)
         panel.append(it)

@@ -20,7 +20,9 @@
 (function () {
   "use strict";
   var MS_PER_S = 1000, S_PER_MIN = 60;
-  var FULL = 255, DARK = "#222";
+  /* led_echo.js (included before this one; node: required) */
+  var LE = typeof module === "object" && module.exports ? require("./led_echo.js") : LedEcho;
+  var cssColour = LE.cssColour, ledEcho = LE.ledEcho, ledFrames = LE.ledFrames, DARK = LE.DARK;
   var LED_NAMES = ["link", "ch1", "ch2", "ch3", "ch4", "beat"];
   var STATE_WORDS = {
     ws_client: "Sandbells connected", wifi_only: "Wi-Fi, no Sandbells",
@@ -37,19 +39,10 @@
   };
   var NOTE_KINDS = { fault: "bad", trigger: "trig" };   // why shown for these
   var PANEL_CHANNELS = 4;                              // LEDs 2-5 = ch 1-4
+  var ECHO_WORD = " · live LEDs";                     // after the LED words while the echo runs
   var VIA_SERIAL = "usb serial";                       // api.serial_link
   var SYNC_WORDS = { synced: "synced", stale: "holdover", held: "held (ringing)",
                      unsynced: "NOT synced" };
-
-  /* panel rgb (0..~48, dim on purpose) -> a CSS colour bright enough to see */
-  function cssColour(rgb) {
-    if (!rgb || rgb.length < 3) return DARK;
-    var m = Math.max(rgb[0], rgb[1], rgb[2]);
-    if (m <= 0) return DARK;
-    var k = FULL / m;
-    return "rgb(" + Math.round(rgb[0] * k) + "," + Math.round(rgb[1] * k) + "," +
-           Math.round(rgb[2] * k) + ")";
-  }
 
   function ago(ms) {
     if (ms === null || ms === undefined) return "never";
@@ -161,29 +154,6 @@
     return v;
   }
 
-  /* /events/api/leds/ reply -> {leds, states} to paint, or null (not live) */
-  function ledEcho(d) {
-    if (!d || !d.live || !d.panel) return null;
-    return { leds: d.panel.map(cssColour), states: d.panel_state || [] };
-  }
-
-  var ECHO_WORD = " · live LEDs";
-
-  /* /events/api/leds/ reply + the last line number shown -> the lines not yet
-   * shown, oldest first ({n, leds, states}), and the new last number.  First
-   * reply, or n went back (Pico rebooted): just the newest. */
-  function ledFrames(d, lastN) {
-    if (!ledEcho(d)) return { frames: [], lastN: null };
-    var cur = { n: d.n, p: d.panel, s: d.panel_state };
-    var rec = (d.recent || []).filter(function (r) { return r && r.p && r.n !== null; });
-    if (!rec.length || rec[rec.length - 1].n !== d.n) rec = rec.concat([cur]);
-    var fresh = lastN === null || lastN === undefined || d.n === null || d.n < lastN
-      ? [cur] : rec.filter(function (r) { return r.n > lastN; });
-    return { frames: fresh.map(function (r) {
-               return { n: r.n, leds: r.p.map(cssColour), states: r.s || [] }; }),
-             lastN: d.n };
-  }
-
   var api = { ledFrames: ledFrames, ledEcho: ledEcho, midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
               syncClass: syncClass, channels: channels };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
@@ -193,8 +163,7 @@
   var cfg = { url: box.dataset.url, poll: +box.dataset.poll, timeout: +box.dataset.timeout,
               ledsUrl: box.dataset.ledsUrl, ledPoll: +box.dataset.ledPoll,
               echoMax: +box.dataset.echoMax };       // SERIAL_LEDS_RECENT
-  var last = null, echo = null, echoOn = false, echoRunning = false;
-  var queue = [], lastN = null;              // echo lines not yet shown; the newest seen
+  var last = null, echo = null;             // the last view; the echo frame shown (or null)
   var painted = [];                          // colour last set per LED (style reads back changed)
   var leds = box.querySelectorAll(".lw-led");
   var kindEls = box.querySelectorAll(".lw-kind");
@@ -215,34 +184,11 @@
     }
   }
 
-  function ledPoll() {
-    if (!echoOn || document.hidden || !cfg.ledsUrl) {
-      echoRunning = false;
-      echoOff();
-      return;
-    }
-    var ctl = window.AbortController ? new AbortController() : null;
-    var guard = ctl ? setTimeout(function () { ctl.abort(); }, cfg.timeout) : null;
-    fetch(cfg.ledsUrl, { cache: "no-store", signal: ctl ? ctl.signal : undefined })
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (d) {
-        clearTimeout(guard);
-        var got = ledFrames(d, lastN);
-        if (got.lastN === null) { echoOn = false; echoOff(); return; }
-        lastN = got.lastN;
-        queue = queue.concat(got.frames).slice(-cfg.echoMax);
-        if (queue.length) echo = queue.shift();     // one line per poll: each one seen
-      })
-      .catch(function () { clearTimeout(guard); echoOn = false; echoOff(); })
-      .then(function () { paintLeds(); ledsText(); setTimeout(ledPoll, cfg.ledPoll); });
-  }
+  var echoer = LE.create({ url: cfg.ledsUrl, pollMs: cfg.ledPoll, max: cfg.echoMax,
+                           timeoutMs: cfg.timeout,
+                           paint: function (f) { echo = f; paintLeds(); ledsText(); } });
 
-  function echoOff() {
-    queue = [];
-    lastN = null;
-    if (echo) { echo = null; paintLeds(); }
-    ledsText();
-  }
+  function echoWanted(on) { echoer.want(on); }
 
   /* LED words under the strip: link and beat states, and whether the echo runs */
   function ledsText() {
@@ -250,11 +196,6 @@
     var word = st[0] ? STATE_WORDS[st[0]] || st[0] : "";
     var beat = st[5] ? STATE_WORDS[st[5]] || st[5] : "";
     text("lw-leds", word + (beat ? " · " + beat : "") + (echo ? ECHO_WORD : ""));
-  }
-
-  function echoWanted(on) {
-    echoOn = !!on;
-    if (echoOn && !echoRunning) { echoRunning = true; ledPoll(); }
   }
 
   function show(v) {

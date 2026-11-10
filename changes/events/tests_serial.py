@@ -416,6 +416,46 @@ class FarmSerialStatusTests(SimpleTestCase, TmpDir):
             r = views.farm_device_status(RequestFactory().get("/", {"url": self.HOME}))
         return r, json.loads(r.content), calls
 
+    def page(self, entry):
+        from django.test import Client
+        with mock.patch("bells.views.load_farm_instances", return_value=[entry]):
+            return Client().get(reverse("farm_status_index", args=[0])).content.decode()
+
+    def test_farm_page_panel_live_only_for_the_serial_pico(self):
+        from bells.status_schema import PANEL_KEY, from_serial_heartbeat
+        self.write(age_s=2)
+        entry = {"id": "sandswing", "name": "sandswing", "family": "sandswing",
+                 "status_url": self.HOME, "uid": UID}
+        html = self.page(entry)
+        self.assertIn("farm_leds.js -- the sandswing farm page", html)
+        self.assertIn("led_echo.js -- the concentrator panel", html)
+        i = html.rindex("FarmLeds.start(") + len("FarmLeds.start(")
+        cfg = json.loads(html[i:html.index(", LedEcho);", i)])
+        self.assertEqual(cfg, {"url": reverse("events:api_leds"), "pollMs": C.LINK_LED_POLL_MS,
+                               "max": C.SERIAL_LEDS_RECENT, "timeoutMs": C.LIVE_FETCH_TIMEOUT_MS,
+                               "probeMs": C.LINK_POLL_MS,
+                               "keys": ["led%d" % n for n in range(1, C.SERIAL_LEDS_N + 1)]})
+        doc = from_serial_heartbeat(S.latest(), entry)
+        panel = [sec for sec in doc["sections"] if sec["id"] == "panel"][0]
+        self.assertEqual([it["key"] for it in panel["items"]], cfg["keys"])   # what it paints exists
+        self.assertEqual(html.count('<script src='), 2)        # reconnect_delay + farm_status only
+        self.assertIn("/static/js/farm_status.js?v=", html)
+
+    def test_other_farm_pages_unchanged(self):
+        self.write(age_s=2)
+        for entry in ({"id": "sandswing", "name": "sandswing", "family": "sandswing",
+                       "status_url": self.HOME, "uid": "0F8A68C934D3A61C"},   # another Pico
+                      {"id": "sandtest", "name": "sandtest", "family": "sandtest",
+                       "status_url": "http://192.168.0.198/status"},
+                      {"id": "sandmon", "name": "sandmon", "family": "sandmon"}):
+            html = self.page(entry)
+            self.assertNotIn("FarmLeds", html, entry)
+            self.assertNotIn("led_echo.js", html, entry)
+        os.unlink(self.path)                                     # no serial status at all
+        html = self.page({"id": "sandswing", "name": "sandswing", "family": "sandswing",
+                          "status_url": self.HOME})
+        self.assertNotIn("FarmLeds", html)
+
     def test_fresh_serial_is_used_wifi_not_asked(self):
         self.write(age_s=2)
         r, doc, calls = self.fetch()
