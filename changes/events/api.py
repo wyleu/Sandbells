@@ -127,6 +127,8 @@ def link(request):
     out["pico"] = (doc or {}).get("pico")
     out["via"] = C.LINK_VIA_UDP
     wifi = out["verdict"]
+    # the heartbeat behind the LEDs is fresh (not just "some packet lately")
+    out["hb_live"] = wifi == "ok" and out["hb_age_ms"] is not None
     serial = serial_link(now, out)
     if serial:                        # Wi-Fi heartbeat not fresh: the USB serial one instead
         out.update(serial)
@@ -157,7 +159,7 @@ def serial_link(now, udp):
         return None
     if s is None or s["stale"] or s["age_ms"] is None:
         return None
-    return {"verdict": "ok", "via": C.LINK_VIA_SERIAL, "pico": s["heartbeat"],
+    return {"verdict": "ok", "via": C.LINK_VIA_SERIAL, "pico": s["heartbeat"], "hb_live": True,
             "hb_age_ms": s["age_ms"], "wifi_verdict": udp.get("verdict"),
             "wifi_why": udp.get("why"),
             "serial": {"port": s["port"], "age_ms": s["age_ms"], "period_s": s["period_s"],

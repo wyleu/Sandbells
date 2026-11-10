@@ -258,12 +258,21 @@ def _ago_text(ms: Any) -> str | None:
     return f"{s // 3600} h {(s % 3600) // 60} min"
 
 
-def _rgb_hex(rgb: Any) -> str | None:
+def panel_css(rgb: Any) -> str:
+    """A panel LED's rgb (dim on purpose) -> a CSS colour bright enough to
+    see: the brightest channel scaled to PANEL_CSS_FULL, black (or no
+    colour) PANEL_CSS_DARK.  Same output as link_widget.js cssColour."""
+    from events import constants as EC
     try:
-        r, g, b = (int(x) & 0xFF for x in rgb)
+        r, g, b = (max(0, int(x)) for x in list(rgb)[:3])
     except (TypeError, ValueError):
-        return None
-    return "#%02x%02x%02x" % (r, g, b)
+        return EC.PANEL_CSS_DARK
+    m = max(r, g, b)
+    if m <= 0:
+        return EC.PANEL_CSS_DARK
+    k = EC.PANEL_CSS_FULL / m
+    half = 0.5                                     # Math.round, not banker's rounding
+    return "rgb(%d,%d,%d)" % tuple(int(v * k + half) for v in (r, g, b))
 
 
 def from_serial_heartbeat(latest: dict, inst: dict | None = None) -> dict:
@@ -318,9 +327,7 @@ def from_serial_heartbeat(latest: dict, inst: dict | None = None) -> dict:
     for i, rgb in enumerate(b.get("panel") or []):
         it = _item(f"led{i + 1}", PANEL_LEDS[i] if i < len(PANEL_LEDS) else f"LED {i + 1}",
                    states[i] if i < len(states) else None)
-        css = _rgb_hex(rgb)
-        if css:
-            it["color"] = css
+        it["color"] = panel_css(rgb)
         panel.append(it)
 
     wifi = b.get("wifi") or {}

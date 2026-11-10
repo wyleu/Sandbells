@@ -242,6 +242,12 @@ LINK_MIDI = "midi"
 # ingest's link.json, or the USB serial status (ingest_serial) when the
 # Wi-Fi heartbeat is not fresh and the serial one is (api.serial_link)
 LINK_VIA_UDP = "udp"
+# panel LED colours on screen: the Pico's rgb is dim on purpose (0..~48), so
+# the brightest channel is scaled to PANEL_CSS_FULL; black is PANEL_CSS_DARK.
+# The same rule as link_widget.js cssColour (FULL, DARK): tests_led_colour
+# checks the two agree.
+PANEL_CSS_FULL = 255
+PANEL_CSS_DARK = "#222"
 LINK_VIA_SERIAL = "usb serial"
 MIDI_CLOCK_EVERY_MS = 10000     # sandswing midi_stamp.py clock interval
 MIDI_LIVE_MS = 2 * MIDI_CLOCK_EVERY_MS + 5000
