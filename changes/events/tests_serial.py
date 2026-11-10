@@ -240,6 +240,19 @@ class LedEchoTests(SimpleTestCase, TmpDir):
         self.st.line(led_line(n=5, p=[[0, 0, 24]] * 6))
         self.assertEqual(S.leds(path=self.lpath)["panel"][0], [0, 0, 24])
 
+    def test_recent_lines_kept_trimmed_and_cleared(self):
+        self.st.line(echo_hb())
+        for n in range(1, C.SERIAL_LEDS_RECENT + 3):
+            self.st.line(led_line(n=n, p=[[0, 0, n]] * 6))
+        L = S.leds(path=self.lpath)
+        self.assertEqual([r["n"] for r in L["recent"]],
+                         list(range(3, C.SERIAL_LEDS_RECENT + 3)))     # oldest first, newest = n
+        self.assertEqual(L["recent"][-1]["p"], L["panel"])
+        self.assertEqual(L["recent"][-1]["s"], LED["s"])
+        self.st.disconnected("EOF")
+        self.assertEqual(self.st.leds.doc["recent"], [])
+        self.assertEqual(S.leds(path=self.lpath)["recent"], [])
+
     def test_not_live_stale_off_or_disconnected(self):
         self.st.line(echo_hb(period_s=10))
         self.st.line(led_line())
@@ -285,7 +298,8 @@ class LedEchoTests(SimpleTestCase, TmpDir):
             r = self.client.get(reverse("events:api_leds")).json()
             self.assertTrue(r["live"])
             self.assertEqual(r["panel"], LED["p"])
-            self.assertEqual(set(r), {"live", "panel", "panel_state", "n", "led_age_ms", "hb_age_ms"})
+            self.assertEqual(set(r), {"live", "panel", "panel_state", "n", "recent",
+                                      "led_age_ms", "hb_age_ms"})
             self.assertTrue(self.client.get(reverse("events:api_link")).json()["leds_live"])
         with mock.patch.dict(os.environ, {C.SERIAL_LEDS_ENV: os.path.join(d, "none.json")}):
             r = self.client.get(reverse("events:api_leds")).json()

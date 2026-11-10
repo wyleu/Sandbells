@@ -19,6 +19,7 @@ def live_panel(ring=None):
         "link_poll_ms": C.LINK_POLL_MS,
         "leds_url": reverse("events:api_leds"),
         "led_poll_ms": C.LINK_LED_POLL_MS,
+        "echo_max": C.SERIAL_LEDS_RECENT,
         "type": "",                     # every stored event: strokes + link/ingest
         "first_load": C.LIVE_FIRST_LOAD,
         "batch": C.LIVE_LIMIT_DEFAULT,

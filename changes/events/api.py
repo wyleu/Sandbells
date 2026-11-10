@@ -153,7 +153,7 @@ def _leds(now):
     try:
         return serialingest.leds(now)
     except Exception:
-        return {"live": False, "panel": None, "panel_state": None, "n": None,
+        return {"live": False, "panel": None, "panel_state": None, "n": None, "recent": [],
                 "led_age_ms": None, "hb_age_ms": None}
 
 

@@ -13,7 +13,10 @@
  * LED echo: while /events/api/link/ says leds_live, /events/api/leds/ (the
  * panel as the Pico paints it, by USB serial) is polled every led-poll ms
  * (only while the page is visible) and its colours replace the heartbeat's
- * snapshot (ledEcho); it stops by itself when the echo is no longer live. */
+ * snapshot (ledEcho); it stops by itself when the echo is no longer live.
+ * Every line the Pico sent is shown for at least one poll (ledFrames, from
+ * the reply's "recent"), so a 0.25 s stroke flash between polls is not
+ * missed; "· live LEDs" after the LED words says the fast poll is running. */
 (function () {
   "use strict";
   var MS_PER_S = 1000, S_PER_MIN = 60;
@@ -164,15 +167,34 @@
     return { leds: d.panel.map(cssColour), states: d.panel_state || [] };
   }
 
-  var api = { ledEcho: ledEcho, midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
+  var ECHO_WORD = " · live LEDs";
+
+  /* /events/api/leds/ reply + the last line number shown -> the lines not yet
+   * shown, oldest first ({n, leds, states}), and the new last number.  First
+   * reply, or n went back (Pico rebooted): just the newest. */
+  function ledFrames(d, lastN) {
+    if (!ledEcho(d)) return { frames: [], lastN: null };
+    var cur = { n: d.n, p: d.panel, s: d.panel_state };
+    var rec = (d.recent || []).filter(function (r) { return r && r.p && r.n !== null; });
+    if (!rec.length || rec[rec.length - 1].n !== d.n) rec = rec.concat([cur]);
+    var fresh = lastN === null || lastN === undefined || d.n === null || d.n < lastN
+      ? [cur] : rec.filter(function (r) { return r.n > lastN; });
+    return { frames: fresh.map(function (r) {
+               return { n: r.n, leds: r.p.map(cssColour), states: r.s || [] }; }),
+             lastN: d.n };
+  }
+
+  var api = { ledFrames: ledFrames, ledEcho: ledEcho, midiView: midiView, cssColour: cssColour, ago: ago, timeLine: timeLine, view: view,
               syncClass: syncClass, channels: channels };
   if (typeof module === "object" && module.exports) { module.exports = api; return; }
 
   var box = document.getElementById("link-widget");
   if (!box) return;
   var cfg = { url: box.dataset.url, poll: +box.dataset.poll, timeout: +box.dataset.timeout,
-              ledsUrl: box.dataset.ledsUrl, ledPoll: +box.dataset.ledPoll };
+              ledsUrl: box.dataset.ledsUrl, ledPoll: +box.dataset.ledPoll,
+              echoMax: +box.dataset.echoMax };       // SERIAL_LEDS_RECENT
   var last = null, echo = null, echoOn = false, echoRunning = false;
+  var queue = [], lastN = null;              // echo lines not yet shown; the newest seen
   var painted = [];                          // colour last set per LED (style reads back changed)
   var leds = box.querySelectorAll(".lw-led");
   var kindEls = box.querySelectorAll(".lw-kind");
@@ -196,16 +218,38 @@
   function ledPoll() {
     if (!echoOn || document.hidden || !cfg.ledsUrl) {
       echoRunning = false;
-      if (echo) { echo = null; paintLeds(); }
+      echoOff();
       return;
     }
     var ctl = window.AbortController ? new AbortController() : null;
     var guard = ctl ? setTimeout(function () { ctl.abort(); }, cfg.timeout) : null;
     fetch(cfg.ledsUrl, { cache: "no-store", signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (d) { clearTimeout(guard); echo = ledEcho(d); if (!echo) echoOn = false; })
-      .catch(function () { clearTimeout(guard); echo = null; echoOn = false; })
-      .then(function () { paintLeds(); setTimeout(ledPoll, cfg.ledPoll); });
+      .then(function (d) {
+        clearTimeout(guard);
+        var got = ledFrames(d, lastN);
+        if (got.lastN === null) { echoOn = false; echoOff(); return; }
+        lastN = got.lastN;
+        queue = queue.concat(got.frames).slice(-cfg.echoMax);
+        if (queue.length) echo = queue.shift();     // one line per poll: each one seen
+      })
+      .catch(function () { clearTimeout(guard); echoOn = false; echoOff(); })
+      .then(function () { paintLeds(); ledsText(); setTimeout(ledPoll, cfg.ledPoll); });
+  }
+
+  function echoOff() {
+    queue = [];
+    lastN = null;
+    if (echo) { echo = null; paintLeds(); }
+    ledsText();
+  }
+
+  /* LED words under the strip: link and beat states, and whether the echo runs */
+  function ledsText() {
+    var st = echo ? echo.states : last ? last.states : [];
+    var word = st[0] ? STATE_WORDS[st[0]] || st[0] : "";
+    var beat = st[5] ? STATE_WORDS[st[5]] || st[5] : "";
+    text("lw-leds", word + (beat ? " · " + beat : "") + (echo ? ECHO_WORD : ""));
   }
 
   function echoWanted(on) {
@@ -240,9 +284,7 @@
       }).join("");
       if (notes.innerHTML !== html) notes.innerHTML = html;
     }
-    var word = v.states[0] ? STATE_WORDS[v.states[0]] || v.states[0] : "";
-    var beat = v.states[5] ? STATE_WORDS[v.states[5]] || v.states[5] : "";
-    text("lw-leds", word + (beat ? " · " + beat : ""));
+    ledsText();
   }
 
   function poll() {

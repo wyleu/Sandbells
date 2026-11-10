@@ -206,6 +206,7 @@ class StrokesPageLinkWidgetTests(TestCase):
         self.assertContains(r, 'e.type === "channel"')          # survey rows in the list
         self.assertContains(r, 'data-leds-url="%s"' % reverse("events:api_leds"))
         self.assertContains(r, 'data-led-poll="%d"' % C.LINK_LED_POLL_MS)
+        self.assertContains(r, 'data-echo-max="%d"' % C.SERIAL_LEDS_RECENT)
         r = self.client.get(reverse("farm_status_index", args=[0]))
         self.assertNotContains(r, "link-widget")
 

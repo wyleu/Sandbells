@@ -255,7 +255,7 @@ class LedsFile:
         self.errors = 0
         self.doc = {"schema": C.SERIAL_LEDS_SCHEMA, "connected": False, "echo": False,
                     "panel": None, "panel_state": None, "n": None, "led_ms": None,
-                    "hb_ms": None, "stale_ms": None, "port": None}
+                    "hb_ms": None, "stale_ms": None, "port": None, "recent": []}
 
     def _write(self):
         if not self.path:
@@ -271,6 +271,8 @@ class LedsFile:
     def led(self, doc, now_ms):
         self.doc.update(panel=doc["p"], panel_state=doc["s"], n=doc.get("n"), led_ms=now_ms,
                         connected=True)
+        recent = self.doc["recent"] + [{"n": doc.get("n"), "p": doc["p"], "s": doc["s"]}]
+        self.doc["recent"] = recent[-C.SERIAL_LEDS_RECENT:]
         self._write()
 
     def heartbeat(self, hb, now_ms, port=None):
@@ -278,11 +280,12 @@ class LedsFile:
         self.doc.update(echo=echo, hb_ms=now_ms, stale_ms=stale_ms_of(hb)[1], port=port,
                         connected=True)
         if not echo:
-            self.doc.update(panel=None, panel_state=None, n=None, led_ms=None)
+            self.doc.update(panel=None, panel_state=None, n=None, led_ms=None, recent=[])
         self._write()
 
     def disconnected(self):
-        self.doc.update(connected=False, panel=None, panel_state=None, n=None, led_ms=None)
+        self.doc.update(connected=False, panel=None, panel_state=None, n=None, led_ms=None,
+                        recent=[])
         self._write()
 
 
@@ -476,7 +479,8 @@ def latest(now_ms=None, path=None):
 
 def leds(now_ms=None, path=None):
     """The LED echo for /events/api/leds/: {"live", "panel", "panel_state",
-    "n", "led_age_ms", "hb_age_ms"}.  live: the port is open, the newest
+    "n", "recent" (the last SERIAL_LEDS_RECENT lines, {n, p, s}, oldest
+    first), "led_age_ms", "hb_age_ms"}.  live: the port is open, the newest
     heartbeat (younger than its stale_ms) says the echo is on, and a line
     has come (since the port opened).  Not live: panel None (show the
     heartbeat's)."""
@@ -488,6 +492,7 @@ def leds(now_ms=None, path=None):
     live = bool(d.get("connected") and d.get("echo") and d.get("panel")
                 and hb_age is not None and d.get("stale_ms") is not None
                 and hb_age <= d["stale_ms"])
+    recent = d.get("recent") if live and isinstance(d.get("recent"), list) else []
     return {"live": live, "panel": d.get("panel") if live else None,
             "panel_state": d.get("panel_state") if live else None, "n": d.get("n"),
-            "led_age_ms": led_age, "hb_age_ms": hb_age}
+            "recent": recent, "led_age_ms": led_age, "hb_age_ms": hb_age}
