@@ -151,25 +151,33 @@ class IngestStatus:
         self.doc["written_ms"] = _ms(self.wall)
         if not self.path:
             return False
-        tmp = None
         try:
-            fd, tmp = tempfile.mkstemp(prefix=".status-",
-                                       dir=os.path.dirname(self.path) or ".")
-            with os.fdopen(fd, "w") as f:
-                json.dump(self.doc, f, separators=(",", ":"))
-            os.chmod(tmp, C.LINK_STATE_MODE)
-            os.replace(tmp, self.path)
+            write_json_atomic(self.path, self.doc)
         except Exception as e:
             self._oops("write to %s" % self.path, e)
-            if tmp:
-                try:
-                    os.unlink(tmp)
-                except OSError:
-                    pass
             return False
         self._failed = False
         self.writes += 1
         return True
+
+
+def write_json_atomic(path, doc, prefix=".status-"):
+    """doc -> path as compact JSON, atomically (temp file + os.replace),
+    readable by gunicorn.  Raises on failure (the temp file removed)."""
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(prefix=prefix, dir=os.path.dirname(path) or ".")
+        with os.fdopen(fd, "w") as f:
+            json.dump(doc, f, separators=(",", ":"))
+        os.chmod(tmp, C.LINK_STATE_MODE)
+        os.replace(tmp, path)
+    except Exception:
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+        raise
 
 
 def read_ingest_status(path=None):

@@ -11,7 +11,8 @@ serialingest.py has the details.  SIGTERM / SIGINT stop the loop.
 
 One tmpfs file: SERIAL_STATUS_PATH (serial_status.json: port, connected,
 line counters, errors, and the newest heartbeat), next to ingest_udp's
-status.json and ingest_midi's midi_status.json.  Nothing goes in the DB;
+status.json and ingest_midi's midi_status.json; and SERIAL_LEDS_PATH
+(serial_leds.json, the newest LED echo line) for the link widget.  Nothing goes in the DB;
 the sandswing status page and the Ingest page read the file.
 """
 
@@ -56,7 +57,8 @@ class Command(BaseCommand):
                  + " or ".join(repr(m) for m in match))
         stop = threading.Event()
         previous = install_signal_handlers(stop)
-        status = serialingest.SerialStatus(serialingest.serial_status_path())
+        status = serialingest.SerialStatus(serialingest.serial_status_path(),
+                                           leds_path=serialingest.serial_leds_path())
         status.serial["looking_for"] = device or list(match)
         try:
             status.maybe_write(None, force=True)

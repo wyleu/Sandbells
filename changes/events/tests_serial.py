@@ -201,6 +201,100 @@ class StatusTests(SimpleTestCase, TmpDir):
         self.assertIsNone(S.latest(path=path))
 
 
+# ---- LED echo -----------------------------------------------------------------
+LED = {"t": "led", "n": 4, "p": [[0, 32, 0], [48, 48, 48], [0, 0, 0], [24, 12, 0], [24, 12, 0], [8, 8, 8]],
+       "s": ["ws_client", "response", "no_board", "empty", "empty", "heartbeat"]}
+
+
+def led_line(**kw):
+    return json.dumps(dict(LED, **kw), separators=(",", ":")).encode()
+
+
+def echo_hb(**kw):
+    hb = heartbeat(**kw)
+    hb["serial"]["leds"] = {"lines": 3, "dropped": 0, "min_s": 0.25}
+    return (json.dumps(hb, separators=(",", ":"))).encode()
+
+
+class LedEchoTests(SimpleTestCase, TmpDir):
+    def setUp(self):
+        d = self.tmpdir()
+        self.path, self.lpath = os.path.join(d, "serial_status.json"), os.path.join(d, "leds.json")
+        self.st = S.SerialStatus(self.path, leds_path=self.lpath)
+        self.st.serial["port"] = "serial:/dev/ttyACM1"
+        self.st.serial["connected"] = True
+
+    def now(self):
+        return int(time.time() * C.MS_PER_S)
+
+    def test_led_line_written_and_live_after_an_echo_heartbeat(self):
+        self.assertTrue(self.st.line(echo_hb()))
+        self.assertFalse(S.leds(path=self.lpath)["live"])         # echo on, no line yet
+        self.assertFalse(self.st.line(led_line()))                # not a heartbeat ...
+        L = S.leds(path=self.lpath)
+        self.assertTrue(L["live"], L)
+        self.assertEqual((L["panel"], L["panel_state"], L["n"]), (LED["p"], LED["s"], 4))
+        self.assertEqual(self.st.doc["heartbeat"]["seq"], 7)      # ... and leaves the heartbeat alone
+        self.assertEqual((self.st.serial["led_lines"], self.st.serial["not_heartbeat"],
+                          self.st.serial["good"]), (1, 0, 1))
+        self.st.line(led_line(n=5, p=[[0, 0, 24]] * 6))
+        self.assertEqual(S.leds(path=self.lpath)["panel"][0], [0, 0, 24])
+
+    def test_not_live_stale_off_or_disconnected(self):
+        self.st.line(echo_hb(period_s=10))
+        self.st.line(led_line())
+        hb_ms = self.st.leds.doc["hb_ms"]
+        stale = 10 * C.MS_PER_S * C.SERIAL_STALE_PERIODS + C.SERIAL_STALE_SLACK_MS
+        self.assertTrue(S.leds(hb_ms + stale, self.lpath)["live"])
+        L = S.leds(hb_ms + stale + 1, self.lpath)
+        self.assertFalse(L["live"])
+        self.assertIsNone(L["panel"])
+        self.st.line(line())                                      # a heartbeat with the echo off
+        self.assertFalse(S.leds(path=self.lpath)["live"])
+        self.st.line(echo_hb())
+        self.st.line(led_line())
+        self.assertTrue(S.leds(path=self.lpath)["live"])
+        self.st.disconnected("EOF")
+        self.assertFalse(S.leds(path=self.lpath)["live"])
+        self.assertFalse(S.leds(path=os.path.join(self.tmpdir(), "none.json"))["live"])
+
+    def test_malformed_led_lines_are_rejected(self):
+        self.st.line(echo_hb())
+        for bad in (led_line(p=[[0, 0, 0]] * 5), led_line(p="x"), led_line(s=None),
+                    led_line(p=[[0, 0, "x"]] * 6), led_line(t="LED")):
+            self.assertFalse(self.st.line(bad))
+        self.assertEqual((self.st.serial["led_lines"], self.st.serial["not_heartbeat"]), (0, 5))
+        self.assertFalse(S.leds(path=self.lpath)["live"])
+
+    def test_no_leds_path_writes_nothing(self):
+        st = S.SerialStatus(self.path)
+        st.line(echo_hb())
+        st.line(led_line())
+        self.assertEqual(st.serial["led_lines"], 1)
+        self.assertEqual(st.leds.writes, 0)
+
+    def test_api_leds_and_link_leds_live(self):
+        self.st.line(echo_hb())
+        self.st.line(led_line())
+        self.st.maybe_write(None, force=True)
+        d = self.tmpdir()
+        with mock.patch.dict(os.environ, {C.SERIAL_LEDS_ENV: self.lpath,
+                                          C.SERIAL_STATUS_ENV: self.path,
+                                          C.LINK_STATE_ENV: os.path.join(d, "link.json"),
+                                          C.MIDI_STATUS_ENV: os.path.join(d, "midi.json")}):
+            r = self.client.get(reverse("events:api_leds")).json()
+            self.assertTrue(r["live"])
+            self.assertEqual(r["panel"], LED["p"])
+            self.assertEqual(set(r), {"live", "panel", "panel_state", "n", "led_age_ms", "hb_age_ms"})
+            self.assertTrue(self.client.get(reverse("events:api_link")).json()["leds_live"])
+        with mock.patch.dict(os.environ, {C.SERIAL_LEDS_ENV: os.path.join(d, "none.json")}):
+            r = self.client.get(reverse("events:api_leds")).json()
+            self.assertEqual((r["live"], r["panel"]), (False, None))
+
+    def test_poll_no_slower_than_the_picos_hold(self):
+        self.assertLessEqual(C.LINK_LED_POLL_MS, C.SERIAL_LED_MIN_S * C.MS_PER_S)
+
+
 # ---- the loop: a file, then a real pty ---------------------------------------------
 class RunTests(TestCase, TmpDir):
     def test_command_once_on_a_file(self):

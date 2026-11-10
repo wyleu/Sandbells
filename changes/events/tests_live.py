@@ -204,6 +204,8 @@ class StrokesPageLinkWidgetTests(TestCase):
         self.assertContains(r, 'class="lw-kind"', count=4)      # ch 1-4 kind words
         self.assertContains(r, 'id="lw-chans"')                 # fault / trigger why
         self.assertContains(r, 'e.type === "channel"')          # survey rows in the list
+        self.assertContains(r, 'data-leds-url="%s"' % reverse("events:api_leds"))
+        self.assertContains(r, 'data-led-poll="%d"' % C.LINK_LED_POLL_MS)
         r = self.client.get(reverse("farm_status_index", args=[0]))
         self.assertNotContains(r, "link-widget")
 
@@ -242,7 +244,8 @@ class LinkApiTests(SimpleTestCase):
                 st.maybe_write(None, force=True)
             with mock.patch.dict("os.environ", {C.LINK_STATE_ENV: path,
                                                 C.MIDI_STATUS_ENV: mpath,
-                                                C.SERIAL_STATUS_ENV: spath}):
+                                                C.SERIAL_STATUS_ENV: spath,
+                                                C.SERIAL_LEDS_ENV: os.path.join(d, "leds.json")}):
                 return self.client.get(reverse("events:api_link")).json()
 
     def test_serial_stands_in_when_wifi_heartbeat_is_not_fresh(self):

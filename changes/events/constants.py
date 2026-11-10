@@ -230,6 +230,10 @@ BELL_STRIKE_GAP_MS = 350
 
 # ---- page 3 link widget (link_widget.js, api.link) -------------------------
 LINK_POLL_MS = 2000             # widget poll of /events/api/link/
+# widget poll of /events/api/leds/ while the USB serial LED echo is live (and
+# the page is visible): no slower than sandswing's SERIAL_LED_MIN_S (0.25 s),
+# the shortest time a state stays on the wire, or flashes are missed
+LINK_LED_POLL_MS = 250
 LINK_STALE_MS = 15000           # no Pico heartbeat this long: grey (3 missed)
 LINK_LOST_MS = 30000            # ...this long, or ingest down: red LOST
 INGEST_FILE_STALE_MS = 15000    # link file not rewritten: ingest not running
@@ -422,6 +426,17 @@ SERIAL_HB_TYPE = "heartbeat"
 SERIAL_PERIOD_DEFAULT_S = 10    # sandswing serial_status.SERIAL_PERIOD_S, if a line does not say
 SERIAL_STALE_PERIODS = 3        # no line for this many periods: stale
 SERIAL_STALE_SLACK_MS = 5000    # ... plus this
+# LED echo (sandswing serial_status.leds): {"t":"led","n","p","s"} lines on
+# each panel change, at most one per 0.25 s (its SERIAL_LED_MIN_S).  The
+# newest goes to SERIAL_LEDS_PATH (small, written on each such line and each
+# heartbeat) for /events/api/leds/, which the link widget polls every
+# LINK_LED_POLL_MS while the echo is live.
+SERIAL_LED_TYPE = "led"
+SERIAL_LED_MIN_S = 0.25         # sandswing serial_status.SERIAL_LED_MIN_S (LINK_LED_POLL_MS no slower)
+SERIAL_LEDS_PATH = "/run/sandbells-ingest/serial_leds.json"
+SERIAL_LEDS_ENV = "SANDBELLS_SERIAL_LEDS"
+SERIAL_LEDS_SCHEMA = "sandbells.serial_leds/v1"
+SERIAL_LEDS_N = 6               # panel LEDs in a line (sandswing panel.PANEL_N)
 # the sandswing status page (bells.views.farm_device_status): a fresh serial
 # status is shown instead of asking the Pico's /status over Wi-Fi (its 7 kB
 # reply is what starved lwIP); a stale one only when Wi-Fi does not answer

@@ -6,6 +6,9 @@
                                                     rings per local day
   GET /events/api/link/                             concentrator link state
                                                     (ingest's LinkState file)
+  GET /events/api/leds/                             the panel LEDs as painted
+                                                    (USB serial LED echo; small,
+                                                    polled fast while live)
 """
 
 import time
@@ -132,6 +135,7 @@ def link(request):
     serial = serial_link(now, out)
     if serial:                        # Wi-Fi heartbeat not fresh: the USB serial one instead
         out.update(serial)
+    out["leds_live"] = _leds(now)["live"]   # the widget polls api/leds/ while True
     mdoc, mage = read_ingest_status(midi_status_path())
     out["midi"] = (mdoc or {}).get("midi")
     midi = midi_verdict(mdoc, mage, now)
@@ -143,6 +147,20 @@ def link(request):
         out.update(midi, why=why)
         out["verdict"] = C.LINK_MIDI
     return JsonResponse(out)
+
+
+def _leds(now):
+    try:
+        return serialingest.leds(now)
+    except Exception:
+        return {"live": False, "panel": None, "panel_state": None, "n": None,
+                "led_age_ms": None, "hb_age_ms": None}
+
+
+def leds(request):
+    """The panel as the Pico paints it (ingest_serial's LED file): no DB,
+    one small tmpfs read, for the link widget's fast poll."""
+    return JsonResponse(_leds(_now_ms()))
 
 
 def serial_link(now, udp):
