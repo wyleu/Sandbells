@@ -2,6 +2,27 @@
 
 from django.test import SimpleTestCase  # noqa: E402
 
+_env = {}
+
+
+def setUpModule():
+    """These tests ask the Pico over (fake) Wi-Fi: no real serial status
+    file (ingest_serial on this Pi) may answer for it."""
+    import os
+    import tempfile
+    from events import constants as C
+    _env["old"] = os.environ.get(C.SERIAL_STATUS_ENV)
+    os.environ[C.SERIAL_STATUS_ENV] = os.path.join(tempfile.gettempdir(), "no-such-serial-status.json")
+
+
+def tearDownModule():
+    import os
+    from events import constants as C
+    if _env.get("old") is None:
+        os.environ.pop(C.SERIAL_STATUS_ENV, None)
+    else:
+        os.environ[C.SERIAL_STATUS_ENV] = _env["old"]
+
 
 class FarmAltAddressTests(SimpleTestCase):
     """A registry entry with alt_status_urls: any of its addresses is accepted,

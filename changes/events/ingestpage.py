@@ -19,6 +19,7 @@ from . import constants as C
 from . import localtime as LT
 from .ingeststatus import ingest_status_path, read_ingest_status
 from .midiingest import midi_status_path
+from . import serialingest
 
 V_OK, V_QUIET, V_STALE, V_DOWN = "OK", "QUIET", "STALE", "DOWN"
 NO_SYSTEMD = "no systemd"
@@ -157,7 +158,16 @@ def page_context(now_ms=None, run=None, proc_udp=C.PROC_NET_UDP):
         midi["stamp"] = midi.get("stamp") or {}
         midi["last_note_when"] = _when(now, midi.get("last_note_ms"))
         midi["last_stamp_when"] = _when(now, midi["stamp"].get("last_stamp_ms"))
+    sdoc, sage = read_ingest_status(serialingest.serial_status_path())
+    serial = dict((sdoc or {}).get("serial") or {})
+    hb = serialingest.latest(now) if serial else None
+    if serial:
+        serial["last_good_when"] = _when(now, serial.get("last_good_ms"))
     return {
+        "serial": serial, "serial_path": serialingest.serial_status_path(),
+        "serial_age_s": None if sage is None else sage // C.MS_PER_S,
+        "serial_file_stale": sage is None or sage > C.INGEST_STATUS_STALE_MS,
+        "serial_hb_stale": hb is None or hb["stale"],
         "midi": midi, "midi_path": midi_status_path(),
         "midi_age_s": None if mage is None else mage // C.MS_PER_S,
         "midi_stale": mage is None or mage > C.INGEST_STATUS_STALE_MS,

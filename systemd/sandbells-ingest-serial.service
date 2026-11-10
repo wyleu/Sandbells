@@ -1,0 +1,39 @@
+[Unit]
+Description=Sandbells concentrator status over its USB data port (serial; concentrator's USB plugged into this Pi; no Wi-Fi)
+After=sandbells-ingest-midi.service
+
+[Service]
+Type=simple
+User=sandbells
+Group=sandbells
+# /dev/ttyACM* are group "dialout"
+SupplementaryGroups=dialout
+WorkingDirectory=/home/sandbells/Code/Sandbells/changes
+Environment=PYTHONUNBUFFERED=1
+# Status file serial_status.json (events.constants.SERIAL_STATUS_PATH) on the
+# same tmpfs as ingest_udp's status.json and ingest_midi's midi_status.json.
+# Preserve: stopping this unit must not take the others' files with it.
+RuntimeDirectory=sandbells-ingest
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+
+# Finds the Pico's usb_cdc data port: the second CDC interface of the USB
+# device named 'Pico 2 W' / 'CircuitPython' (events.constants.SERIAL_PRODUCT_MATCH),
+# normally /dev/ttyACM1.  Never the REPL console (interface 0, ttyACM0), never
+# the MIDI device.  Unplugged: looks again every 3 s.  Nothing goes in the DB.
+# Overrides:  Environment=SANDBELLS_SERIAL_MATCH=<name>  or
+#             Environment=SANDBELLS_SERIAL_DEVICE=/dev/ttyACM1
+ExecStart=/home/sandbells/Code/Sandbells/Bellvirtenv/bin/python manage.py ingest_serial
+
+KillSignal=SIGTERM
+TimeoutStopSec=10
+Restart=always
+RestartSec=5
+
+# Pi 3 friendly scheduling (as gunicorn.service)
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

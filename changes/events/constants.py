@@ -259,9 +259,11 @@ INGEST_STATE_RUNNING = "running"
 INGEST_STATE_STOPPED = "stopped"
 INGEST_QUIET_MS = 15000         # running but no datagram this long: QUIET
 INGEST_UNITS = ("sandbells-ingest-udp.service", "sandbells-ingest.service",
-                "sandbells-ingest-midi.service")
+                "sandbells-ingest-midi.service", "sandbells-ingest-serial.service")
 INGEST_UNIT_MODES = {"sandbells-ingest-udp.service": "udp (manage.py ingest_udp)",
                      "sandbells-ingest-midi.service": "usb midi (manage.py ingest_midi)",
+                     "sandbells-ingest-serial.service":
+                         "usb serial status (manage.py ingest_serial)",
                      "sandbells-ingest.service": "websocket (manage.py ingest_events)"}
 SYSTEMCTL = "systemctl"
 SYSTEMCTL_TIMEOUT_S = 2.0       # per call; the page never waits longer
@@ -374,3 +376,42 @@ MIDI_BODY_OFFSET_MS = "offset_ms"
 # a ChannelMap lookup for a MIDI stroke uses the Pico's own src's rows
 # (same Pico, same channels), so bells show the same as over udp.
 MAP_SRC_FALLBACK = {MIDI_SRC: DEFAULT_SRC}
+
+# ---- ingest: the Pico's status over its USB data port (manage.py ingest_serial, serialingest.py) --
+# sandswing serial_status.py writes its slim heartbeat (sand.panel/v1, type
+# heartbeat, "via": "usb_cdc") as one JSON line every serial_status.period_s
+# on usb_cdc.data: the second CDC interface of the Pico's USB (ttyACM1 here;
+# ttyACM0, the first, is the REPL console and is never opened).  Nothing is
+# stored in the DB: the latest line goes to SERIAL_STATUS_PATH for the
+# sandswing status page and the Ingest page.  MIDI is not touched.
+INGEST_MODE_SERIAL = "serial"
+SERIAL_STATUS_PATH = "/run/sandbells-ingest/serial_status.json"
+SERIAL_STATUS_ENV = "SANDBELLS_SERIAL_STATUS"
+SERIAL_DEVICE_ENV = "SANDBELLS_SERIAL_DEVICE"   # override: this tty, no search
+SERIAL_MATCH_ENV = "SANDBELLS_SERIAL_MATCH"     # override: one product substring
+SERIAL_SYS_TTY_GLOB = "/sys/class/tty/ttyACM*"
+SERIAL_DEV_DIR = "/dev"
+SERIAL_BY_ID_GLOB = "/dev/serial/by-id/*"
+# the Pico: its USB product / manufacturer contains one of these
+SERIAL_PRODUCT_MATCH = ("Pico 2 W", "CircuitPython")
+# CircuitPython names its CDC interfaces "CircuitPython CDC control" (the
+# REPL) and "CircuitPython CDC2 control" (usb_cdc.data)
+SERIAL_DATA_IF_NAME = "CDC2"
+SERIAL_CONSOLE_IF_NUM = 0       # bInterfaceNumber of the REPL: never this one
+SERIAL_DATA_IF_NUM = 2          # usb_cdc.data's when the name is not there (by-id ...-if02)
+SERIAL_BY_ID_DATA_SUFFIX = "-if%02d" % SERIAL_DATA_IF_NUM
+SERIAL_URL_FORMAT = "serial:%s"  # status "port": serial:/dev/ttyACM1
+SERIAL_READ_B = 1024            # one os.read
+SERIAL_LINE_MAX_B = 8192        # no newline within this many bytes: dropped (sandswing max 2048)
+SERIAL_IDLE_S = 1.0             # select timeout: status file this often when quiet
+SERIAL_RECONNECT_S = 3.0        # no port / unplugged: look again this often
+SERIAL_STATUS_RECENT_ERRORS = 10
+SERIAL_HB_SCHEMA = "sand.panel/v1"
+SERIAL_HB_TYPE = "heartbeat"
+SERIAL_PERIOD_DEFAULT_S = 10    # sandswing serial_status.SERIAL_PERIOD_S, if a line does not say
+SERIAL_STALE_PERIODS = 3        # no line for this many periods: stale
+SERIAL_STALE_SLACK_MS = 5000    # ... plus this
+# the sandswing status page (bells.views.farm_device_status): a fresh serial
+# status is shown instead of asking the Pico's /status over Wi-Fi (its 7 kB
+# reply is what starved lwIP); a stale one only when Wi-Fi does not answer
+SERIAL_FIRST = True

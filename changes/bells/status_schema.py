@@ -240,3 +240,146 @@ def _join(*parts: Any) -> str:
     bits = [str(p) for p in parts if p not in (None, "", "—")]
     return "  ".join(bits) if bits else "—"
 
+
+
+# ---- sandswing over its USB data port (events.serialingest, no Wi-Fi) -------
+SERIAL_SOURCE = "usb serial"
+PANEL_LEDS = ("Link", "LED 2", "LED 3", "LED 4", "LED 5", "Sync")   # sandswing panel.py order
+
+
+def _ago_text(ms: Any) -> str | None:
+    if ms is None:
+        return None
+    s = int(ms) // 1000
+    if s < 120:
+        return f"{s} s"
+    if s < 7200:
+        return f"{s // 60} min"
+    return f"{s // 3600} h {(s % 3600) // 60} min"
+
+
+def _rgb_hex(rgb: Any) -> str | None:
+    try:
+        r, g, b = (int(x) & 0xFF for x in rgb)
+    except (TypeError, ValueError):
+        return None
+    return "#%02x%02x%02x" % (r, g, b)
+
+
+def from_serial_heartbeat(latest: dict, inst: dict | None = None) -> dict:
+    """events.serialingest.latest() -> sand.status/v1 for the sandswing
+    page: the Pico's slim heartbeat, read over USB serial, with its age.
+    Stale: level warn and the summary says how old."""
+    inst = inst or {}
+    hb = latest.get("heartbeat") or {}
+    b = hb.get("body") or {}
+    age_ms, stale = latest.get("age_ms"), bool(latest.get("stale"))
+    age = _ago_text(age_ms)
+    pico = hb.get("serial") or {}
+    reader = latest.get("serial") or {}
+
+    src_items = [
+        _item("source", "Status from", f"{SERIAL_SOURCE} {latest.get('port') or ''}".strip(),
+              "warn" if stale else "ok",
+              hint="no Wi-Fi needed; the Pico's USB data port"),
+        _item("age", "Last line", f"{age} ago" if age else None,
+              "warn" if stale else "ok",
+              hint=f"stale after {latest.get('stale_ms', 0) // 1000} s"),
+        _item("every", "Every", f"{latest.get('period_s'):g} s" if latest.get("period_s") else None),
+        _item("lines", "Lines read", _join(f"{reader.get('good', 0)} good",
+                                           f"{reader.get('bad', 0)} cut" if reader.get("bad") else None),
+              "ok"),
+        _item("pico", "Pico writer", _join(f"{pico.get('lines', 0)} sent",
+                                           f"{pico.get('cut', 0)} cut" if pico.get("cut") else None,
+                                           f"{pico.get('errors', 0)} errors" if pico.get("errors") else None),
+              "warn" if pico.get("errors") else "ok", hint=pico.get("last_error")),
+    ]
+    sync = b.get("sync") or "unsynced"
+    sync_level = {"synced": "ok", "held": "ok", "stale": "warn"}.get(sync, "error")
+    t = b.get("time") or {}
+    last = t.get("last") or {}
+    time_items = [
+        _item("sync", "Sync", sync, sync_level),
+        _item("srv", "Source", _join(t.get("srv"), f"stratum {t['stratum']}" if t.get("stratum") is not None else None)),
+    ]
+    if last.get("ok") is False and last.get("why"):
+        time_items.append(_item("why", "Last attempt", last["why"], "warn"))
+
+    heads, head_level = [], "ok"
+    for i, c in enumerate(b.get("chan") or []):
+        kind = c[0] if isinstance(c, list) and c else c
+        why = c[1] if isinstance(c, list) and len(c) > 1 else None
+        lvl = "error" if kind == "fault" else ("warn" if kind == "unknown" else "ok")
+        head_level = worst_level(head_level, lvl)
+        heads.append(_item(f"ch{i + 1}", f"Channel {i + 1}", _join(kind, why), lvl))
+
+    panel = []
+    states = b.get("panel_state") or []
+    for i, rgb in enumerate(b.get("panel") or []):
+        it = _item(f"led{i + 1}", PANEL_LEDS[i] if i < len(PANEL_LEDS) else f"LED {i + 1}",
+                   states[i] if i < len(states) else None)
+        css = _rgb_hex(rgb)
+        if css:
+            it["color"] = css
+        panel.append(it)
+
+    wifi = b.get("wifi") or {}
+    net = b.get("net") or {}
+    net_items = [
+        _item("link", "Link", b.get("link")),
+        _item("ip", "Wi-Fi IP", wifi.get("ip")),
+        _item("rssi", "Signal", f"{wifi['rssi']} dBm" if wifi.get("rssi") is not None else None),
+        _item("drops", "Drops", net.get("drops"), "warn" if net.get("drops") else None,
+              hint=net.get("last_drop_reason")),
+    ]
+    mem = b.get("mem_free")
+    lost, late = b.get("edges_lost") or 0, b.get("late_drains") or 0
+    conc = [
+        _item("uptime", "Up", _ago_text((b.get("uptime_s") or 0) * 1000) if b.get("uptime_s") is not None else None),
+        _item("reset", "Last reset", b.get("last_reset"),
+              "warn" if str(b.get("last_reset") or "").upper() == "WATCHDOG" else None),
+        _item("watchdog", "Watchdog", None if b.get("watchdog") is None else ("armed" if b["watchdog"] else "off")),
+        _item("mem", "Free memory", f"{mem // 1024} kB" if isinstance(mem, int) else None,
+              hint=f"VM heap {b['gc_heap_kb']} kB" if b.get("gc_heap_kb") is not None else None),
+        _item("edges", "Edge stamps", f"{lost} lost, {late} late drains",
+              "warn" if lost or late else "ok"),
+        _item("undelivered", "Strokes not delivered (Wi-Fi)", b.get("strokes_undelivered")),
+        _item("boot", "Boot / event", _join(hb.get("boot_id"), b.get("last_seq"))),
+        _item("uid", "UID", b.get("uid")),
+    ]
+    tower = b.get("tower") or "unknown"
+    tower_level = "ok" if tower == "active" else ("warn" if tower == "ringing_down" else "unknown")
+    sections = [
+        _section("serial", "USB serial", src_items, "warn" if stale else "ok"),
+        _section("panel", "Panel", panel),
+        _section("time", "Time", time_items, sync_level),
+        _section("heads", "Heads", heads, head_level),
+        _section("tower", "Tower", [_item("state", "State", tower, tower_level)], tower_level),
+        _section("network", "Network", net_items),
+        _section("concentrator", "Concentrator", conc),
+    ]
+    level = "warn" if stale else worst_level(sync_level, head_level)
+    kinds = " ".join(str(h["value"]).split("  ")[0] for h in heads)
+    if stale:
+        summary = f"USB serial status STALE ({age} old)" if age else "USB serial status STALE"
+    else:
+        summary = f"USB serial, {age} ago" if age else "USB serial"
+    if kinds:
+        summary += f" · heads {kinds}"
+    return {
+        "schema": SCHEMA,
+        "id": inst.get("id") or hb.get("id") or "sandswing",
+        "name": inst.get("name") or hb.get("id") or "sandswing",
+        "role": inst.get("role") or "concentrator",
+        "family": inst.get("family") or "sandswing",
+        "host": "",
+        "ts": int(time.time()),
+        "level": level,
+        "summary": summary[:100],
+        "poll_hint_sec": int(latest.get("period_s") or 10),
+        "uptime_s": b.get("uptime_s"),
+        "via": SERIAL_SOURCE,
+        "stale": stale,
+        "age_ms": age_ms,
+        "sections": sections,
+    }

@@ -83,6 +83,18 @@ ingest_udp's tmpfs status file and the DB.  Nothing asks a Pico anything.{% endc
   </table>
   {% else %}<p class="muted">No MIDI status file at {{ midi_path }} (ingest_midi not running, or the file is not readable).</p>{% endif %}
 
+  <h2>USB serial status (ingest_serial)</h2>
+  {% if serial %}
+  <table>
+    <tr><th>status file</th><td class="{% if serial_file_stale %}bad{% else %}muted{% endif %}">written {{ serial_age_s }} s ago{% if serial_file_stale %}: ingest_serial not running?{% endif %}</td></tr>
+    <tr><th>port</th><td>{{ serial.port|default:"—" }} <span class="muted">{{ serial.how|default:"" }}</span></td></tr>
+    <tr><th>connected</th><td class="{% if serial.connected %}good{% else %}bad{% endif %}">{{ serial.connected|yesno:"yes,no" }}</td></tr>
+    <tr><th>lines good · cut · other</th><td class="num">{{ serial.good }} · <span class="{% if serial.bad %}warn{% endif %}">{{ serial.bad }}</span> · {{ serial.not_heartbeat }}</td></tr>
+    <tr><th>last heartbeat</th><td class="{% if serial_hb_stale %}warn{% endif %}">{% if serial.last_good_when.ms %}{{ serial.last_good_when.hms }} <span class="muted">({{ serial.last_good_when.ago_s }} s ago{% if serial_hb_stale %}, STALE{% endif %})</span>{% else %}—{% endif %}</td></tr>
+    <tr><th>errors · disconnects</th><td class="num{% if serial.errors %} warn{% endif %}">{{ serial.errors }} · {{ serial.disconnects }}</td></tr>
+  </table>
+  {% else %}<p class="muted">No serial status file at {{ serial_path }} (ingest_serial not running, or the file is not readable).</p>{% endif %}
+
   <h2>Last datagram</h2>
   {% if last.ms %}
   <table>
