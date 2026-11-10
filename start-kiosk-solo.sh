@@ -102,6 +102,18 @@ fi
 # ------------------------------------------------------------------
 # exec luakit -U -u "$CHOSEN_URL"
 
+# ------------------------------------------------------------------
+# GPU off for WebKit (test: the strokes page wedged WebKit's GPU path on
+# a Pi 3 twice; the home page survived the night).  KIOSK_GPU=on puts it back.
+# ------------------------------------------------------------------
+KIOSK_GPU="${KIOSK_GPU:-off}"
+if [ "$KIOSK_GPU" = "off" ]; then
+    export WEBKIT_DISABLE_COMPOSITING_MODE=1      # no accelerated compositing
+    export WEBKIT_SKIA_ENABLE_CPU_RENDERING=1     # Skia paints on the CPU, no SkiaGPUWorker
+    export WEBKIT_DISABLE_DMABUF_RENDERER=1       # no GPU buffer sharing with X
+fi
+echo "WebKit GPU: $KIOSK_GPU" | tee -a "$LOG_FILE"
+
 echo "Launching Luakit kiosk → $CHOSEN_URL" | tee -a "$LOG_FILE"
 
 luakit -U -u "$CHOSEN_URL" &
