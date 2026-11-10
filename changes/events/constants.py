@@ -437,6 +437,9 @@ SERIAL_LEDS_PATH = "/run/sandbells-ingest/serial_leds.json"
 SERIAL_LEDS_ENV = "SANDBELLS_SERIAL_LEDS"
 SERIAL_LEDS_SCHEMA = "sandbells.serial_leds/v1"
 SERIAL_LEDS_N = 6               # panel LEDs in a line (sandswing panel.PANEL_N)
+# the newest LED lines kept in the file ("recent"): the widget shows each for
+# at least one poll, so a 0.25 s flash between two polls is not missed
+SERIAL_LEDS_RECENT = 4
 # the sandswing status page (bells.views.farm_device_status): a fresh serial
 # status is shown instead of asking the Pico's /status over Wi-Fi (its 7 kB
 # reply is what starved lwIP); a stale one only when Wi-Fi does not answer

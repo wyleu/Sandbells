@@ -19,7 +19,7 @@ function page(replies) {
   const leds = [0, 1, 2, 3, 4, 5].map(el);
   const ids = {};
   const box = Object.assign(el(), {
-    dataset: { url: LINK, poll: "2000", timeout: "4000", ledsUrl: LEDS, ledPoll: "250" },
+    dataset: { url: LINK, poll: "2000", timeout: "4000", ledsUrl: LEDS, ledPoll: "250", echoMax: "4" },
     querySelectorAll: (q) => (q === ".lw-led" ? leds : []),
   });
   const timers = [];
@@ -95,4 +95,52 @@ test("echo: never without leds_live (one poll, no fast loop)", async () => {
   await p.settle();
   assert.deepEqual(p.calls, [LINK]);
   assert.equal(p.leds[0].style.background, "rgb(0,255,0)");
+});
+
+const lw = require(path.join(__dirname, "..", "templates", "events", "link_widget.js"));
+const PURPLE = [24, 0, 48], WHITE = [48, 48, 48];
+function reply(n, recent) {
+  const last = recent[recent.length - 1];
+  return { live: true, n, panel: [[0, 32, 0], [0, 0, 24], PURPLE, [24, 12, 0], last, [24, 48, 0]],
+           panel_state: ["ws_client", "loopback", "trigger", "empty", "trigger", "ringing_down"],
+           recent: recent.map((c, i) => ({ n: n - recent.length + 1 + i,
+                                           p: [[0, 32, 0], [0, 0, 24], PURPLE, [24, 12, 0], c, [24, 48, 0]],
+                                           s: [] })) };
+}
+
+test("ledFrames: the lines since the last one shown, oldest first; first or after a reboot just the newest", () => {
+  const d = reply(165, [PURPLE, WHITE, PURPLE]);          // 163 purple, 164 white, 165 purple
+  assert.deepEqual(lw.ledFrames(d, null).frames.map((f) => f.n), [165]);
+  const got = lw.ledFrames(d, 163);
+  assert.deepEqual(got.frames.map((f) => [f.n, f.leds[4]]),
+                   [[164, "rgb(255,255,255)"], [165, "rgb(128,0,255)"]]);
+  assert.equal(got.lastN, 165);
+  assert.deepEqual(lw.ledFrames(d, 165).frames, []);
+  assert.deepEqual(lw.ledFrames(reply(3, [PURPLE]), 165).frames.map((f) => f.n), [3]);
+  assert.deepEqual(lw.ledFrames({ live: false }, 165), { frames: [], lastN: null });
+  assert.deepEqual(lw.ledFrames({ live: true, n: 7, panel: [PURPLE], panel_state: [] }, 6)
+                   .frames.map((f) => f.n), [7]);         // no recent (older ingest): the current
+});
+
+test("echo: a flash that came and went between two polls is still shown, for one poll", async () => {
+  let leds = reply(163, [PURPLE]);
+  const p = page({ [LINK]: () => Object.assign({}, HB, { leds_live: true }), [LEDS]: () => leds });
+  await p.settle();
+  assert.equal(p.leds[4].style.background, "rgb(128,0,255)");
+  leds = reply(165, [PURPLE, WHITE, PURPLE]);             // the white is not the current panel
+  await p.run(250);
+  assert.equal(p.leds[4].style.background, "rgb(255,255,255)");
+  await p.run(250);
+  assert.equal(p.leds[4].style.background, "rgb(128,0,255)");
+  await p.run(250);
+  assert.equal(p.leds[4].style.background, "rgb(128,0,255)");
+});
+
+test("echo: the LED words say the fast poll is running", async () => {
+  const ids = {};
+  let link = Object.assign({}, HB, { leds_live: true });
+  const p = page({ [LINK]: () => link, [LEDS]: () => ECHO });
+  await p.settle();
+  const words = p.doc.getElementById("lw-leds").textContent;
+  assert.match(words, / · live LEDs$/);
 });
