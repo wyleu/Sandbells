@@ -7,7 +7,9 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const SRC = fs.readFileSync(path.join(__dirname, "..", "templates", "events", "link_widget.js"), "utf8");
+const DIR = path.join(__dirname, "..", "templates", "events");
+const SRC = fs.readFileSync(path.join(DIR, "led_echo.js"), "utf8") + "\n" +
+            fs.readFileSync(path.join(DIR, "link_widget.js"), "utf8");   // as live_panel.html inlines them
 const LINK = "/events/api/link/", LEDS = "/events/api/leds/";
 
 function el() {

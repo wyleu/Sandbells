@@ -44,5 +44,12 @@
       interval: {{ inst.poll_hint_sec|default:15 }}000
     });
   </script>
+  {% if led_echo_json %}
+  <script>
+{% include "events/led_echo.js" %}
+{% include "bells/farm_leds.js" %}
+    FarmLeds.start({{ led_echo_json }}, LedEcho);
+  </script>
+  {% endif %}
 </body>
 </html>

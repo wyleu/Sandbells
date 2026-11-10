@@ -160,7 +160,23 @@ def farm_status(request, index=0):
         "hostname_id": socket.gethostname().split(".")[0],  # or "sandbells2"
         "host_label": farm_host_label(inst, socket.gethostname().split(".")[0]),
         "ws_urls_json": mark_safe(json.dumps(device_urls(inst, "ws")).replace("</", "<\\/")),
+        "led_echo_json": farm_led_echo(inst),
     })
+
+
+def farm_led_echo(inst):
+    """The live Panel for the farm page (bells/farm_leds.js): its config as
+    JSON, only for the sandswing whose status comes over USB serial (the
+    Pico ingest_serial reads); None for every other farm page."""
+    if serial_status_for(inst) is None:
+        return None
+    from bells.status_schema import PANEL_KEY
+    from events import constants as EC
+    cfg = {"url": reverse("events:api_leds"), "pollMs": EC.LINK_LED_POLL_MS,
+           "max": EC.SERIAL_LEDS_RECENT, "timeoutMs": EC.LIVE_FETCH_TIMEOUT_MS,
+           "probeMs": EC.LINK_POLL_MS,
+           "keys": [PANEL_KEY % (i + 1) for i in range(EC.SERIAL_LEDS_N)]}
+    return mark_safe(json.dumps(cfg).replace("</", "<\\/"))
 
 def swing_display(request, n: int):
     if n < 1 or n > 16:

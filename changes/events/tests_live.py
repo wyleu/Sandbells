@@ -199,6 +199,7 @@ class StrokesPageLinkWidgetTests(TestCase):
         self.assertContains(r, 'id="link-widget"')
         self.assertContains(r, 'data-url="%s"' % reverse("events:api_link"))
         self.assertContains(r, "link_widget.js -- page 3")       # script inlined
+        self.assertContains(r, "led_echo.js -- the concentrator panel")   # and the shared echo
         self.assertContains(r, 'data-type=""')                   # every packet shown
         self.assertContains(r, "addInfoRow")
         self.assertContains(r, 'class="lw-kind"', count=4)      # ch 1-4 kind words
