@@ -39,7 +39,7 @@ from bells.functions import (
 )
 from bells.app_settings import display_settings
 from bells.compose import compose_directed_legs, pick_random_leg_patterns, menu_patterns
-from bells.status_schema import wrap_document
+from bells.status_schema import wrap_document, from_serial_heartbeat
 from events import constants as EVENTS
 
 def home(request, number=6):
@@ -251,6 +251,12 @@ def farm_device_status(request):
     if good in urls:                       # the address that worked last goes first
         urls.remove(good)
         urls.insert(0, good)
+    # the Pico's status over its USB data port (ingest_serial): fresh, it is
+    # used and the Pico's Wi-Fi is not asked at all; stale, only when Wi-Fi
+    # does not answer either (marked stale)
+    serial = serial_status_for(owner)
+    if serial is not None and not serial["stale"] and EVENTS.SERIAL_FIRST:
+        return JsonResponse(from_serial_heartbeat(serial, owner))
     err = "no answer"
     query = _status_query(request)
     for u in urls:
@@ -261,7 +267,29 @@ def farm_device_status(request):
             return JsonResponse(wrap_document(data))
         except Exception as e:
             err = str(e)
+    if serial is not None:
+        return JsonResponse(from_serial_heartbeat(serial, owner))
     return JsonResponse({"error": err, "stale": True}, status=504)
+
+
+def serial_status_for(inst):
+    """events.serialingest.latest() if it is this registry entry's: a
+    sandswing (family), and the same Pico when the entry names a "uid".
+    None otherwise, or when there is no serial status at all.  Never raises."""
+    if inst.get("family") != EVENTS.CONCENTRATOR_FAMILY:
+        return None
+    try:
+        from events import serialingest
+        latest = serialingest.latest()
+    except Exception:
+        return None
+    if latest is None:
+        return None
+    want = str(inst.get("uid") or "").strip().upper()
+    got = str((latest["heartbeat"].get("body") or {}).get("uid") or "").strip().upper()
+    if want and got != want:
+        return None
+    return latest
 
 def bell_band(request, number=8):
     """

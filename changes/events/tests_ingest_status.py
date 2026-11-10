@@ -215,11 +215,13 @@ class UnitProbeTests(SimpleTestCase):
             ("is-enabled", "sandbells-ingest-udp.service"): "enabled",
             ("is-active", "sandbells-ingest-udp.service"): "active",
             ("is-active", "sandbells-ingest.service"): "inactive"}))
-        udp, ws, midi = u
+        udp, ws, midi, serial = u
         self.assertEqual((udp["installed"], udp["enabled"], udp["active"]), (True, "enabled", "active"))
         self.assertEqual((ws["installed"], ws["enabled"], ws["active"]), (False, "not-found", "inactive"))
         self.assertEqual((midi["unit"], midi["installed"]), ("sandbells-ingest-midi.service", False))
         self.assertIn("ingest_midi", midi["mode"])
+        self.assertEqual((serial["unit"], serial["installed"]), ("sandbells-ingest-serial.service", False))
+        self.assertIn("ingest_serial", serial["mode"])
 
     def test_udp_bound_from_proc(self):
         d = tempfile.mkdtemp()
