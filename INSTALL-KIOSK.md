@@ -49,6 +49,7 @@ After reboot you should see the Sandbells interface full-screen on the HDMI moni
 | 17   | `17-observability.sh`     | Persistent journal capped at 50M (`/etc/systemd/journald.conf.d/sandbells.conf`); `sandbells-thermal.timer` logs temp, throttling, load, memory every minute (`journalctl -t sandbells-thermal`) |
 | 18   | `18-ingest.sh`            | Checks websocket-client + migrations, installs and enables `sandbells-ingest.service` |
 | 19   | `19-power.sh`             | `/etc/sudoers.d/sandbells-power` (0440, `visudo -cf`): the gunicorn user may run only `systemctl reboot` and `systemctl poweroff` without a password, for the Reboot / Shut down buttons on the farm status page (see docs/power.md) |
+| 20   | `20-hdmi.sh`              | Install `/usr/local/sbin/sandbells-hdmi` and apply `display.hdmi` from settings to the Pi's boot files (forced 1920×1080@60 for the tower splitter; see docs/hdmi.md). Does not edit settings.json. |
 
 `master_install.sh` automatically runs every `install-steps/NN-*.sh` in order, so the new steps are picked up with no further changes.
 
@@ -77,6 +78,14 @@ Multiple layers (belt-and-braces):
 3. `/etc/X11/Xsession.d/99-sandbells-noblank` system-wide.
 4. lightdm seat: `xserver-command=X -s 0 -dpms`
 5. `/boot/config.txt` (or firmware): `hdmi_blanking=1`
+
+An optional forced HDMI mode (recommended at the tower, 1920×1080 at
+60 Hz, so a passive splitter that hides EDID cannot drop the kiosk to
+a low resolution) is set in `/etc/sandbells/settings.json` under
+`display.hdmi` and applied by `sudo sandbells-hdmi apply`.  See
+[docs/hdmi.md](docs/hdmi.md).  The farm status Display section shows
+the requested and actual mode.
+
 
 If blanking ever returns, run:
 

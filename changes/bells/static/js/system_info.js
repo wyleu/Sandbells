@@ -49,6 +49,12 @@ document.addEventListener('DOMContentLoaded', function () {
     "Run:",
     "— Time —",
     "NTP:",
+    "— HDMI —",
+    "Wanted:",
+    "Actual:",
+    "Conn:",
+    "Mon:",
+    "EDID:",
   ];
 
   function createRows() {
@@ -116,6 +122,12 @@ document.addEventListener('DOMContentLoaded', function () {
       `${d._run_s || 0}s`,
       "",                                          // — Time —
       d.time_label || "NO LOCK",
+      "",                                      // — HDMI —
+      d.hdmi_requested || "—",
+      d.hdmi_actual || "—",
+      d.hdmi_connector || "—",
+      d.hdmi_monitor || "—",
+      d.hdmi_edid || "—",
     ];
     updateValues(values);
   }

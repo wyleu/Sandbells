@@ -10,7 +10,41 @@ from django.http import JsonResponse
 
 from bells.app_settings import display_settings
 from bells.status_schema import wrap_document
+from bells import hdmi as hdmi_mod
 SETTINGS_PATH = Path("/etc/sandbells/settings.json")
+
+
+def _hdmi_drm_root() -> Path:
+    return hdmi_mod.DEFAULT_DRM_ROOT
+
+
+def _hdmi_cmdline_path() -> Path | None:
+    boot = hdmi_mod.find_boot_dir()
+    if boot is None:
+        return None
+    cmdline = boot / "cmdline.txt"
+    return cmdline if cmdline.is_file() else None
+
+
+def _hdmi_state_path() -> Path | None:
+    return hdmi_mod.DEFAULT_STATE_PATH
+
+
+def _hdmi_payload(display: dict) -> dict:
+    """Requested and actual HDMI facts.  Never raises; never needs X."""
+    try:
+        path = Path(display["_settings_path"]) if display.get("_settings_path") else None
+        request = hdmi_mod.load_hdmi_request(path)
+        state_path = _hdmi_state_path()
+        cmdline_path = _hdmi_cmdline_path()
+        return hdmi_mod.hdmi_status(
+            request,
+            _hdmi_drm_root(),
+            cmdline_text=hdmi_mod.load_cmdline_text(cmdline_path) if cmdline_path else None,
+            applied_state=hdmi_mod.load_applied_state(state_path) if state_path else None,
+        )
+    except Exception:
+        return hdmi_mod.empty_hdmi_status()
 
 
 def _run(cmd, timeout=3):
@@ -303,6 +337,7 @@ def system_status(request):
         "pattern_mode": d["pattern_position_mode"],
         "settings_path": d.get("_settings_path", ""),
     }
+    payload.update(_hdmi_payload(d))
     return JsonResponse(wrap_document(payload))
 
 def layout_test(request, number, a="Rounds", b="Exploding Titums", c="Kings"):

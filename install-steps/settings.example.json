@@ -23,7 +23,10 @@
   "display": {
     "random_bells": 6,
     "random_windows": 3,
-    "pattern_position_mode": "centre"
+    "pattern_position_mode": "centre",
+    "hdmi": {
+      "mode": "auto"
+    }
   },
   "status": {
     "poll_hint_sec": 5,

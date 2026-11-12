@@ -120,12 +120,34 @@ def from_sandbells_flat(d: dict) -> dict:
         _item("source", "Source", d.get("time_source"), time_level),
         _item("lock", "Lock", d.get("time_label") or ("locked" if time_locked else "NO LOCK"), time_level),
     ]
+    hdmi_mismatch = bool(d.get("hdmi_mismatch"))
+    hdmi_apply_needed = bool(d.get("hdmi_apply_needed"))
+    hdmi_edid = d.get("hdmi_edid")
+    hdmi_edid_level = None
+    if hdmi_edid == "no EDID":
+        hdmi_edid_level = "warn"
     display_items = [
         _item("bells", "Random bells", d.get("random_bells")),
         _item("windows", "Windows", d.get("random_windows")),
         _item("pattern_mode", "Pattern mode", d.get("pattern_mode")),
+        _item("hdmi_requested", "HDMI requested", d.get("hdmi_requested")),
+        _item("hdmi_actual", "HDMI actual", d.get("hdmi_actual"),
+              "warn" if hdmi_mismatch else None),
+        _item("hdmi_connector", "HDMI connector", d.get("hdmi_connector")),
+        _item("hdmi_monitor", "HDMI monitor", d.get("hdmi_monitor"),
+              "warn" if d.get("hdmi_monitor") == "disconnected" else None),
+        _item("hdmi_edid", "HDMI EDID", hdmi_edid, hdmi_edid_level),
         _item("settings", "Settings", d.get("settings_path")),
     ]
+    if hdmi_apply_needed:
+        display_items.append(
+            _item("hdmi_apply", "HDMI apply",
+                  "needed — run sudo sandbells-hdmi apply", "warn")
+        )
+    if d.get("hdmi_error"):
+        display_items.append(
+            _item("hdmi_error", "HDMI settings", d.get("hdmi_error"), "error")
+        )
 
     level = worst_level(
         time_level,

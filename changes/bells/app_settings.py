@@ -2,6 +2,8 @@ from pathlib import Path
 import json
 import os
 
+from bells.hdmi import parse_hdmi_settings
+
 PATHS = (
     Path(os.environ.get("SANDBELLS_SETTINGS", "")),
     Path("/etc/sandbells/settings.json"),
@@ -14,11 +16,13 @@ _DEFAULT = {
     "pattern_position_mode": "centre",
 }
 
+
 def _load():
     for p in PATHS:
         if p and p.is_file():
             return json.loads(p.read_text()), p
     return {}, None
+
 
 def display_settings() -> dict:
     raw, path = _load()
@@ -30,5 +34,6 @@ def display_settings() -> dict:
     if mode not in ("centre", "shorter", "float"):
         mode = "centre"
     data["pattern_position_mode"] = mode
+    data["hdmi"] = parse_hdmi_settings(data.get("hdmi")).to_dict()
     data["_settings_path"] = str(path) if path else ""
     return data

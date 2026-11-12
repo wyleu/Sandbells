@@ -39,7 +39,7 @@ Tower deployment is intended to work with or without Internet: local WiFi (for e
 
 ## Architecture overview
 
-HDMI display runs Luakit fullscreen against http://localhost (with fallbacks in `start-kiosk-solo.sh`).
+HDMI display runs Luakit fullscreen against http://localhost (with fallbacks in `start-kiosk-solo.sh`). A forced HDMI mode from `display.hdmi` in settings is documented in [docs/hdmi.md](docs/hdmi.md).
 
 On the Pi (kiosk host such as `sandbells` or `sandbells2`):
 
