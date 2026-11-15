@@ -154,6 +154,20 @@ test("a frame fills the readouts and draws the trace", () => {
   assert.equal(r.ids["align-tower"].textContent, "strokes in progress: adjusting paused");
 });
 
+test("the laser current: average, and the current while on", () => {
+  const r = rig();
+  r.sockets[0].open();
+  r.sockets[0].recv(r.msg("align_info", { kinds: r.kinds, tower: "inactive" }));
+  r.sockets[0].recv(r.msg("align", { ch: 1, n: 16, dt: 20, bits: "f81f", ma: 7.4, ma_on: 29.6,
+                                     rb: 1, thr: 1, drv: 16384, tower: "inactive", busy: false }));
+  const card = r.cards()[0];
+  assert.equal(r.text(card, "val")[0].textContent, "7.4 mA");
+  assert.equal(r.text(card, "sub")[0].textContent, "while on 29.6 mA");
+  r.sockets[0].recv(r.msg("align", { ch: 1, n: 16, dt: 20, bits: "f81f", ma: 0, ma_on: null,
+                                     rb: 1, thr: 1, drv: 0, tower: "inactive", busy: false }));
+  assert.equal(r.text(card, "sub")[0].textContent, "");
+});
+
 test("the PT level: volts with its spread and a label on the wired head, 'not wired' elsewhere", () => {
   const r = rig();
   r.sockets[0].open();

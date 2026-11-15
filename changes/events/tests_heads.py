@@ -78,7 +78,16 @@ class Decoder(SimpleTestCase):
         self.assertEqual((b["ch"], b["thr"], b["drv"], b["ma"], b["pt"], b["pt_span"]),
                          (1, 32768, 65535, 4.9, 1.18, 0.05))
         self.assertLessEqual(abs(b["rb"] - 23500), 4)                     # 4-count steps
+        self.assertEqual(b["ma_on"], 4.9)                                 # full duty: on = average
         self.assertEqual((b["tower"], b["busy"], b["n"], b["bits"]), ("inactive", False, 1, "80"))
+
+    def test_on_current_is_the_average_over_the_drive_duty(self):
+        # sandswing tune.py: CC_MA is the average over whole PWM periods
+        for duty, avg in ((16384, 7.4), (34078, 15.39), (65535, 29.6)):
+            self.assertAlmostEqual(headscc._on_ma(avg, duty), 29.6, delta=0.02)
+        self.assertIsNone(headscc._on_ma(7.4, 0))
+        self.assertIsNone(headscc._on_ma(None, 16384))
+        self.assertIsNone(headscc._on_ma(7.4, None))
 
     def test_ringing_report_keeps_the_last_readings_marked_busy(self):
         d, docs = decode(FULL, RINGING)

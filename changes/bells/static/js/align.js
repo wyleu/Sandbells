@@ -160,7 +160,7 @@
 
     var right = el("div", "right");
     var r = el("div", "readouts");
-    card.ma = readout("Laser current");
+    card.ma = readout("Laser current (average)");
     card.rb = readout("Threshold readback");
     card.thrR = readout("Threshold duty");
     card.drvR = readout("Laser drive duty");
@@ -421,6 +421,9 @@
     card.thr = b.thr === undefined ? null : b.thr;
     card.drv = b.drv === undefined ? null : b.drv;
     card.ma.val.textContent = b.ma === null || b.ma === undefined ? "—" : b.ma.toFixed(1) + " mA";
+    // the current while the laser is on (average / drive duty): compare with the survey
+    card.ma.sub.textContent = b.ma_on === null || b.ma_on === undefined ? "" :
+      "while on " + b.ma_on.toFixed(1) + " mA";
     card.rb.val.textContent = b.rb === null || b.rb === undefined ? "—" : String(b.rb);
     card.rb.sub.textContent = volts(b.rb);
     showPt(card, b);

@@ -506,6 +506,7 @@ HEADS_CC_NONE = 16383
 HEADS_CC_MAX = 16382            # full duty (65535) is sent as this
 HEADS_DUTY_FULL = 65535
 HEADS_MA_UNITS = 100            # 0.01 mA
+HEADS_MA_DP = 2                 # decimals of the on-current worked out here
 HEADS_MV_PER_V = 1000
 HEADS_FLAG_CLEAR = 1
 HEADS_FLAG_BROKE = 2

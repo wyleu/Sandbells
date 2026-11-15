@@ -39,6 +39,15 @@ def _ma(v):
     return None if v is None else v / C.HEADS_MA_UNITS
 
 
+def _on_ma(ma, drv):
+    """The laser current while on: CC_MA is the Pico's AVERAGE over whole
+    PWM periods (sandswing tune.py), so divide by the drive duty (CC_DRV).
+    None at duty 0 or without both."""
+    if ma is None or not drv:
+        return None
+    return round(ma * C.HEADS_DUTY_FULL / drv, C.HEADS_MA_DP)
+
+
 def _volts(v):
     return None if v is None else v / C.HEADS_MV_PER_V
 
@@ -116,7 +125,7 @@ class HeadsCcDecoder:
         dt = (tr[-1][0] - tr[0][0]) / (n - 1) if n > 1 else 0
         body = {"ch": ch, "n": n, "dt": round(dt, 1), "gap": int(dt),
                 "bits": bits_hex([b for _, b in tr]),
-                "ma": last["ma"], "rb": last["rb"], "thr": last["thr"], "drv": last["drv"],
+                "ma": last["ma"], "ma_on": _on_ma(last["ma"], last["drv"]), "rb": last["rb"], "thr": last["thr"], "drv": last["drv"],
                 "pt": _volts(_v14(raw, C.HEADS_CC_PT)),
                 "pt_span": _volts(_v14(raw, C.HEADS_CC_PT_SPAN)),
                 "tower": tower, "busy": bool(flags & C.HEADS_FLAG_BUSY) or not full,
