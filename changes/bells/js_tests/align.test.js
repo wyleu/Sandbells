@@ -44,7 +44,16 @@ function rig(cfg, opts) {
   const store = Object.assign({}, opts.store || {});
   const location = { hash: opts.hash || "" };
   const winListeners = {};
+  const xhrs = [];
+  class XHR {                     // the USB transport's requests, answered by the test
+    constructor() { this.headers = {}; xhrs.push(this); }
+    open(method, url) { this.method = method; this.url = url; }
+    setRequestHeader(k, v) { this.headers[k] = v; }
+    send(body) { this.body = body == null ? null : JSON.parse(body); }
+    reply(status, obj) { this.status = status; this.responseText = JSON.stringify(obj); this.onload(); }
+  }
   const win = {
+    XMLHttpRequest: XHR,
     addEventListener(ev, fn) { winListeners[ev] = fn; },
     location,
     sessionStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } },
@@ -61,7 +70,7 @@ function rig(cfg, opts) {
   const timers = [];
   const listeners = {};
   const document = {
-    visibilityState: "visible",
+    visibilityState: "visible", cookie: "a=1; csrftoken=tok%2Ben",
     getElementById: (id) => ids[id] || null,
     createElement: (t) => new El(t),
     addEventListener: (ev, fn) => { listeners[ev] = fn; },
@@ -80,7 +89,7 @@ function rig(cfg, opts) {
                               windowMs: 2000, activeKinds: ["head_new", "head_old"] }, cfg || {}));
   const kinds = ["head_new", "head_old", "empty", "trigger", "fault", "loopback", "unknown", "empty"];
   const msg = (type, body) => ({ schema: SCHEMA, type, src: "sandswing", seq: 1, body });
-  return { ids, sockets, timers, document, listeners, Align, kinds, msg, store, location, winListeners,
+  return { ids, sockets, timers, xhrs, document, listeners, Align, kinds, msg, store, location, winListeners,
            cards: () => ids["align-main"].find((e) => e.tag === "section"),
            tabs: () => ids["align-heads"].children,
            sel: () => ids["align-heads"].children.filter((t) => / sel\b/.test(t.className)).map((t) => t.attrs["data-ch"]),
@@ -426,4 +435,78 @@ test("before the survey answers: no buttons, a waiting line; a stored head waits
   assert.equal(r.tabs().length, 0);
   r.sockets[0].open();
   assert.deepEqual(r.scopes(r.sockets[0]), []);          // nothing asked for before we know the head is active
+});
+
+
+/* ---- USB (CFG.via "serial"): POST commands, poll the MIDI-decoded readings ---- */
+const SERIAL = { via: "serial", serial: { cmdUrl: "/farm/heads/serial/cmd/", pollUrl: "/farm/heads/serial/",
+                                          logUrl: "/farm/heads/pt-log.csv", pollMs: 400, liveMs: 3000 } };
+const HB_CHAN = [["head_new"], ["head_old"], ["empty"], ["empty"]];
+
+function serialUp(r, extra) {
+  const polls = r.xhrs.filter((x) => x.method === "GET");
+  polls[polls.length - 1].reply(200, Object.assign({
+    running: true, connected: true, n: 0, items: [],
+    heartbeat: { schema: SCHEMA, type: "heartbeat", body: { tower: "inactive", chan: HB_CHAN } },
+    midi: { running: true, connected: true, n: 0, items: [], age_ms: 100 } }, extra || {}));
+}
+const posts = (r) => r.xhrs.filter((x) => x.method === "POST");
+
+test("USB: no socket; polls, takes the kinds from the heartbeat, POSTs info and scope with the CSRF token", () => {
+  const r = rig(SERIAL);
+  assert.equal(r.sockets.length, 0);
+  assert.equal(r.xhrs[0].url, "/farm/heads/serial/?after=0&midi_after=0");
+  assert.ok(r.timers.some((t) => t.kind === "i" && t.ms === 400));
+  serialUp(r);
+  assert.deepEqual(posts(r).map((x) => x.body), [{ cmd: "align", info: true }, { cmd: "align", ch: 1, scope: true }]);
+  assert.equal(posts(r)[0].headers["X-CSRFToken"], "tok+en");
+  assert.equal(posts(r)[0].url, "/farm/heads/serial/cmd/");
+  assert.equal(r.tabs().length, 4);
+  assert.equal(r.ids["align-link"].textContent, "live (USB)");
+  assert.equal(r.ids["align-tower"].textContent, "tower quiet");
+});
+
+test("USB: MIDI frames and acks reach the panel; cursors follow n and reset when ingest restarts", () => {
+  const r = rig(SERIAL);
+  serialUp(r);
+  const frame = r.msg("align", { ch: 1, n: 3, dt: 500, gap: 500, bits: "a0", ma: 4.9, rb: 32768, thr: 32768,
+                                 drv: 65535, pt: 1.18, pt_span: 0.05, tower: "inactive", busy: false, via: "midi" });
+  r.timers.filter((t) => t.ms === 400)[0].fn();
+  serialUp(r, { midi: { running: true, connected: true, n: 7, items: [frame], age_ms: 50 } });
+  const card = r.cards()[0];
+  assert.equal(r.text(card, "val")[0].textContent, "4.9 mA");
+  r.timers.filter((t) => t.ms === 400)[0].fn();
+  const polls = r.xhrs.filter((x) => x.method === "GET");
+  assert.match(polls[polls.length - 1].url, /after=0&midi_after=7$/);
+  serialUp(r, { midi: { running: true, connected: true, n: 2, items: [], age_ms: 50 } });
+  r.timers.filter((t) => t.ms === 400)[0].fn();
+  assert.match(r.xhrs.filter((x) => x.method === "GET").pop().url, /midi_after=2$/);
+});
+
+test("USB: the mid button sends thr_mid; its ack reads as a threshold change", () => {
+  const r = rig(SERIAL);
+  serialUp(r);
+  const card = r.cards()[0];
+  const mid = r.buttons(card, "mid")[0];
+  assert.equal(mid.disabled, false);
+  mid.click();
+  assert.deepEqual(posts(r).pop().body, { cmd: "align", ch: 1, thr_mid: true });
+  r.timers.filter((t) => t.ms === 400)[0].fn();
+  serialUp(r, { midi: { running: true, connected: true, n: 1, age_ms: 10, items: [
+    r.msg("align_ack", { what: "thr_mid", ch: 1, ok: true, why: null, thr: 32768, drv: 65535, tower: "inactive" })] } });
+  assert.match(r.text(card, "msg")[0].textContent, /Threshold now 50\.0 %.*not saved/);
+});
+
+test("USB: says what is missing; no commands go out until the port is there", () => {
+  const r = rig(SERIAL);
+  r.xhrs[0].reply(200, { running: false, connected: false, n: 0, items: [], heartbeat: null,
+                         midi: { running: false, connected: false, n: 0, items: [], age_ms: null } });
+  assert.match(r.ids["align-link"].textContent, /ingest_serial not running/);
+  assert.equal(posts(r).length, 0);
+  r.timers.filter((t) => t.ms === 400)[0].fn();
+  r.xhrs[1].reply(200, { running: true, connected: false, n: 0, items: [], heartbeat: null, midi: null });
+  assert.match(r.ids["align-link"].textContent, /not plugged in/);
+  r.timers.filter((t) => t.ms === 400)[0].fn();
+  r.xhrs[2].reply(500, {});
+  assert.match(r.ids["align-link"].textContent, /poll failed \(500\)/);
 });

@@ -22,6 +22,16 @@ never picked, not even by --device.  MIDI (/dev/snd) is not touched.
 Reading: os.open + termios raw (no pyserial), select, os.read.  Unplugged
 (EIO, EOF, the node gone): close, look again every SERIAL_RECONNECT_S.
 
+Sandheads (ring_send "off"): this is also the one writer to the port.  The
+page's checked {"cmd":"align"} commands arrive on a datagram socket
+(serialheads.CommandInbox) and go out as lines; the Pico's align /
+align_ack / align_info lines go to SERIAL_HEADS_PATH for the page's poll
+(serialheads.HeadsFile).  A heartbeat's PT level ("pt") goes to on_heartbeat
+(ingest_serial: the HeadLevel log).  A {"t":"serr"} line (the Pico could not
+build its heartbeat) is counted and logged.  Connected but no heartbeat for
+SERIAL_REOPEN_STALE stale periods: the port is closed and opened again (that
+drops and raises DTR, which the Pico's usb_cdc.data.connected follows).
+
 LED echo: sandswing also sends {"t":"led","n","p","s"} on each panel change
 (serial_status.leds, at most 4 a second).  The newest goes to a second,
 small file, SERIAL_LEDS_PATH (LedsFile; also rewritten on each heartbeat and
@@ -39,6 +49,7 @@ from collections import deque, namedtuple
 
 from . import constants as C
 from .ingeststatus import IngestStatus, read_ingest_status, write_json_atomic
+from . import serialheads
 
 log = logging.getLogger(C.LOGGER_NAME + ".serial")   # under setup_logging()'s handler
 
@@ -154,8 +165,18 @@ class SerialSource:
     def __init__(self, device):
         self.device = device
         self.label = C.SERIAL_URL_FORMAT % device
-        self.fd = os.open(device, os.O_RDONLY | os.O_NOCTTY | os.O_NONBLOCK)
+        # read and write: the sandheads commands go out on the same port
+        self.fd = os.open(device, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
         self.raw = _raw(self.fd)
+
+    def write(self, data):
+        """-> bytes taken (0: the tty buffer is full, try later)."""
+        try:
+            return os.write(self.fd, data)
+        except OSError as e:
+            if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK, errno.EINTR):
+                return 0
+            raise Disconnected("write %s: %s" % (self.device, e))
 
     def fileno(self):
         return self.fd
@@ -294,10 +315,12 @@ class SerialStatus(IngestStatus):
     section (port, connected, line counters, errors) and "heartbeat": the
     newest good line as the Pico sent it, "heartbeat_ms" when it came."""
 
-    def __init__(self, path=None, leds_path=None, **kw):
+    def __init__(self, path=None, leds_path=None, heads_path=None, on_heartbeat=None, **kw):
         kw.setdefault("mode", C.INGEST_MODE_SERIAL)
         super().__init__(path, **kw)
         self.leds = LedsFile(leds_path, wall=self.wall)   # leds_path None: not written
+        self.heads = serialheads.HeadsFile(heads_path, wall=self.wall)
+        self.on_heartbeat = on_heartbeat                  # (heartbeat doc, now ms); never raises out
         self.errors = deque(maxlen=C.SERIAL_STATUS_RECENT_ERRORS)
         self.serial = {
             "looking_for": None, "port": None, "how": None, "connected": False,
@@ -305,6 +328,8 @@ class SerialStatus(IngestStatus):
             "too_long": 0, "last_line_ms": None, "last_good_ms": None,
             "connects": 0, "disconnects": 0, "errors": 0, "recent_errors": [],
             "led_lines": 0, "last_led_ms": None,
+            "heads_lines": 0, "pico_errors": 0, "pico_last_error": None, "reopens": 0,
+            "good_since_open": 0,
         }
         self.doc["serial"] = self.serial
         self.doc["heartbeat"] = None
@@ -315,7 +340,10 @@ class SerialStatus(IngestStatus):
 
     def connected(self, source, how=None):
         self.serial.update(port=source.label, how=how, connected=True,
-                           since_ms=self._now_ms(), connects=self.serial["connects"] + 1)
+                           since_ms=self._now_ms(), connects=self.serial["connects"] + 1,
+                           good_since_open=0)
+        self._serr_logged = 0
+        self.heads.connected(True)
         self._changed = True
 
     def disconnected(self, why=None):
@@ -324,6 +352,7 @@ class SerialStatus(IngestStatus):
         if was:
             self.serial["disconnects"] += 1
             self.leds.disconnected()
+            self.heads.connected(False)
         if why:
             self.error(why)
         self._changed = True
@@ -355,42 +384,134 @@ class SerialStatus(IngestStatus):
             s["last_led_ms"] = now
             self.leds.led(doc, now)
             return False
+        if serialheads.is_heads_line(doc):
+            s["heads_lines"] += 1
+            self.heads.line(doc)
+            return False
+        if isinstance(doc, dict) and doc.get("t") == C.SERIAL_ERR_TYPE:
+            self._pico_error(doc)
+            return False
         if not (isinstance(doc, dict) and doc.get(C.F_SCHEMA) == C.SERIAL_HB_SCHEMA
                 and doc.get(C.F_TYPE) == C.SERIAL_HB_TYPE and isinstance(doc.get(C.F_BODY), dict)):
             s["not_heartbeat"] += 1
             self.rejected("not a sand.panel/v1 heartbeat", raw)
             return False
         s["good"] += 1
+        s["good_since_open"] += 1
         s["last_good_ms"] = now
         self.doc["heartbeat"] = doc
         self.doc["heartbeat_ms"] = now
         self.leds.heartbeat(doc, now, s["port"])
+        if self.on_heartbeat is not None:
+            try:
+                self.on_heartbeat(doc, now)
+            except Exception as e:                # the log must never stop the reader
+                self.error("heartbeat hook: %s" % e)
         return True
+
+    def _pico_error(self, doc):
+        """{"t":"serr","n","e"}: the Pico could not build its heartbeat."""
+        s = self.serial
+        s["pico_errors"] += 1
+        s["pico_last_error"] = str(doc.get("e"))[:C.INGEST_STATUS_EXCERPT]
+        n = getattr(self, "_serr_logged", 0)
+        if n == 0 or s["pico_errors"] % C.SERIAL_ERR_LOG_EVERY == 0:
+            log.warning("the Pico could not build its heartbeat (%s errors on the Pico): %s",
+                        doc.get("n"), s["pico_last_error"])
+        self._serr_logged = n + 1
+        self._changed = True
+
+    def stale_ms(self):
+        hb = self.doc.get("heartbeat")
+        return stale_ms_of(hb if isinstance(hb, dict) else {})[1]
 
     def snapshot(self, ingest=None):
         """No Ingest here: the counters are this reader's own."""
         s = self.serial
         self.doc["counters"] = {"lines": s["lines"], "good": s["good"], "bad": s["bad"],
                                 "not_heartbeat": s["not_heartbeat"], "too_long": s["too_long"],
-                                "errors": s["errors"], "led_lines": s["led_lines"]}
+                                "errors": s["errors"], "led_lines": s["led_lines"],
+                                "heads_lines": s["heads_lines"], "pico_errors": s["pico_errors"],
+                                "reopens": s["reopens"]}
         s["recent_errors"] = list(self.errors)
         self.doc["recent_rejects"] = list(self.recent)
 
 
 # ---- the loop ----------------------------------------------------------------
+class Outbox:
+    """Command lines waiting for the port (normally gone at once: a few
+    tens of bytes, and the Pico reads all the time).  Bounded."""
+
+    def __init__(self, max_b=C.SERIAL_CMD_QUEUE_MAX_B):
+        self.max_b = max_b
+        self.buf = bytearray()
+
+    def add(self, lines):
+        """-> (taken, dropped)."""
+        ok = dropped = 0
+        for line in lines:
+            if len(self.buf) + len(line) > self.max_b:
+                dropped += 1
+            else:
+                self.buf += line
+                ok += 1
+        return ok, dropped
+
+    def flush(self, source):
+        while self.buf:
+            n = source.write(bytes(self.buf))
+            if not n:
+                return
+            del self.buf[:n]
+
+    def clear(self):
+        self.buf = bytearray()
+
+
+def _reopen_after_ms(status):
+    """Connected, no good heartbeat since: reopen after this long (doubling
+    after each reopen that did not help, up to SERIAL_REOPEN_MAX_FACTOR)."""
+    factor = min(2 ** status.serial.get("reopens_in_row", 0), C.SERIAL_REOPEN_MAX_FACTOR)
+    return status.stale_ms() * C.SERIAL_REOPEN_STALE * factor
+
+
 def serve(source, stop, status, splitter, find=None, idle_s=C.SERIAL_IDLE_S,
-          check_s=C.SERIAL_RECONNECT_S, clock=time.monotonic, selector=select.select):
-    """Read lines until stop or Disconnected."""
+          check_s=C.SERIAL_RECONNECT_S, clock=time.monotonic, selector=select.select,
+          inbox=None, outbox=None):
+    """Read lines until stop or Disconnected.  inbox: the page's commands
+    (serialheads.CommandInbox), written to the port through outbox."""
     checked = clock()
+    opened = last_good = clock()
+    good = status.serial["good"]
+    outbox = outbox if outbox is not None else Outbox()
     while not stop.is_set():
+        watch = [source] + ([inbox] if inbox is not None else [])
         try:
-            ready, _, _ = selector([source], [], [], idle_s)
+            ready, _, _ = selector(watch, [], [], idle_s)
         except (OSError, ValueError) as e:
             raise Disconnected("select: %s" % e)
-        if ready:
+        if source in ready:
             for raw in splitter.feed(source.read()):
                 if status.line(raw, splitter):
                     log.debug("heartbeat seq %s", status.doc["heartbeat"].get(C.F_SEQ))
+        if inbox is not None and inbox in ready:
+            refused = inbox.refused
+            ok, dropped = outbox.add(inbox.take())
+            status.heads.relayed(ok, dropped, inbox.refused - refused)
+        if outbox.buf:
+            outbox.flush(source)
+        if status.serial["good"] != good:
+            good = status.serial["good"]
+            last_good = clock()
+            status.serial["reopens_in_row"] = 0
+        elif (clock() - last_good) * C.MS_PER_S >= _reopen_after_ms(status):
+            status.serial["reopens"] += 1
+            status.serial["reopens_in_row"] = status.serial.get("reopens_in_row", 0) + 1
+            raise Disconnected("connected %d s, no heartbeat for %d s (lines %d, led %d, "
+                               "not heartbeat %d, cut %d, Pico errors %d): reopening the port"
+                               % (clock() - opened, clock() - last_good, status.serial["lines"],
+                                  status.serial["led_lines"], status.serial["not_heartbeat"],
+                                  status.serial["bad"], status.serial["pico_errors"]))
         if clock() - checked >= check_s:
             checked = clock()
             if not os.path.exists(source.device):
@@ -399,10 +520,13 @@ def serve(source, stop, status, splitter, find=None, idle_s=C.SERIAL_IDLE_S,
 
 
 def run(stop, status, find=find_port, opener=open_source, reconnect_s=C.SERIAL_RECONNECT_S,
-        idle_s=C.SERIAL_IDLE_S, once=False, selector=select.select):
+        idle_s=C.SERIAL_IDLE_S, once=False, selector=select.select, inbox=None,
+        clock=time.monotonic):
     """Find the data port, read it, and again after an unplug, until stop.
-    once: return after the first disconnect (tests, a manual check)."""
+    once: return after the first disconnect (tests, a manual check).
+    inbox: the page's commands (None: read only, as before)."""
     splitter = LineSplitter()
+    outbox = Outbox()
     waiting_logged = False
     try:
         while not stop.is_set():
@@ -434,13 +558,19 @@ def run(stop, status, find=find_port, opener=open_source, reconnect_s=C.SERIAL_R
                 stop.wait(reconnect_s)
                 continue
             waiting_logged = False
+            if inbox is not None:
+                stale = inbox.take()                  # sent while there was no port
+                if stale:
+                    status.heads.relayed(0, len(stale))
             log.info("serial status connected: %s (%s)", source.label, port.how)
             splitter.reset()
             status.connected(source, port.how)
             status.maybe_write(None, force=True)
             try:
+                outbox.clear()                    # commands for an earlier port are stale
                 serve(source, stop, status, splitter, find=find, idle_s=idle_s,
-                      check_s=reconnect_s, selector=selector)
+                      check_s=reconnect_s, selector=selector, inbox=inbox, outbox=outbox,
+                      clock=clock)
             except Disconnected as e:
                 log.warning("serial status disconnected: %s", e)
                 status.disconnected(e)

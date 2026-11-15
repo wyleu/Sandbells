@@ -444,3 +444,95 @@ SERIAL_LEDS_RECENT = 4
 # status is shown instead of asking the Pico's /status over Wi-Fi (its 7 kB
 # reply is what starved lwIP); a stale one only when Wi-Fi does not answer
 SERIAL_FIRST = True
+
+# ---- sandheads over the USB data port (ring_send "off": no Wi-Fi) -----------
+# ingest_serial is the one owner of the port.  The sandheads page POSTs its
+# {"cmd":"align",...} commands to Django, which checks them and hands them to
+# ingest_serial as one datagram each on SERIAL_CMD_SOCK_PATH; ingest_serial
+# writes them to the Pico as lines.  The Pico's replies (sand.panel/v1 types
+# in SERIAL_HEADS_TYPES) go to SERIAL_HEADS_PATH, which the page polls.
+# Protocol: sandswing docs/align-scope.md.
+SERIAL_CMD_SOCK_PATH = "/run/sandbells-ingest/serial_cmd.sock"
+SERIAL_CMD_SOCK_ENV = "SANDBELLS_SERIAL_CMD_SOCK"
+SERIAL_CMD_SOCK_MODE = 0o660    # gunicorn and ingest_serial both run as sandbells
+SERIAL_CMD_MAX_B = 256          # one command (sandswing align_scope.MSG_MAX_B)
+SERIAL_CMD_QUEUE_MAX_B = 2048   # bytes waiting for the port; more: dropped (counted)
+SERIAL_CMD_NAME = "align"       # the only command the page may send
+SERIAL_CMD_KEYS = ("cmd", "ch", "scope", "thr", "drive", "info", "thr_mid")   # align_scope._KEYS
+SERIAL_CMD_MAX_CH = 16          # a channel number above this is refused here already
+SERIAL_HEADS_PATH = "/run/sandbells-ingest/serial_heads.json"
+SERIAL_HEADS_ENV = "SANDBELLS_SERIAL_HEADS"
+SERIAL_HEADS_SCHEMA = "sandbells.serial_heads/v1"
+SERIAL_HEADS_TYPES = ("align", "align_ack", "align_info")
+SERIAL_HEADS_KEEP = 12          # newest scope lines kept in the file (the page asks after=<n>)
+SERIAL_HEADS_POLL_MS = 400      # the page's poll (the Pico sends a frame every 500 ms)
+SERIAL_HEADS_LIVE_MS = 3000     # the page: no new line for this long while scoping: "no frames"
+# sandswing serial_status: a heartbeat it could not build ({"t":"serr"})
+SERIAL_ERR_TYPE = "serr"
+SERIAL_ERR_LOG_EVERY = 30       # journal: the first after a connect, then every this many
+# connected, yet no good heartbeat for this many stale periods: close and
+# reopen the port (drops and raises DTR, which is what the Pico's
+# usb_cdc.data.connected follows); the wait doubles after each reopen that
+# did not help, up to SERIAL_REOPEN_MAX_FACTOR times
+SERIAL_REOPEN_STALE = 1
+SERIAL_REOPEN_MAX_FACTOR = 16
+
+# ---- sandheads readings as MIDI CC (sandswing heads_cc.py) -------------------
+# Commands go to the Pico over the USB data port (above); its readings and
+# acks come back as Control Change on its USB MIDI out, channel
+# HEADS_CC_CHANNEL.  ingest_midi decodes each report (CC_HEAD .. CC_SEQ) into
+# the same sand.panel/v1 align / align_ack docs the /ws path carries, and
+# keeps the newest in MIDI_HEADS_PATH for the sandheads page's poll.
+# 14-bit values: MSB on CC n, LSB on n + HEADS_CC_LSB; HEADS_CC_NONE: none.
+# Map and reasons: sandswing docs/align-scope.md "MIDI CC map".
+MIDI_CC = "cc"                  # CcMessage.kind
+MIDI_CONTROL_CHANGE = 0xB0
+HEADS_CC_CHANNEL = 16
+HEADS_CC_LSB = 32
+HEADS_CC_HEAD = 102
+HEADS_CC_FLAGS = 103
+HEADS_CC_ACK_WHAT = 104
+HEADS_CC_ACK_WHY = 105
+HEADS_CC_SEQ = 106
+HEADS_CC_THR = 20
+HEADS_CC_RB = 21
+HEADS_CC_DRV = 22
+HEADS_CC_MA = 23
+HEADS_CC_PT = 24
+HEADS_CC_PT_SPAN = 25
+HEADS_CC_14 = (HEADS_CC_THR, HEADS_CC_RB, HEADS_CC_DRV, HEADS_CC_MA, HEADS_CC_PT,
+               HEADS_CC_PT_SPAN)
+HEADS_CC_NONE = 16383
+HEADS_CC_MAX = 16382            # full duty (65535) is sent as this
+HEADS_DUTY_FULL = 65535
+HEADS_MA_UNITS = 100            # 0.01 mA
+HEADS_MV_PER_V = 1000
+HEADS_FLAG_CLEAR = 1
+HEADS_FLAG_BROKE = 2
+HEADS_FLAG_BUSY = 4
+HEADS_FLAG_QUIET = 8
+HEADS_FLAG_SCOPE = 16
+HEADS_WHAT = {1: "thr", 2: "drive", 3: "scope", 4: "bad", 5: "thr_mid"}
+HEADS_WHY = {1: "not an active head", 2: "tower not quiet: strokes in progress",
+             3: "survey running", 4: "old head has no threshold", 5: "too fast",
+             6: "at limit", 7: "laser is off", 8: "laser current over its limit",
+             9: "busy", 10: "timeout", 11: "head gone", 12: "low memory",
+             13: "bad command", 127: "refused"}
+HEADS_TOWER_QUIET = "inactive"  # what align.js calls a quiet tower
+HEADS_TOWER_BUSY = "active"
+# the page's trace from MIDI: one sample per report (beam low if any low
+# sample since the last report), the last HEADS_TRACE_MS of them
+HEADS_TRACE_MS = 2000
+HEADS_TRACE_MAX = 64
+MIDI_HEADS_PATH = "/run/sandbells-ingest/midi_heads.json"
+MIDI_HEADS_ENV = "SANDBELLS_MIDI_HEADS"
+
+# ---- PT level log (day / night drift of the phototransistor) -----------------
+# The heartbeat's body "pt" = [ch, volts, spread] (sandswing pt_level.brief, the
+# Orange/White wire on GP27).  ingest_serial stores one HeadLevel row per wired
+# head at most every PT_LOG_EVERY_S; /farm/heads/pt-log.csv?days=N reads them.
+PT_LOG_EVERY_S = 300
+PT_LOG_UID_MAX_LEN = 32         # the Pico's UID (16 hex) with room
+PT_LOG_TOWER_MAX_LEN = 16       # "inactive", "active", "ringing_down"
+PT_LOG_DAYS_DEFAULT = 7
+PT_LOG_DAYS_MAX = 366

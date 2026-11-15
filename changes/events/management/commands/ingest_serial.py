@@ -9,11 +9,16 @@ serial_status.period_s on usb_cdc.data, the second CDC interface; the REPL
 console (the first, ttyACM0) is never opened and MIDI is not touched.
 serialingest.py has the details.  SIGTERM / SIGINT stop the loop.
 
+Sandheads (ring_send "off"): the page's commands arrive on SERIAL_CMD_SOCK_PATH
+and go to the Pico; its scope lines go to SERIAL_HEADS_PATH (serialheads.py).
+The heartbeat's PT level is logged to the DB (HeadLevel, headlog.py) at most
+every PT_LOG_EVERY_S.
+
 One tmpfs file: SERIAL_STATUS_PATH (serial_status.json: port, connected,
 line counters, errors, and the newest heartbeat), next to ingest_udp's
 status.json and ingest_midi's midi_status.json; and SERIAL_LEDS_PATH
-(serial_leds.json, the newest LED echo line) for the link widget.  Nothing goes in the DB;
-the sandswing status page and the Ingest page read the file.
+(serial_leds.json, the newest LED echo line) for the link widget.  Only the PT level log
+goes in the DB; the sandswing status page and the Ingest page read the file.
 """
 
 import os
@@ -22,7 +27,8 @@ import threading
 from django.core.management.base import BaseCommand
 
 from events import constants as C
-from events import serialingest
+from events import serialheads, serialingest
+from events.headlog import PtLogger
 from events.management.commands.ingest_events import (
     install_signal_handlers, restore_signal_handlers, setup_logging)
 
@@ -57,13 +63,26 @@ class Command(BaseCommand):
                  + " or ".join(repr(m) for m in match))
         stop = threading.Event()
         previous = install_signal_handlers(stop)
+        pt_log = PtLogger()
         status = serialingest.SerialStatus(serialingest.serial_status_path(),
-                                           leds_path=serialingest.serial_leds_path())
+                                           leds_path=serialingest.serial_leds_path(),
+                                           heads_path=serialheads.heads_path(),
+                                           on_heartbeat=pt_log.heartbeat)
         status.serial["looking_for"] = device or list(match)
+        inbox = None
+        try:
+            inbox = serialheads.CommandInbox().open()
+            log.info("sandheads commands on %s", inbox.path)
+        except OSError as e:
+            log.warning("sandheads commands off (%s): the page cannot reach the Pico", e)
+            inbox = None
         try:
             status.maybe_write(None, force=True)
+            status.heads.connected(False)
             serialingest.run(stop, status, find=find, reconnect_s=opts["reconnect"],
-                             once=opts["once"])
+                             once=opts["once"], inbox=inbox)
         finally:
             restore_signal_handlers(previous)
             status.stopped(None)
+            if inbox is not None:
+                inbox.close()

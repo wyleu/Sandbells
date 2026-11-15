@@ -1,0 +1,33 @@
+# Sandheads page over USB (no Wi-Fi)
+
+`/farm/heads/` works with the concentrator's USB plugged into this Pi
+(`link.ring_send` "off").  It picks USB when `sandbells-ingest-serial` has
+the Pico's data port open (or `?via=serial` / `?via=ws`).
+
+* **Commands, page -> Pico:** POST `/farm/heads/serial/cmd/` (CSRF) ->
+  checked (`events/serialheads.check_command`: only `{"cmd":"align"}`
+  with ch 1-16 and a ±1 step, `thr_mid`, `scope` or `info`) -> unix
+  datagram `/run/sandbells-ingest/serial_cmd.sock` -> `ingest_serial`
+  (still the one owner of `/dev/ttyACM1`) checks again and writes the line.
+  503: ingest_serial is not listening.
+* **Readings and acks, Pico -> page:** MIDI Control Change on the USB MIDI
+  out, channel 16 (map: sandswing `docs/align-scope.md` "MIDI CC map";
+  numbers mirrored in `events/constants.py` `HEADS_CC_*`).  `ingest_midi`
+  decodes them (`events/headscc.py`) into the same `align` / `align_ack`
+  docs as /ws and keeps the newest in `/run/sandbells-ingest/midi_heads.json`.
+  CCs are never strokes.  Only sent while the page keeps the scope alive.
+* **Poll:** GET `/farm/heads/serial/?after=N&midi_after=M` every 400 ms:
+  the newer docs, plus the head kinds and tower from the serial heartbeat.
+* **Mid button:** threshold to the middle of its limits (`thr_mid`, 32768
+  with the default limits).  Live only, like ±; not saved.
+* While strokes are in progress the Pico sends only the PT level (marked
+  busy); adjustments are refused until the tower is quiet.
+* The trace over MIDI is one sample per report (every 500 ms; low if the
+  beam broke since the last one): enough to see a break, not its shape.
+
+## PT level log
+
+`ingest_serial` stores the heartbeat's PT level (`pt`: channel, volts,
+spread) with the threshold target/readback as `HeadLevel` rows, at most one
+per head every 5 min (`PT_LOG_EVERY_S`).  CSV: `/farm/heads/pt-log.csv?days=7`
+(linked from the page; days 1-366).  Needs `manage.py migrate` (0003).

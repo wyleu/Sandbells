@@ -10,6 +10,13 @@
  * head is kept in the URL hash (#head=2) and sessionStorage, so it survives
  * a reload and coming back from another tab.  Adjustments are live only: the Pico never
  * writes them to settings.json.  Protocol: sandswing docs/align-scope.md.
+ *
+ * Over USB (CFG.via "serial": the concentrator's USB is on this Pi, e.g.
+ * link.ring_send "off", no Wi-Fi): the same commands are POSTed to Django
+ * (CFG.serial.cmdUrl), which hands them to ingest_serial for the data port;
+ * the Pico's readings and acks come back as MIDI CC, decoded by ingest_midi
+ * into the same align / align_ack docs, and the page polls them
+ * (CFG.serial.pollUrl, with the head kinds from the serial heartbeat).
  * Plain ES5 for Luakit/WebKit on a Pi 3.
  */
 (function () {
@@ -27,14 +34,15 @@
   var STORE_KEY = "sandheadsHead";   // sessionStorage; the URL hash is #head=N
   var MAX_HEADS = 16;
 
-  var CFG = { wsUrls: [], keepAliveMs: 2000, windowMs: 2000 };
+  var CFG = { wsUrls: [], keepAliveMs: 2000, windowMs: 2000, via: "ws" };
   var S = {
     sock: null, urlIx: 0, rd: window.ReconnectDelay.create(), connectTimer: null, keepTimer: null,
     helloAt: 0, lastRx: 0, heardHb: 0,
     kinds: [], tower: "", gotInfo: false, ptCh: 0,
     sel: 0,                      // the head on show (1-based), active or not
     want: 0,                     // the head being watched: sel when it is active, else none
-    shown: 0, cards: {}
+    shown: 0, cards: {},
+    after: 0, midiAfter: 0, pollTimer: null, polling: false, serialUp: false
   };
 
   function $(id) { return document.getElementById(id); }
@@ -166,6 +174,11 @@
 
     var n = el("div", "nudges");
     card.thrB = pair(card, "thr", "Threshold");
+    card.midB = el("button", "nudge mid", "mid");
+    card.midB.type = "button";
+    card.midB.title = "Threshold to mid-range (32768 with the default limits)";
+    card.midB.addEventListener("click", function () { nudge(card, "thr_mid", true); });
+    card.thrB.box.appendChild(card.midB);
     card.drvB = pair(card, "drive", "Laser drive");
     n.appendChild(card.thrB.box);
     n.appendChild(card.drvB.box);
@@ -234,7 +247,7 @@
     var quiet = S.tower === "inactive";
     var noThr = inList(kind, NO_THRESHOLD);
     var busy = card.locked || !quiet || !active;
-    card.thrB.dn.disabled = card.thrB.up.disabled = busy || noThr;
+    card.thrB.dn.disabled = card.thrB.up.disabled = card.midB.disabled = busy || noThr;
     card.drvB.dn.disabled = card.drvB.up.disabled = busy;
     card.thrB.box.title = noThr ? "old heads have no threshold" : "";
     card.thrR.val.textContent = noThr ? "n/a" : (active ? pct(card.thr) : "—");
@@ -339,7 +352,30 @@
 
   /* ---- talking to the Pico ------------------------------------------------ */
 
+  function csrfToken() {
+    var m = /(?:^|; )csrftoken=([^;]*)/.exec(document.cookie || "");
+    return m ? decodeURIComponent(m[1]) : "";
+  }
+
+  /* USB: one command to Django -> ingest_serial -> the Pico's data port */
+  function post(obj) {
+    var sc = CFG.serial || {};
+    if (!sc.cmdUrl || !S.serialUp) return false;
+    try {
+      var x = new window.XMLHttpRequest();
+      x.open("POST", sc.cmdUrl, true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.setRequestHeader("X-CSRFToken", csrfToken());
+      x.onload = function () {
+        if (x.status !== 200) setLink("pill-busy", "USB: command not sent (" + x.status + ")");
+      };
+      x.send(JSON.stringify(obj));
+    } catch (e) { return false; }
+    return true;
+  }
+
   function send(obj) {
+    if (CFG.via === "serial") return post(obj);
     var sock = S.sock;
     if (!sock || sock.readyState !== 1) return false;
     try { sock.send(JSON.stringify(obj)); } catch (e) { return false; }
@@ -363,6 +399,7 @@
     if (S.want) {
       send({ cmd: "align", ch: S.want, scope: true });
     }
+    if (CFG.via === "serial") return;            // no socket: nothing else to keep
     if (now - S.helloAt >= HELLO_MS) {
       S.helloAt = now;
       send({ schema: "sand.hello/v1", type: "heartbeat", src: "sandbells-align" });
@@ -422,9 +459,10 @@
       refreshCard(card);
       return;
     }
-    var name = b.what === "thr" ? "Threshold" : "Laser drive";
+    var isThr = b.what === "thr" || b.what === "thr_mid";
+    var name = isThr ? "Threshold" : "Laser drive";
     if (b.ok) {
-      setMsg(card, name + " now " + pct(b.what === "thr" ? b.thr : b.drv) + " (live, not saved)", false);
+      setMsg(card, name + " now " + pct(isThr ? b.thr : b.drv) + " (live, not saved)", false);
     } else {
       setMsg(card, "Not changed: " + b.why, true);
     }
@@ -461,6 +499,10 @@
     if (typeof text !== "string" || text.indexOf(SCHEMA) < 0) return;
     var m;
     try { m = JSON.parse(text); } catch (e) { return; }
+    dispatch(m);
+  }
+
+  function dispatch(m) {
     if (!m || m.schema !== SCHEMA) return;
     if (m.type === "align") onFrame(m);
     else if (m.type === "align_ack") onAck(m);
@@ -471,11 +513,70 @@
   function stopTimers() {
     if (S.connectTimer) clearTimeout(S.connectTimer);
     if (S.keepTimer) clearInterval(S.keepTimer);
-    S.connectTimer = S.keepTimer = null;
+    if (S.pollTimer) clearInterval(S.pollTimer);
+    S.connectTimer = S.keepTimer = S.pollTimer = null;
+  }
+
+  /* ---- USB: poll Django for the decoded readings ---------------------------- */
+
+  function takeItems(r, key) {
+    if (!r) return;
+    if (typeof r.n === "number" && r.n < S[key]) S[key] = 0;   // ingest restarted: count again
+    var items = r.items || [];
+    for (var i = 0; i < items.length; i++) dispatch(items[i]);
+    if (typeof r.n === "number") S[key] = r.n;
+  }
+
+  function onPoll(r) {
+    var was = S.serialUp;
+    S.serialUp = !!(r && r.running && r.connected);
+    if (S.serialUp && !was) {                    // (re)connected: ask again
+      send({ cmd: "align", info: true });
+      if (S.want) send({ cmd: "align", ch: S.want, scope: true });
+    }
+    if (r && r.heartbeat) onHeartbeat(r.heartbeat);
+    takeItems(r, "after");
+    takeItems(r && r.midi, "midiAfter");
+    if (!r || !r.running) setLink("pill-busy", "USB: ingest_serial not running");
+    else if (!r.connected) setLink("pill-busy", "USB: concentrator not plugged in here");
+    else if (S.want && (!r.midi || r.midi.age_ms === null ||
+                        r.midi.age_ms > ((CFG.serial || {}).liveMs || 3000)) &&
+             (r.age_ms === null || r.age_ms > ((CFG.serial || {}).liveMs || 3000)))
+      setLink("pill-wait", "USB: no readings yet");
+    else setLink("pill-ok", "live (USB)");
+  }
+
+  function poll() {
+    var sc = CFG.serial || {};
+    if (!sc.pollUrl || S.polling) return;
+    S.polling = true;
+    try {
+      var x = new window.XMLHttpRequest();
+      x.open("GET", sc.pollUrl + "?after=" + S.after + "&midi_after=" + S.midiAfter, true);
+      x.onload = function () {
+        S.polling = false;
+        var r = null;
+        try { r = JSON.parse(x.responseText); } catch (e) {}
+        if (x.status === 200) onPoll(r);
+        else setLink("pill-busy", "USB: poll failed (" + x.status + ")");
+      };
+      x.onerror = function () { S.polling = false; setLink("pill-busy", "USB: Sandbells not answering"); };
+      x.send(null);
+    } catch (e) { S.polling = false; }
+  }
+
+  function startSerial() {
+    stopTimers();
+    S.serialUp = false;
+    setLink("pill-wait", "USB: connecting…");
+    S.pollTimer = setInterval(poll, (CFG.serial || {}).pollMs || 400);
+    S.keepTimer = setInterval(keepAlive, CFG.keepAliveMs || 2000);
+    poll();
   }
 
   function connect() {
     if (document.visibilityState === "hidden") return;
+    if (CFG.via === "serial") { startSerial(); return; }
     var urls = CFG.wsUrls || [];
     if (!urls.length) { setLink("pill-busy", "no address for this device"); return; }
     stopTimers();

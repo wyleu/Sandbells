@@ -111,3 +111,25 @@ class ChannelMap(models.Model):
     @property
     def valid_from_ms(self):
         return int((self.valid_from - UNIX_EPOCH) / timedelta(milliseconds=1))
+
+
+class HeadLevel(models.Model):
+    """One reading of a head's raw phototransistor level (the Orange/White
+    wire, sandswing pt_level.py on GP27), stored by ingest_serial from the
+    serial heartbeat at most every PT_LOG_EVERY_S, so the day / night drift
+    of the PT can be reviewed later (/farm/heads/pt-log.csv)."""
+    at = models.DateTimeField(default=timezone.now, db_index=True)
+    uid = models.CharField(max_length=C.PT_LOG_UID_MAX_LEN, blank=True, default="",
+                           help_text="the Pico's UID")
+    ch = models.PositiveSmallIntegerField(help_text="1-based channel")
+    pt_v = models.FloatField(help_text="PT level, volts (mean of a short burst)")
+    pt_span = models.FloatField(null=True, blank=True, help_text="max - min over the burst, volts")
+    thr = models.IntegerField(null=True, blank=True, help_text="threshold target duty")
+    thr_rb = models.IntegerField(null=True, blank=True, help_text="GP28 threshold readback")
+    tower = models.CharField(max_length=C.PT_LOG_TOWER_MAX_LEN, blank=True, default="")
+
+    class Meta:
+        ordering = ["at"]
+
+    def __str__(self):
+        return "%s ch %d %.3f V" % (self.at, self.ch, self.pt_v)

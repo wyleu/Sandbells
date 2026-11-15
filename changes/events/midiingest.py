@@ -446,17 +446,31 @@ class StampPairer:
         self.unstamped = 0
         self.clocks = 0              # clock messages
         self.orphans = 0             # stroke stamps with no NoteOn waiting
+        self.ccs = 0                 # Control Changes (sandheads readings), not strokes
+        self.cc_sink = None          # (CcMessage, utc_ms): headscc.HeadsCcDecoder.cc
+        self.cc_errors = 0
         self.last_pico_ms = None
         self.last_stamp_ms = None    # this Pi's wall ms when the last stamp/clock arrived
         self.wall_minus_tick = None  # utc ms - monotonic ms at the last read
 
     # ---- in -------------------------------------------------------------
     def handle(self, msgs, utc_ms, tick_ms):
-        """msgs (NoteMessage / StampMessage), all read at utc_ms / tick_ms
+        """msgs (NoteMessage / StampMessage / CcMessage), all read at utc_ms / tick_ms
         (this Pi's wall and monotonic ms).  -> strokes handed to Ingest."""
         self.wall_minus_tick = utc_ms - tick_ms
         n = 0
         for msg in msgs:
+            if getattr(msg, "kind", None) == C.MIDI_CC:
+                # the sandheads readings (heads_cc): never a stroke, never held
+                self.ccs += 1
+                if self.cc_sink is not None:
+                    try:
+                        self.cc_sink(msg, utc_ms)
+                    except Exception as e:
+                        self.cc_errors += 1
+                        if self.cc_errors % C.SERIAL_ERR_LOG_EVERY == 1:
+                            log.warning("sandheads CC (%d): %s", self.cc_errors, e)
+                continue
             if isinstance(msg, StampMessage):
                 n += self._stamp(msg, tick_ms)
                 continue
@@ -538,7 +552,7 @@ class StampPairer:
                 "seq_gaps": c.seq_gaps, "seq_missing": c.seq_missing, "seq_odd": c.seq_odd,
                 "last_seq": c.last_seq, "last_pico_ms": self.last_pico_ms,
                 "last_stamp_ms": self.last_stamp_ms,
-                "wait_ms": self.wait_ms, "held": len(self.pending)}
+                "wait_ms": self.wait_ms, "held": len(self.pending), "ccs": self.ccs}
 
 
 def handle_notes(msgs, ingest, maker, status, utc_ms, tick_ms, peer=None, pairer=None):
@@ -587,12 +601,13 @@ def serve(source, ingest, stop, maker, status, find=None, idle_s=C.MIDI_IDLE_S,
 
 def run(ingest, stop, status, find=find_port, opener=open_source,
         transport=C.MIDI_TRANSPORT_AUTO, maker=None, reconnect_s=C.MIDI_RECONNECT_S,
-        idle_s=C.MIDI_IDLE_S, once=False):
+        idle_s=C.MIDI_IDLE_S, once=False, cc_sink=None):
     """Find the Pico, read it, and again after an unplug, until stop.  once:
     return after the first disconnect (tests, a manual check).  Flushes on
     the way out."""
     maker = maker or StrokeMaker()
     pairer = StampPairer(ingest, maker, status)
+    pairer.cc_sink = cc_sink
     waiting_logged = False
     try:
         while not stop.is_set():

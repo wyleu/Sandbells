@@ -9,6 +9,9 @@ Each NoteOn on MIDI channel MIDI_CHANNEL (sandswing: 1) is one stroke on
 the channel MIDI_NOTE_TO_CH gives, timed by the Pico's own stamp SysEx
 when one follows it (else this Pi's clock on arrival), stored (src "midi") through the same Ingest / EventStore as ingest_udp, so
 the Strokes page shows it.  midiingest.py has the details.
+Control Changes on HEADS_CC_CHANNEL (16) are the sandheads page's readings
+and acks (sandswing heads_cc.py), never strokes: headscc.py turns them into
+align docs in MIDI_HEADS_PATH (midi_heads.json) for /farm/heads/serial/.
 SIGTERM / SIGINT stop the loop; the buffer is flushed before exit.
 
 One tmpfs file: MIDI_STATUS_PATH (midi_status.json: port, connected, notes,
@@ -21,6 +24,8 @@ import threading
 
 from django.core.management.base import BaseCommand
 
+from events.headscc import HeadsCcDecoder, midi_heads_path
+from events.serialheads import HeadsFile
 from events import constants as C
 from events import midiingest
 from events.ingest import Ingest
@@ -72,9 +77,14 @@ class Command(BaseCommand):
         try:
             ingest = Ingest(EventStore(), status=status)
             status.maybe_write(ingest, force=True)
+            # sandheads readings (MIDI CC, channel HEADS_CC_CHANNEL) -> the page's file
+            heads = HeadsFile(midi_heads_path())
+            heads.connected(True)
+            decoder = HeadsCcDecoder(heads.line)
             midiingest.run(ingest, stop, status, find=find, transport=opts["transport"],
                            maker=midiingest.StrokeMaker(channel=opts["channel"]),
-                           reconnect_s=opts["reconnect"], once=opts["once"])
+                           reconnect_s=opts["reconnect"], once=opts["once"],
+                           cc_sink=decoder.cc)
         finally:
             restore_signal_handlers(previous)
             if ingest is not None:

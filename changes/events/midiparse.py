@@ -6,7 +6,7 @@ Pure: standard library only, no Django, no I/O.
     for m in p.feed(data):       # bytes from the rawmidi device, any split
         m.kind, m.channel, m.note, m.velocity   # kind MIDI_ON / MIDI_OFF
 
-Notes come out, and the Pico's stroke stamps (StampMessage, kind
+Notes come out, Control Changes (CcMessage: the sandheads readings), and the Pico's stroke stamps (StampMessage, kind
 MIDI_STAMP: the 7D 'S' SysEx of sandswing midi_stamp.py), in the order
 they arrived.  Handled on the way:
   - running status: data bytes after a channel message reuse its status
@@ -34,6 +34,8 @@ NoteMessage = namedtuple("NoteMessage", "kind channel note velocity")
 # the Pico's stamp: seq (14 bits), ch = bell channel 1-8 (0: a clock
 # message), pico_ms = its tick ms (the stroke's keypad stamp, or now)
 StampMessage = namedtuple("StampMessage", "kind seq ch pico_ms")
+# a Control Change (kind MIDI_CC): the sandheads readings (sandswing heads_cc.py)
+CcMessage = namedtuple("CcMessage", "kind channel cc value")
 
 
 def parse_stamp(msg):
@@ -135,6 +137,8 @@ class MidiParser:
 
 def _note(status, data):
     kind = status & C.MIDI_TYPE_MASK
+    if kind == C.MIDI_CONTROL_CHANGE:
+        return CcMessage(C.MIDI_CC, (status & C.MIDI_CHANNEL_MASK) + 1, data[0], data[1])
     if kind not in (C.MIDI_NOTE_ON, C.MIDI_NOTE_OFF):
         return None
     note, vel = data[0], data[1]
@@ -152,6 +156,10 @@ _SEQ_NOTE = re.compile(r"^\s*\d+:\d+\s+Note (on|off)\s+(\d+),\s*note (\d+)(?:,\s
 _SEQ_SYSEX = re.compile(r"^\s*\d+:\d+\s+%s\s+((?:[0-9A-Fa-f]{2}\s*)+)$" % C.MIDI_SEQ_SYSEX_WORDS)
 
 
+# aseqdump:  " 28:0   Control change         15, controller 102, value 1"
+_SEQ_CC = re.compile(r"^\s*\d+:\d+\s+Control change\s+(\d+),\s*controller (\d+),\s*value (\d+)")
+
+
 def parse_seq_line(line):
     """One aseqdump line -> NoteMessage / StampMessage, or None (header,
     other events, a SysEx that is not a stamp)."""
@@ -160,6 +168,9 @@ def parse_seq_line(line):
     m = _SEQ_SYSEX.match(line.rstrip())
     if m:
         return parse_stamp(bytes(int(h, 16) for h in m.group(1).split()))
+    m = _SEQ_CC.match(line)
+    if m:
+        return CcMessage(C.MIDI_CC, int(m.group(1)) + 1, int(m.group(2)), int(m.group(3)))
     m = _SEQ_NOTE.match(line)
     if not m:
         return None

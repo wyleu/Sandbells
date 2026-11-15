@@ -25,7 +25,8 @@
   </header>
 
   <p id="align-note">Live adjustments only: they are <strong>not saved</strong> to settings.json,
-    and a reboot returns the head to its saved values.</p>
+    and a reboot returns the head to its saved values.
+    {% if cfg %}<a id="align-ptlog" href="{{ cfg.serial.logUrl }}?days=7">PT level log (CSV, last 7 days)</a>{% endif %}</p>
 
   <nav id="align-heads" role="tablist" aria-label="heads"></nav>
 

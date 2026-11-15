@@ -23,7 +23,7 @@ from . import constants as C
 from . import midiingest
 from .ingest import Ingest
 from .mapping import ChannelMapper
-from .midiparse import MidiParser, NoteMessage, StampMessage, parse_seq_line, parse_stamp
+from .midiparse import CcMessage, MidiParser, NoteMessage, StampMessage, parse_seq_line, parse_stamp
 from .models import Event
 from .store import EventStore
 
@@ -118,7 +118,8 @@ class ParserTests(SimpleTestCase):
 
     def test_other_messages_and_channels(self):
         out, _ = self.feed([0xB0, 7, 100, 0xC0, 5, 0x93, 60, 100, 0xE0, 0, 64])
-        self.assertEqual(out, [NoteMessage(ON, 4, 60, 100)])   # 0x93: channel 4
+        # a Control Change comes out (the sandheads readings: tests_heads); the rest do not
+        self.assertEqual(out, [CcMessage(C.MIDI_CC, 1, 7, 100), NoteMessage(ON, 4, 60, 100)])
 
     def test_stray_data_and_cut_short_messages_are_dropped(self):
         out, p = self.feed([65, 100, NOTE_ON_CH1, 65, NOTE_ON_CH1, 64, 100])
@@ -136,8 +137,10 @@ class SeqLineTests(SimpleTestCase):
                          NoteMessage(OFF, 4, 60, 0))
         self.assertEqual(parse_seq_line(" 28:0   Note off                0, note 53"), off(53))
         for line in ("Waiting for data. Press Ctrl+C to end.", "Source  Event  Ch  Data",
-                     " 28:0   Control change          0, controller 7, value 100", ""):
+                     " 28:0   Program change          0, program 5", ""):
             self.assertIsNone(parse_seq_line(line))
+        self.assertEqual(parse_seq_line(" 28:0   Control change          0, controller 7, value 100"),
+                         CcMessage(C.MIDI_CC, 1, 7, 100))
 
 
 # ---- the Pico's stamp SysEx (sandswing midi_stamp.py) ---------------------------

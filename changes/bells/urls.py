@@ -75,6 +75,9 @@ urlpatterns = [
     path("api/farm/device-status/",views.farm_device_status,name="farm_device_status"),
     path("farm/heads/", views.farm_heads, name="farm_heads"),
     path("farm/heads/<int:index>/", views.farm_heads, name="farm_heads_index"),
+    path("farm/heads/serial/", views.farm_heads_serial, name="farm_heads_serial"),
+    path("farm/heads/serial/cmd/", views.farm_heads_serial_cmd, name="farm_heads_serial_cmd"),
+    path("farm/heads/pt-log.csv", views.farm_heads_pt_log, name="farm_heads_pt_log"),
     # the page's first name: still works, goes to /farm/heads/
     path("farm/align/", views.farm_align, name="farm_align"),
     path("farm/align/<int:index>/", views.farm_align, name="farm_align_index"),

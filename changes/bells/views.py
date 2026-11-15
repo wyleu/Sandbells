@@ -587,18 +587,95 @@ def farm_align(request, index=None):
     return redirect(url)
 
 
+@ensure_csrf_cookie
 def farm_heads(request, index=None):
     """The sandheads tab for one concentrator: a row of head buttons and one
     head's panel (comparator trace, readouts, live nudges).  The browser
-    talks to the Pico's /ws directly; nothing here is stored or sent on."""
+    talks to the Pico's /ws directly, or (USB data port on this Pi) through
+    farm_heads_serial / farm_heads_serial_cmd; nothing is saved on the Pico."""
     from bells import align
+    from events import serialheads
     instances = load_farm_instances()
     i, inst = align.pick(instances, index)
     if index is not None and inst is None:
         raise Http404("not a concentrator in the farm registry")
+    cfg = None
+    if inst:
+        try:
+            h = serialheads.heads()
+            serial_open = h["running"] and h["connected"]
+        except Exception:
+            serial_open = False
+        via = align.pick_via(inst, serial_open, request.GET.get("via"))
+        cfg = align.page_config(inst, via, {
+            "cmdUrl": reverse("farm_heads_serial_cmd"), "pollUrl": reverse("farm_heads_serial"),
+            "logUrl": reverse("farm_heads_pt_log")})
     return render(request, "bells/align.html", {
         "inst": inst,
         "index": i,
-        "cfg": align.page_config(inst) if inst else None,
+        "cfg": cfg,
         "farm_index": i if i is not None else 0,
     })
+
+
+def farm_heads_serial(request):
+    """The sandheads page's poll over USB: the Pico's readings and acks
+    newer than ?midi_after=<n> (MIDI CC, decoded by ingest_midi into
+    MIDI_HEADS_PATH) and ?after=<n> (JSON lines on the data port, only from
+    a Pico with no USB MIDI: ingest_serial's SERIAL_HEADS_PATH), plus the
+    newest serial heartbeat's tower and head kinds.  Tmpfs reads only."""
+    from events import serialheads, serialingest
+    from events.headscc import midi_heads_path
+    try:
+        after = int(request.GET.get("after") or 0)
+        midi_after = int(request.GET.get("midi_after") or 0)
+    except ValueError:
+        return JsonResponse({"error": "bad after"}, status=400)
+    out = serialheads.heads(after)
+    out["midi"] = serialheads.heads(midi_after, path=midi_heads_path())
+    hb = None
+    try:
+        latest = serialingest.latest()
+    except Exception:
+        latest = None
+    if latest is not None:
+        # kinds rarely change: a stale heartbeat's are still the best known
+        b = latest["heartbeat"].get("body") or {}
+        hb = {"schema": EVENTS.SERIAL_HB_SCHEMA, "type": EVENTS.SERIAL_HB_TYPE,
+              "body": {"tower": None if latest["stale"] else b.get("tower"),
+                       "chan": b.get("chan"), "pt": b.get("pt")}}
+    out["heartbeat"] = hb
+    out["hb_age_ms"] = None if latest is None else latest["age_ms"]
+    out["hb_stale"] = None if latest is None else bool(latest["stale"])
+    return JsonResponse(out)
+
+
+@require_POST
+def farm_heads_serial_cmd(request):
+    """One sandheads command for the Pico, through ingest_serial (the one
+    owner of the port).  Only {"cmd":"align",...} with checked fields."""
+    from events import serialheads
+    try:
+        line = serialheads.check_command(json.loads(request.body.decode("utf-8")))
+    except (ValueError, UnicodeDecodeError) as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    try:
+        serialheads.send_command(line)
+    except OSError as e:
+        return JsonResponse({"ok": False, "error": "ingest_serial is not listening (%s)" % e},
+                            status=503)
+    return JsonResponse({"ok": True})
+
+
+def farm_heads_pt_log(request):
+    """The PT level log (HeadLevel) as CSV: ?days=N (default
+    PT_LOG_DAYS_DEFAULT, at most PT_LOG_DAYS_MAX)."""
+    from events.headlog import rows_csv
+    try:
+        days = int(request.GET.get("days") or EVENTS.PT_LOG_DAYS_DEFAULT)
+    except ValueError:
+        return HttpResponse("bad days", status=400, content_type="text/plain")
+    days = max(1, min(days, EVENTS.PT_LOG_DAYS_MAX))
+    r = HttpResponse(rows_csv(days), content_type="text/csv; charset=utf-8")
+    r["Content-Disposition"] = 'inline; filename="pt-level-%dd.csv"' % days
+    return r
