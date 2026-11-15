@@ -31,7 +31,7 @@
   var S = {
     sock: null, urlIx: 0, rd: window.ReconnectDelay.create(), connectTimer: null, keepTimer: null,
     helloAt: 0, lastRx: 0, heardHb: 0,
-    kinds: [], tower: "", gotInfo: false,
+    kinds: [], tower: "", gotInfo: false, ptCh: 0,
     sel: 0,                      // the head on show (1-based), active or not
     want: 0,                     // the head being watched: sel when it is active, else none
     shown: 0, cards: {}
@@ -156,10 +156,12 @@
     card.rb = readout("Threshold readback");
     card.thrR = readout("Threshold duty");
     card.drvR = readout("Laser drive duty");
+    card.pt = readout("PT level (Orange/White)");
     r.appendChild(card.ma.box);
     r.appendChild(card.rb.box);
     r.appendChild(card.thrR.box);
     r.appendChild(card.drvR.box);
+    r.appendChild(card.pt.box);
     right.appendChild(r);
 
     var n = el("div", "nudges");
@@ -384,8 +386,27 @@
     card.ma.val.textContent = b.ma === null || b.ma === undefined ? "—" : b.ma.toFixed(1) + " mA";
     card.rb.val.textContent = b.rb === null || b.rb === undefined ? "—" : String(b.rb);
     card.rb.sub.textContent = volts(b.rb);
-    card.ma.val.className = card.rb.val.className = "val" + (b.busy ? " stale" : "");
+    showPt(card, b);
+    card.ma.val.className = card.rb.val.className = card.pt.val.className = "val" + (b.busy ? " stale" : "");
     refreshCard(card);
+  }
+
+  /* the raw PT level (sandswing pt_level.py: GP27, one channel only).  null:
+     no wire on this channel; absent: firmware without it.  A head without
+     the Orange/White wire leaves the pin floating, which the Pico cannot
+     tell, so the reading is labelled, never trusted blindly. */
+  function showPt(card, b) {
+    if (!("pt" in b)) {
+      card.pt.val.textContent = "—";
+      card.pt.sub.textContent = "";
+    } else if (b.pt === null) {
+      card.pt.val.textContent = "not wired";
+      card.pt.sub.textContent = S.ptCh ? "only head " + S.ptCh + " has it" : "";
+    } else {
+      card.pt.val.textContent = b.pt.toFixed(2) + " V";
+      card.pt.sub.textContent = (b.pt_span === null || b.pt_span === undefined ? "" :
+        "spread " + b.pt_span.toFixed(2) + " V · ") + "real only with the Orange/White wire";
+    }
   }
 
   function onAck(m) {
@@ -413,6 +434,7 @@
   function onInfo(m) {
     var b = m.body || {};
     S.kinds = b.kinds || [];
+    S.ptCh = b.pt && b.pt.ch ? b.pt.ch : 0;
     setTower(b.tower);
     kindsChanged();
   }

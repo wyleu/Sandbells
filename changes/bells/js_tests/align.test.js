@@ -130,8 +130,8 @@ test("a frame fills the readouts and draws the trace", () => {
                                      rb: 23500, thr: 23500, drv: 63000, tower: "inactive", busy: false }));
   const card = r.cards()[0];
   const vals = r.text(card, "val").map((e) => e.textContent);
-  assert.deepEqual(vals, ["4.9 mA", "23500", "35.9 %", "96.1 %"]);
-  assert.deepEqual(r.text(card, "sub").map((e) => e.textContent), ["", "1.18 V", "23500", "63000"]);
+  assert.deepEqual(vals, ["4.9 mA", "23500", "35.9 %", "96.1 %", "—"]);   // no pt key: older firmware
+  assert.deepEqual(r.text(card, "sub").map((e) => e.textContent), ["", "1.18 V", "23500", "63000", ""]);
   const canvas = card.find((e) => e.tag === "canvas")[0];
   tick(r);
   const fills = canvas.ctx.calls.filter((c) => c[0] === "fillRect");
@@ -143,6 +143,25 @@ test("a frame fills the readouts and draws the trace", () => {
   assert.match(r.text(card, "val")[0].className, /stale/);
   assert.equal(r.text(card, "val")[2].textContent, "—");
   assert.equal(r.ids["align-tower"].textContent, "strokes in progress: adjusting paused");
+});
+
+test("the PT level: volts with its spread and a label on the wired head, 'not wired' elsewhere", () => {
+  const r = rig();
+  r.sockets[0].open();
+  r.sockets[0].recv(r.msg("align_info", { kinds: r.kinds, tower: "inactive", pt: { ch: 1, gp: 27 } }));
+  r.sockets[0].recv(r.msg("align", { ch: 1, n: 16, dt: 20, bits: "f81f", ma: 4.9, rb: 1, thr: 1,
+                                     drv: 65535, pt: 1.562, pt_span: 0.004, tower: "inactive", busy: false }));
+  const card = r.cards()[0];
+  assert.equal(r.text(card, "val")[4].textContent, "1.56 V");
+  assert.equal(r.text(card, "sub")[4].textContent, "spread 0.00 V · real only with the Orange/White wire");
+  r.tabs()[1].click();                                 // head 2: no PT wire
+  r.sockets[0].recv(r.msg("align", { ch: 2, n: 16, dt: 20, bits: "ffff", ma: 4.9, rb: null, thr: null,
+                                     drv: 65535, pt: null, pt_span: null, tower: "inactive", busy: true }));
+  const card2 = r.cards()[0];
+  assert.equal(card2.attrs["data-ch"], "2");
+  assert.equal(r.text(card2, "val")[4].textContent, "not wired");
+  assert.equal(r.text(card2, "sub")[4].textContent, "only head 1 has it");
+  assert.match(r.text(card2, "val")[4].className, /stale/);
 });
 
 test("the buttons send the commands; paused while strokes are in progress; old head has no threshold", () => {
