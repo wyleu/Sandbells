@@ -536,3 +536,11 @@ text {
   width: 100px;
   pointer-events: none;
 }
+
+/* Home page, left column: links to other Sandbells pages (Chimes). */
+.home_menu_item {
+  display: block;
+  margin-top: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+}

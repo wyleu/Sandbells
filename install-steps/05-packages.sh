@@ -51,6 +51,7 @@ PACKAGES=(
     libnss-mdns
     htop
     rsync
+    poppler-utils      # pdftoppm: Chimes tune PDFs -> page images
 )
 
 # Only install what is missing

@@ -37,10 +37,10 @@ def live_panel(ring=None):
 @register.inclusion_tag("events/top_menu.html")
 def top_menu(current=None):
     """{% top_menu current=<farm index> %} -- the shared menu of every top line:
-    Sandbells, Strokes (when the farm has a concentrator), Rings by day, Ingest, then
+    Sandbells, Strokes (when the farm has a concentrator), Rings by day, Ingest, Chimes, then
     on the right one button per farm device, Sandtest and sandheads (concentrator).
-    current is the farm page index, or "heads", "strokes", "days" or "ingest" on those
-    pages."""
+    current is the farm page index, or "heads", "strokes", "days", "ingest" or
+    "chimes" on those pages."""
     from bells.views import load_farm_instances      # here: bells imports events
     instances = load_farm_instances()
     devices = [{"index": i, "name": d["name"], "on": current == i}
@@ -57,4 +57,7 @@ def top_menu(current=None):
             "strokes_on": current == "strokes",
             # the Ingest page: is the event ingest there, running, set up right
             "ingest_url": reverse("events:ingest"),
-            "ingest_on": current == "ingest"}
+            "ingest_on": current == "ingest",
+            # the Chimes page: handbell tune sheets (bells/chimes_views.py)
+            "chimes_url": reverse("chimes"),
+            "chimes_on": current == "chimes"}

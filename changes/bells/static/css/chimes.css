@@ -1,0 +1,62 @@
+/* Chimes: handbell tune sheets.  The sheet fills what the screen has left,
+   object-fit: contain on black; the tune menu sits on the right like the
+   home page's method menu (red first letter, then black, on whitesmoke). */
+
+:root {
+  --chimes-menu-width: 22vw;
+  --chimes-pager-gap: 1rem;
+  --chimes-first-size: 3.1vh;      /* same as .frontpage_td_select_first_char */
+  --chimes-other-size: 2.9vh;      /* same as .frontpage_td_select_other_char */
+}
+
+html, body { height: 100%; margin: 0; }
+
+body.chimes {
+  font-family: system-ui, sans-serif;
+  background: #000;
+  color: #eee;
+  display: flex;
+  flex-direction: column;
+}
+
+#chimes-header { flex: 0 0 auto; }
+.topline { display: flex; gap: 0.75rem 1rem; align-items: center; flex-wrap: wrap;
+           padding: 0.3rem 0.6rem; }
+
+#chimes-body { flex: 1 1 auto; display: flex; min-height: 0; }
+
+#chimes-sheet { flex: 1 1 auto; position: relative; background: #000; min-width: 0; }
+#chimes-open-full { display: block; width: 100%; height: 100%; }
+#chimes-image { display: block; width: 100%; height: 100%; object-fit: contain; }
+#chimes-empty { padding: 2rem; font-size: 2.5vh; }
+
+#chimes-pager { position: absolute; left: 0; right: 0; bottom: 0.5rem;
+                display: flex; justify-content: center; align-items: center;
+                gap: var(--chimes-pager-gap); }
+.pagebtn { border: 1px solid #6b5a35; border-radius: 999px; padding: 0.3rem 1rem;
+           background: rgba(44, 37, 25, 0.85); color: #f1e3c2; text-decoration: none;
+           font-size: 2.4vh; }
+.pagebtn.off { opacity: 0.35; }
+.pagecount { color: #f1e3c2; font-size: 2.4vh; background: rgba(0, 0, 0, 0.6);
+             padding: 0.2rem 0.6rem; border-radius: 999px; }
+
+#chimes-menu { flex: 0 0 var(--chimes-menu-width); background: whitesmoke;
+               overflow-y: auto; }
+.chimes_select { border-collapse: collapse; width: 100%; margin-left: 10px; }
+.chimes_tune { display: block; padding: 0.2rem 0.4rem; text-decoration: none;
+               white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+               border-left: 4px solid transparent; }
+.chimes_tune.on { border-left-color: green; background: #e2f0e2; }
+.chimes_first_char { color: red; font-size: var(--chimes-first-size); margin-right: 4px; }
+.chimes_other_char { color: black; font-size: var(--chimes-other-size); }
+.chimes_count { color: green; font-size: large; padding-right: 0.5rem; }
+
+/* Full screen: only the sheet. */
+body.chime-full { background: #000; overflow: hidden; }
+#chime-full-back { display: block; width: 100vw; height: 100vh; }
+#chime-full-image { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+.fullbtn { position: fixed; top: 50%; transform: translateY(-50%);
+           font-size: 5vh; color: rgba(255, 255, 255, 0.35); text-decoration: none;
+           padding: 1rem; }
+#chime-full-prev { left: 0; }
+#chime-full-next { right: 0; }

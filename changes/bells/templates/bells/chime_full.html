@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ tune.title }} · {{ page.number }}</title>
+  <link rel="stylesheet" href="{% static 'css/chimes.css' %}?v={{ git_hash }}">
+</head>
+<body class="chime-full">
+  {# The sheet fitted to the whole screen ({{ screen_w }}x{{ screen_h }} at the tower), black round it. #}
+  <a id="chime-full-back" href="{{ back_url }}" title="Back to the Chimes menu">
+    <img id="chime-full-image" src="{{ image_url }}" alt="{{ tune.title }}, page {{ page.number }}">
+  </a>
+  {% if prev_full_url %}<a class="fullbtn" id="chime-full-prev" href="{{ prev_full_url }}" title="Previous page">&#9664;</a>{% endif %}
+  {% if next_full_url %}<a class="fullbtn" id="chime-full-next" href="{{ next_full_url }}" title="Next page">&#9654;</a>{% endif %}
+
+  <script nonce="{{ request.csp_nonce }}">
+  (function () {
+    "use strict";
+    var keys = {
+      ArrowLeft: "{{ prev_full_url|escapejs }}",
+      ArrowRight: "{{ next_full_url|escapejs }}",
+      Escape: "{{ back_url|escapejs }}"
+    };
+    document.addEventListener("keydown", function (ev) {
+      var url = keys[ev.key];
+      if (url) { window.location.href = url; }
+    });
+  })();
+  </script>
+</body>
+</html>

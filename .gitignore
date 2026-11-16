@@ -14,3 +14,6 @@ luakit.log
 changes/logs/
 *.sqlite3-wal
 *.sqlite3-shm
+
+# Chimes: uploaded tune sheets and their generated page images (bells/chimes.py)
+changes/media/

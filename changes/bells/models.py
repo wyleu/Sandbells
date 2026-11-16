@@ -170,3 +170,141 @@ class Function(models.Model):
 
     def __str__(self):
         return ' '.join(self.name, str(self.order)) 
+
+
+# ---------------------------------------------------------------------------
+# Chimes: handbell tune sheets (bells/chimes.py does the file work)
+# ---------------------------------------------------------------------------
+
+from pathlib import Path
+
+from django.core.validators import FileExtensionValidator
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+from django.utils import timezone
+from django.utils.text import slugify
+
+from . import chimes as chime_files
+
+CHIME_TITLE_MAX = 200
+CHIME_SLUG_MAX = 200
+CHIME_ORDER_DEFAULT = 100
+CHIME_FILE_NAME_MAX = 255
+CHIME_SHA256_LEN = 64
+CHIME_SLUG_FALLBACK = "tune"
+
+
+class ChimeTune(models.Model):
+    """One handbell tune: an uploaded PDF (or image) and its page images."""
+    title = models.CharField(max_length=CHIME_TITLE_MAX)
+    slug = models.SlugField(max_length=CHIME_SLUG_MAX, unique=True, blank=True,
+                            help_text="Used in the page address; made from the title when blank")
+    order = models.SmallIntegerField(default=CHIME_ORDER_DEFAULT,
+                                     help_text="Position in the Chimes menu (lowest first)")
+    enable = models.BooleanField(default=True, help_text="Show this tune in the Chimes menu")
+    notes = models.TextField(blank=True)
+    source = models.FileField(
+        upload_to=chime_files.SOURCES_DIR, storage=chime_files.chime_storage,
+        max_length=CHIME_FILE_NAME_MAX,
+        validators=[FileExtensionValidator(
+            [ext.lstrip(".") for ext in chime_files.ALLOWED_EXTENSIONS])],
+        help_text="A PDF (each page becomes one screen) or a single image")
+    source_sha256 = models.CharField(max_length=CHIME_SHA256_LEN, blank=True, editable=False)
+    page_count = models.SmallIntegerField(default=0, editable=False)
+    rendered = models.DateTimeField(null=True, blank=True, editable=False)
+    render_error = models.TextField(blank=True, editable=False)
+    pub_date = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["order", "title"]
+
+    def __str__(self):
+        return self.title
+
+    def pages_dir(self) -> Path:
+        return chime_files.chimes_root() / chime_files.PAGES_DIR / str(self.pk)
+
+    def _unique_slug(self) -> str:
+        base = slugify(self.title)[:CHIME_SLUG_MAX] or CHIME_SLUG_FALLBACK
+        slug, n = base, 1
+        while ChimeTune.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            n += 1
+            suffix = "-%d" % n
+            slug = base[:CHIME_SLUG_MAX - len(suffix)] + suffix
+        return slug
+
+    def save(self, *args, render=True, **kwargs):
+        """Save, then (re)make the page images when the source is new or changed.
+        Raises chimes.ChimeRenderError if that fails (render_error keeps why)."""
+        if not self.slug:
+            self.slug = self._unique_slug()
+        old_source = None
+        if self.pk:
+            old_source = (ChimeTune.objects.filter(pk=self.pk)
+                          .values_list("source", flat=True).first())
+        super().save(*args, **kwargs)
+        if old_source and old_source != self.source.name:
+            chime_files.chime_storage.delete(old_source)
+        if render:
+            self.render_pages()
+
+    def render_pages(self, force=False) -> bool:
+        """Make the PNG pages from the source.  False if they were already up to
+        date.  Raises chimes.ChimeRenderError."""
+        if not self.source:
+            return False
+        source = Path(self.source.path)
+        sha = chime_files.file_sha256(source)
+        if (not force and sha == self.source_sha256 and self.page_count
+                and self.pages.count() == self.page_count):
+            return False
+        try:
+            files = chime_files.render_source(source, self.pages_dir())
+        except chime_files.ChimeRenderError as e:
+            self.render_error = str(e)
+            ChimeTune.objects.filter(pk=self.pk).update(render_error=self.render_error)
+            raise
+        from PIL import Image
+        root = chime_files.chimes_root()
+        self.pages.all().delete()
+        for number, f in enumerate(files, start=1):
+            with Image.open(f) as im:
+                width, height = im.size
+            ChimePage.objects.create(tune=self, number=number,
+                                     image=f.relative_to(root).as_posix(),
+                                     width=width, height=height)
+        self.source_sha256 = sha
+        self.page_count = len(files)
+        self.rendered = timezone.now()
+        self.render_error = ""
+        ChimeTune.objects.filter(pk=self.pk).update(
+            source_sha256=self.source_sha256, page_count=self.page_count,
+            rendered=self.rendered, render_error=self.render_error)
+        return True
+
+
+class ChimePage(models.Model):
+    """One generated screen of a tune (made by ChimeTune.render_pages)."""
+    tune = models.ForeignKey("ChimeTune", related_name="pages", on_delete=models.CASCADE)
+    number = models.PositiveSmallIntegerField()
+    image = models.FileField(storage=chime_files.chime_storage, max_length=CHIME_FILE_NAME_MAX)
+    width = models.PositiveSmallIntegerField(default=0)
+    height = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["tune", "number"]
+        unique_together = [("tune", "number")]
+
+    def __str__(self):
+        return "%s p%d" % (self.tune.title, self.number)
+
+
+@receiver(post_delete, sender=ChimeTune)
+def _chime_tune_deleted(sender, instance, **kwargs):
+    """A deleted tune takes its source and page images with it (admin bulk
+    delete included)."""
+    import shutil
+    if instance.source:
+        chime_files.chime_storage.delete(instance.source.name)
+    if instance.pk is not None:
+        shutil.rmtree(instance.pages_dir(), ignore_errors=True)

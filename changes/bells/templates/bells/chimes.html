@@ -1,0 +1,71 @@
+{% load static events_live %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Chimes{% if tune %} · {{ tune.title }}{% endif %}</title>
+  <link rel="stylesheet" href="{% static 'css/chimes.css' %}?v={{ git_hash }}">
+  {% include "events/menu_style.html" %}
+</head>
+<body class="chimes">
+  <header id="chimes-header">
+    <div class="topbar topline">
+      {% top_menu current="chimes" %}
+      <span class="right">{% include "events/mini_clock.html" %}</span>
+    </div>
+  </header>
+
+  <div id="chimes-body">
+    <main id="chimes-sheet">
+      {% if tune %}
+        <a id="chimes-open-full" href="{{ full_url }}" title="Full screen">
+          <img id="chimes-image" src="{{ image_url }}" alt="{{ tune.title }}, page {{ page.number }}"
+               width="{{ page.width }}" height="{{ page.height }}">
+        </a>
+        {% if tune.page_count > 1 %}
+          <nav id="chimes-pager" aria-label="pages">
+            {% if prev_url %}<a class="pagebtn" id="chimes-prev" href="{{ prev_url }}">&#9664; Previous</a>{% else %}<span class="pagebtn off">&#9664; Previous</span>{% endif %}
+            <span class="pagecount">{{ page.number }} / {{ tune.page_count }}</span>
+            {% if next_url %}<a class="pagebtn" id="chimes-next" href="{{ next_url }}">Next &#9654;</a>{% else %}<span class="pagebtn off">Next &#9654;</span>{% endif %}
+          </nav>
+        {% endif %}
+      {% else %}
+        <p id="chimes-empty">No tunes yet. Add one in the admin (Bells &rsaquo; Chime tunes).</p>
+      {% endif %}
+    </main>
+
+    <aside id="chimes-menu" aria-label="tunes">
+      <table class="chimes_select">
+        {% for t in tunes %}
+          <tr>
+            <td>
+              <a class="chimes_tune{% if tune and t.pk == tune.pk %} on{% endif %}"
+                 href="{% url 'chime_tune' t.slug %}">
+                <span class="chimes_first_char">{{ t.title|slice:":1" }}</span><span class="chimes_other_char">{{ t.title|slice:"1:" }}</span>
+              </a>
+            </td>
+            <td><span class="chimes_count">{% if t.page_count > 1 %}{{ t.page_count }}{% endif %}</span></td>
+          </tr>
+        {% endfor %}
+      </table>
+    </aside>
+  </div>
+
+  <script nonce="{{ request.csp_nonce }}">
+  (function () {
+    "use strict";
+    // Keys for a keyboard at the tower: arrows turn the page, f or Enter goes full screen.
+    var keys = {
+      ArrowLeft: "{{ prev_url|escapejs }}",
+      ArrowRight: "{{ next_url|escapejs }}",
+      f: "{{ full_url|escapejs }}",
+      Enter: "{{ full_url|escapejs }}"
+    };
+    document.addEventListener("keydown", function (ev) {
+      var url = keys[ev.key];
+      if (url) { window.location.href = url; }
+    });
+  })();
+  </script>
+</body>
+</html>

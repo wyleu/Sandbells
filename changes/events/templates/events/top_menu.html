@@ -10,6 +10,7 @@
   {% if strokes_url %}<a class="navbtn strokes{% if strokes_on %} on{% endif %}" href="{{ strokes_url }}">Strokes</a>{% endif %}
   <a class="navbtn days{% if days_on %} on{% endif %}" href="{{ days_url }}">Rings by day</a>
   <a class="navbtn ingest{% if ingest_on %} on{% endif %}" href="{{ ingest_url }}">Ingest</a>
+  {% if chimes_url %}<a class="navbtn chimes{% if chimes_on %} on{% endif %}" href="{{ chimes_url }}">Chimes</a>{% endif %}
   <span class="sandnav">{% for d in devices %}<a class="navbtn{% if d.on %} on{% endif %}" href="{% url 'farm_status_index' d.index %}">{{ d.name }}</a>{% endfor %}
   {% load sandtest_menu %}{% sandtest_button %}
   {% if heads_url %}<a class="navbtn heads{% if heads_on %} on{% endif %}" href="{{ heads_url }}">sandheads</a>{% endif %}</span>

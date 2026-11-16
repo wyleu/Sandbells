@@ -7,6 +7,7 @@ from . import models
 
 from . import status_views
 from . import controls
+from . import chimes_views
 
 # Serializers define the API representation
 class UserSerializer(serializers.HyperlinkedModelSerializer):
@@ -41,6 +42,11 @@ urlpatterns = [
     path('home/', views.home, name='home'),
     path('draw/', views.some_draw, name='draw'),
     path('menu/', views.menu, name ='menu'),
+    path("chimes/", chimes_views.chimes, name="chimes"),
+    path("chimes/<slug:slug>/", chimes_views.chime_page, name="chime_tune"),
+    path("chimes/<slug:slug>/<int:page>/", chimes_views.chime_page, name="chime_page"),
+    path("chimes/<slug:slug>/<int:page>/full/", chimes_views.chime_full, name="chime_full"),
+    path("chimes/<slug:slug>/<int:page>/image.png", chimes_views.chime_image, name="chime_image"),
     path("farm/status/", views.farm_status, name="farm_status"),
     path("farm/status/<int:index>/", views.farm_status, name="farm_status_index"),    path("swing/<int:n>/", views.swing_display, name="swing_display"),
     path('clock/analogue/', views.clock_analogue, name = 'analogue_clock'),

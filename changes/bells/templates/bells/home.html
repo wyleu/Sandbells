@@ -10,6 +10,8 @@ SANDBELLS
       {% include "bells/svg_data.html" %}
     </div>
     <div id="bell-circle" data-feed-url="{{ feed.url }}" data-feed-poll-ms="{{ feed.poll_ms }}" data-feed-limit="{{ feed.limit }}" data-feed-timeout-ms="{{ feed.timeout_ms }}" data-strike-gap-ms="{{ feed.strike_gap_ms }}"></div>
+    <a id="home-chimes" class="home_menu_item" href="{% url 'chimes' %}" target="_top"
+       onclick="sessionStorage.setItem('sandbellsReturn', '/')"><span class="frontpage_td_select_first_char shadow">C</span><span class="frontpage_td_select_other_char shadow">himes</span></a>
   </div>
   {% include "bells/iframe.html" %}
   {% include "bells/changes.html" %}
