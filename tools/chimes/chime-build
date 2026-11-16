@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""chime-build -- turn a LilyPond tune into a Sandbells Chimes bundle.
+
+    chime-build TUNE.ly [-o OUTDIR] [--allow] [--overlay]
+
+Runs LilyPond on the tune (its file is not edited: chime-notemap.ily is
+loaded with -dinclude-settings), renders the PDF pages to PNGs 1080 px tall
+with pdftoppm (the same as Sandbells does), reads the MIDI, and writes
+
+    OUTDIR/<slug>/            tune.json, score.pdf, tune.midi, notemap.json,
+                              pages/page-001.png ...  (overlay/ with --overlay)
+    OUTDIR/<slug>.chime.zip   the same, for  manage.py chime_load <zip>
+
+Every note is checked against the 8 Sandbach bells (F5 down to F4).  Any
+other note is listed with its bar, beat and pitch, and nothing is written
+(exit 2) unless --allow is given.  Notes are never transposed or bent.
+
+No \\midi block in the tune: a MIDI file is made from the printed notes at
+--tempo (repeats then play once, as printed).
+
+Needs: lilypond (2.24), pdftoppm (poppler-utils).  --overlay needs Pillow.
+"""
+
+import argparse
+import json
+import os
+import re
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
+import unicodedata
+import zipfile
+from fractions import Fraction
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[1]
+sys.path.insert(0, str(REPO / "changes" / "bells"))
+
+import chime_midi                                # noqa: E402
+import chime_notemap                             # noqa: E402
+
+NOTEMAP_ILY = HERE / "chime-notemap.ily"
+BUNDLE_FORMAT = "sandbells-chime-bundle"
+BUNDLE_VERSION = 1
+BUNDLE_SUFFIX = ".chime.zip"
+PAGE_HEIGHT_PX = 1080                            # bells/chimes.py PAGE_HEIGHT_PX
+PAGE_FILE_TEMPLATE = "page-{number:03d}.png"     # bells/chimes.py PAGE_FILE_TEMPLATE
+PDFTOPPM_KEEP_ASPECT = "-1"
+DEFAULT_TEMPO_BPM = 100
+LILYPOND_TIMEOUT_S = 600
+PDFTOPPM_TIMEOUT_S = 120
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+PNG_IHDR_SIZE_AT = 16                            # width, height follow the IHDR tag
+EXIT_OUT_OF_SET = 2
+EXIT_FAILED = 1
+REPORT_MAX_LINES = 40                            # out-of-set notes listed one by one
+OVERLAY_DOT_RADIUS_PX = 9
+OVERLAY_HEAD_OUTLINE_PX = 2
+OVERLAY_DOT_COLOUR = (230, 0, 0)
+OVERLAY_HEAD_COLOUR = (0, 90, 255)
+OVERLAY_LABEL_COLOUR = (0, 0, 0)
+OVERLAY_LABEL_OFFSET_PX = 11
+TITLE_RE = re.compile(r'^\s*title\s*=\s*"([^"]*)"', re.M)
+
+
+def fail(msg, code=EXIT_FAILED):
+    print("chime-build: " + msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def slugify(text):
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    text = re.sub(r"[^\w\s-]", "", text).strip().lower()
+    return re.sub(r"[-\s_]+", "-", text) or "tune"
+
+
+def png_size(path):
+    with open(path, "rb") as f:
+        head = f.read(PNG_IHDR_SIZE_AT + 8)
+    if head[:len(PNG_SIGNATURE)] != PNG_SIGNATURE:
+        fail("%s is not a PNG" % path)
+    return struct.unpack(">II", head[PNG_IHDR_SIZE_AT:PNG_IHDR_SIZE_AT + 8])
+
+
+def run_lilypond(lilypond, ly, work):
+    out = work / ly.stem
+    env = dict(os.environ, CHIME_NOTEMAP_OUT=str(work / "notemap.tsv"))
+    cmd = [lilypond, "-dinclude-settings=%s" % NOTEMAP_ILY, "-I", str(ly.parent),
+           "-o", str(out), str(ly)]
+    print("running: " + " ".join(cmd))
+    try:
+        done = subprocess.run(cmd, cwd=ly.parent, env=env, capture_output=True,
+                              text=True, timeout=LILYPOND_TIMEOUT_S)
+    except FileNotFoundError:
+        fail("lilypond not found (%s)" % lilypond)
+    except subprocess.TimeoutExpired:
+        fail("lilypond took longer than %d s" % LILYPOND_TIMEOUT_S)
+    if done.returncode != 0:
+        sys.stderr.write(done.stderr[-4000:])
+        fail("lilypond failed on %s" % ly.name)
+    pdfs = sorted(work.glob("*.pdf"))
+    if not pdfs:
+        fail("lilypond made no PDF (no \\layout score?)")
+    tsv = work / "notemap.tsv"
+    if not tsv.is_file():
+        fail("no note heads were recorded (chime-notemap.ily not loaded?)")
+    midis = sorted(work.glob("*.mid")) + sorted(work.glob("*.midi"))
+    return pdfs[0], tsv, (midis[0] if midis else None), done.stderr
+
+
+def render_pages(pdf, pages_dir):
+    pages_dir.mkdir(parents=True, exist_ok=True)
+    prefix = pages_dir / "raw"
+    cmd = ["pdftoppm", "-png", "-scale-to-y", str(PAGE_HEIGHT_PX),
+           "-scale-to-x", PDFTOPPM_KEEP_ASPECT, str(pdf), str(prefix)]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=PDFTOPPM_TIMEOUT_S)
+    except FileNotFoundError:
+        fail("pdftoppm not found: sudo apt install poppler-utils")
+    except subprocess.CalledProcessError as e:
+        fail("pdftoppm failed: %s" % e.stderr.decode(errors="replace"))
+    raw = sorted(pages_dir.glob("raw-*.png"),
+                 key=lambda p: int(re.search(r"-(\d+)\.png$", p.name).group(1)))
+    pages = []
+    for n, p in enumerate(raw, start=1):
+        dest = pages_dir / PAGE_FILE_TEMPLATE.format(number=n)
+        p.rename(dest)
+        pages.append(dest)
+    return pages
+
+
+def fallback_midi(heads, bpm, ppq=chime_midi.DEFAULT_PPQ):
+    seen, notes = set(), []
+    for h in heads:
+        key = (h.moment, h.midi)
+        if key in seen:
+            continue
+        seen.add(key)
+        start = chime_midi.moment_to_ticks(h.moment, ppq)
+        end = chime_midi.moment_to_ticks(h.moment + (h.length or Fraction(1, 4)), ppq)
+        notes.append((start, max(end, start + 1), h.midi))
+    return chime_midi.write_midi(notes, ppq=ppq, bpm=bpm)
+
+
+def draw_overlays(pages, heads, notemap, out_dir):
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        print("overlay skipped: Pillow is not installed (pip install pillow)")
+        return []
+    out_dir.mkdir(parents=True, exist_ok=True)
+    made = []
+    for n, page in enumerate(pages, start=1):
+        with Image.open(page) as im:
+            im = im.convert("RGB")
+        w, h = im.size
+        d = ImageDraw.Draw(im)
+        for hd in heads:
+            if hd.page != n:
+                continue
+            cx, cy, hw, hh = hd.fx * w, hd.fy * h, hd.fw * w / 2, hd.fh * h / 2
+            d.rectangle([cx - hw, cy - hh, cx + hw, cy + hh],
+                        outline=OVERLAY_HEAD_COLOUR, width=OVERLAY_HEAD_OUTLINE_PX)
+        for ev in notemap["events"]:
+            if ev["page"] != n:
+                continue
+            cx, cy, r = ev["fx"] * w, ev["fy"] * h, OVERLAY_DOT_RADIUS_PX
+            d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=OVERLAY_DOT_COLOUR)
+            d.text((cx + OVERLAY_LABEL_OFFSET_PX, cy - OVERLAY_LABEL_OFFSET_PX - r),
+                   str(ev["i"]), fill=OVERLAY_LABEL_COLOUR)
+        dest = out_dir / page.name
+        im.save(dest)
+        made.append(dest)
+    return made
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1],
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("ly", help="the tune's .ly file")
+    ap.add_argument("-o", "--out", default="chime-bundles", help="output folder (default %(default)s)")
+    ap.add_argument("--title", help="menu title (default: the .ly header title)")
+    ap.add_argument("--allow", action="store_true",
+                    help="build even if some notes are not on the 8 bells")
+    ap.add_argument("--overlay", action="store_true",
+                    help="also draw the note map over the pages (overlay/, needs Pillow)")
+    ap.add_argument("--tempo", type=float, default=DEFAULT_TEMPO_BPM,
+                    help="quarter notes a minute when the tune has no \\midi (default %(default)s)")
+    ap.add_argument("--lilypond", default=os.environ.get("LILYPOND", "lilypond"))
+    args = ap.parse_args(argv)
+
+    ly = Path(args.ly).resolve()
+    if not ly.is_file():
+        fail("no such file: %s" % ly)
+    source = ly.read_text(errors="replace")
+    m = TITLE_RE.search(source)
+    title = args.title or (m.group(1).strip() if m and m.group(1).strip() else
+                           ly.stem.replace("-", " ").replace("_", " "))
+    slug = slugify(title)
+    out_root = Path(args.out).resolve()
+
+    with tempfile.TemporaryDirectory(prefix="chime-build-") as tmp:
+        work = Path(tmp)
+        pdf, tsv, midi_path, log = run_lilypond(args.lilypond, ly, work)
+        heads = chime_notemap.parse_heads(tsv.read_text())
+        if not heads:
+            fail("no note heads found in %s" % ly.name)
+        if midi_path:
+            midi_bytes = midi_path.read_bytes()
+            midi_note = "from the tune's \\midi block"
+        else:
+            midi_bytes = fallback_midi(heads, args.tempo)
+            midi_note = "made from the printed notes at %g bpm (no \\midi block)" % args.tempo
+        mf = chime_midi.read_midi(midi_bytes)
+
+        pages_tmp = work / "pages"
+        pages = render_pages(pdf, pages_tmp)
+        page_sizes = {str(n): list(png_size(p)) for n, p in enumerate(pages, start=1)}
+        notemap = chime_notemap.build(heads, mf, title=title, page_sizes=page_sizes)
+
+        print("%s: %d page(s), %d note heads, %d played chords (%d not found on the sheet), "
+              "%.1f s at %g bpm; MIDI %s"
+              % (title, len(pages), len(heads), len(notemap["events"]), notemap["unplaced"],
+                 notemap["duration_sec"], notemap["bpm"], midi_note))
+        problems = notemap["out_of_set"]
+        if problems:
+            print("NOT ON THE 8 BELLS (%s):" % ", ".join(
+                chime_midi.pitch_name(p) for p in chime_notemap.BELLS_8))
+            for p in problems[:REPORT_MAX_LINES]:
+                print("  " + chime_notemap.describe_problem(p))
+            if len(problems) > REPORT_MAX_LINES:
+                print("  ... and %d more" % (len(problems) - REPORT_MAX_LINES))
+            counts = {}
+            for p in problems:
+                counts[p["pitch"]] = counts.get(p["pitch"], 0) + 1
+            print("  by pitch: " + ", ".join("%s x%d" % kv for kv in sorted(
+                counts.items(), key=lambda kv: -kv[1])))
+            if not args.allow:
+                fail("%d note(s) are not on the bells; rearrange the tune, or use --allow "
+                     "to build anyway" % len(problems), EXIT_OUT_OF_SET)
+        else:
+            print("all notes are on the 8 bells")
+
+        bundle = out_root / slug
+        if bundle.exists():
+            shutil.rmtree(bundle)
+        (bundle / "pages").mkdir(parents=True)
+        for p in pages:
+            shutil.copy2(p, bundle / "pages" / p.name)
+        shutil.copy2(pdf, bundle / "score.pdf")
+        (bundle / "tune.midi").write_bytes(midi_bytes)
+        (bundle / "notemap.json").write_text(json.dumps(notemap, indent=1))
+        meta = {"format": BUNDLE_FORMAT, "version": BUNDLE_VERSION, "title": title,
+                "slug": slug, "source": ly.name, "pdf": "score.pdf", "midi": "tune.midi",
+                "notemap": "notemap.json",
+                "pages": ["pages/" + p.name for p in pages],
+                "out_of_set": len(problems), "midi_origin": midi_note,
+                "lilypond": (log.splitlines() or [""])[0]}
+        (bundle / "tune.json").write_text(json.dumps(meta, indent=1))
+        if args.overlay:
+            for f in draw_overlays([bundle / "pages" / p.name for p in pages], heads,
+                                   notemap, bundle / "overlay"):
+                print("overlay: %s" % f)
+
+    zpath = out_root / (slug + BUNDLE_SUFFIX)
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted(bundle.rglob("*")):
+            if f.is_file() and "overlay" not in f.relative_to(bundle).parts:
+                z.write(f, Path(slug) / f.relative_to(bundle))
+    print("bundle: %s" % bundle)
+    print("zip:    %s" % zpath)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

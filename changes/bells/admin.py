@@ -51,7 +51,11 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from . import chimes as chime_files
-from .models import ChimeTune, ChimePage
+from . import chime_midi, chime_notemap
+from .models import ChimeTune, ChimePage, ChimeOutputs
+
+
+BELL_WARNING_MAX_LINES = 40
 
 
 class ChimeTuneForm(forms.ModelForm):
@@ -69,6 +73,30 @@ class ChimeTuneForm(forms.ModelForm):
         if kind == "pdf" and not chime_files.pdftoppm_path():
             raise forms.ValidationError(chime_files.MISSING_POPPLER_MESSAGE)
         return source
+
+    def clean_midi(self):
+        midi = self.cleaned_data.get("midi")
+        if midi and hasattr(midi, "read") and not getattr(midi, "_committed", False):
+            try:
+                midi.seek(0)
+                chime_midi.read_midi(midi.read())
+            except chime_midi.MidiError as e:
+                raise forms.ValidationError("Not a MIDI file this Pi can play: %s" % e)
+            finally:
+                midi.seek(0)
+        return midi
+
+    def clean_notemap(self):
+        notemap = self.cleaned_data.get("notemap")
+        if notemap and hasattr(notemap, "read") and not getattr(notemap, "_committed", False):
+            try:
+                notemap.seek(0)
+                chime_notemap.load(notemap.read().decode("utf-8"))
+            except (UnicodeDecodeError, chime_notemap.NotemapError) as e:
+                raise forms.ValidationError("Not a chime-build note map: %s" % e)
+            finally:
+                notemap.seek(0)
+        return notemap
 
 
 class ChimePageInline(admin.TabularInline):
@@ -102,11 +130,30 @@ class ChimeTuneAdmin(admin.ModelAdmin):
     form = ChimeTuneForm
     actions = [rerender_chimes]
     inlines = [ChimePageInline]
-    list_display = ["title", "order", "enable", "page_count", "rendered", "render_error"]
+    list_display = ["title", "order", "enable", "page_count", "on_the_bells", "rendered",
+                    "render_error"]
     list_editable = ["order", "enable"]
     list_filter = ["enable"]
     search_fields = ["title", "notes"]
-    readonly_fields = ("page_count", "rendered", "render_error", "source_sha256")
+    readonly_fields = ("page_count", "rendered", "render_error", "source_sha256",
+                       "bell_warning")
+
+    @admin.display(description="8 bells", boolean=True)
+    def on_the_bells(self, tune):
+        if not (tune.midi or tune.notemap):
+            return None
+        return not tune.bell_problems
+
+    @admin.display(description="Notes not on the 8 bells")
+    def bell_warning(self, tune):
+        if not tune.bell_problems:
+            return "none" if (tune.midi or tune.notemap) else "no MIDI or note map yet"
+        lines = tune.bell_problems.splitlines()
+        return format_html(
+            '<strong style="color:#b00">&#9888; {} note(s) are not on the 8 bells; '
+            'rearrange the tune.</strong><br><pre>{}</pre>',
+            len(lines), "\n".join(lines[:BELL_WARNING_MAX_LINES])
+            + ("\n..." if len(lines) > BELL_WARNING_MAX_LINES else ""))
 
     def save_model(self, request, obj, form, change):
         try:
@@ -114,6 +161,46 @@ class ChimeTuneAdmin(admin.ModelAdmin):
         except chime_files.ChimeRenderError as e:
             self.message_user(request, "Saved, but the page images were not made: %s" % e,
                               messages.ERROR)
+        if obj.bell_problems:
+            self.message_user(request, "%s: %d note(s) are not on the 8 bells (see the tune)."
+                              % (obj, len(obj.bell_problems.splitlines())), messages.WARNING)
 
 
 admin.site.register(ChimeTune, ChimeTuneAdmin)
+
+
+class ChimeOutputsForm(forms.ModelForm):
+    class Meta:
+        model = ChimeOutputs
+        fields = ["midi_out", "midi_port", "hdmi_audio"]
+
+    def clean_midi_port(self):
+        from . import chime_player
+        value = (self.cleaned_data.get("midi_port") or "").strip()
+        if value and chime_player.is_excluded_name(value):
+            raise forms.ValidationError("That is the Pico's port (ingest_midi reads it).")
+        return value
+
+
+class ChimeOutputsAdmin(admin.ModelAdmin):
+    """The one row of player switches (also on the Chimes screen)."""
+    form = ChimeOutputsForm
+    list_display = ["__str__", "midi_out", "midi_port", "hdmi_audio", "updated"]
+    readonly_fields = ("allowed_ports",)
+
+    @admin.display(description="Allowed MIDI ports now (aplaymidi -l, Pico left out)")
+    def allowed_ports(self, obj):
+        from . import chime_player
+        listing = chime_player.list_ports()
+        if listing["error"]:
+            return listing["error"]
+        return ", ".join("%s %s" % (p["id"], p["client"]) for p in listing["ports"]) or "none"
+
+    def has_add_permission(self, request):
+        return not ChimeOutputs.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+admin.site.register(ChimeOutputs, ChimeOutputsAdmin)

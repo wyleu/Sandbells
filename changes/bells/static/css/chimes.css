@@ -52,7 +52,7 @@ body.chimes {
 .chimes_count { color: green; font-size: large; padding-right: 0.5rem; }
 
 /* Full screen: only the sheet. */
-body.chime-full { background: #000; overflow: hidden; }
+body.chime-full { background: #000; overflow: hidden; font-family: system-ui, sans-serif; }
 #chime-full-back { display: block; width: 100vw; height: 100vh; }
 #chime-full-image { display: block; width: 100vw; height: 100vh; object-fit: contain; }
 .fullbtn { position: fixed; top: 50%; transform: translateY(-50%);
@@ -60,3 +60,39 @@ body.chime-full { background: #000; overflow: hidden; }
            padding: 1rem; }
 #chime-full-prev { left: 0; }
 #chime-full-next { right: 0; }
+
+/* Player: Play / Stop / tempo / outputs.  On the Chimes page it sits at the
+   top of the tune menu (never over the sheet's title); full screen, a narrow
+   column in the left black margin, faint until touched.  The dot: red with a
+   white ring and a black edge, so it shows on red (bell 1) note heads too. */
+:root {
+  --chime-dot-size: 2.8vh;
+  --chime-dot-colour: rgba(230, 0, 0, 0.8);
+  --chime-dot-ring: 0.45vh;
+  --chime-dot-edge: 0.25vh;
+  --chime-full-player-width: 10vw;      /* 1920 x 1080, A4 landscape: 196 px of black */
+  --chime-on: #2e7d32;
+}
+.chime-player { display: flex; flex-direction: column; gap: 0.4rem;
+                background: #2c2519; padding: 0.5rem; color: #f1e3c2; font-size: 2.2vh; }
+.chime-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.chime-player-full { position: fixed; left: 0; top: 0; width: var(--chime-full-player-width);
+                     box-sizing: border-box; font-size: 1.8vh; background: rgba(0, 0, 0, 0.7);
+                     opacity: 0.35; z-index: 2; }
+.chime-player-full:hover, .chime-player-full:focus-within { opacity: 1; }
+.chime-player-full .pagebtn { font-size: 1.8vh; padding: 0.3rem 0.6rem; }
+.chime-player button { cursor: pointer; font-family: inherit; }
+.chime-player button:disabled { opacity: 0.4; }
+.chime-tempo input { flex: 1 1 6em; min-width: 4em; }
+.chime-toggle { border: 1px solid #6b5a35; border-radius: 0.4rem; padding: 0.25rem 0.5rem;
+                background: #444; color: #ddd; font-size: inherit; }
+.chime-toggle[aria-pressed="true"] { background: var(--chime-on); color: #fff; border-color: #9c9; }
+.chime-player select { font-size: inherit; max-width: 100%; }
+.chime-status { min-height: 1.2em; }
+.chime-warning { color: #ffcf4a; }
+.chime-dot { position: fixed; width: var(--chime-dot-size); height: var(--chime-dot-size);
+             margin: calc(var(--chime-dot-size) / -2) 0 0 calc(var(--chime-dot-size) / -2);
+             box-sizing: border-box; border-radius: 50%; background: var(--chime-dot-colour);
+             border: var(--chime-dot-ring) solid #fff;
+             box-shadow: 0 0 0 var(--chime-dot-edge) #000, 0 0 1vh rgba(0, 0, 0, 0.6);
+             pointer-events: none; z-index: 3; }

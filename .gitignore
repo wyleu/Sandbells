@@ -17,3 +17,5 @@ changes/logs/
 
 # Chimes: uploaded tune sheets and their generated page images (bells/chimes.py)
 changes/media/
+# chime-build output when run inside the repo (tools/chimes/chime-build)
+chime-bundles/

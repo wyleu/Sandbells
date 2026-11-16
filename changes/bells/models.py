@@ -185,6 +185,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 from . import chimes as chime_files
+from . import chime_midi, chime_notemap
 
 CHIME_TITLE_MAX = 200
 CHIME_SLUG_MAX = 200
@@ -192,6 +193,19 @@ CHIME_ORDER_DEFAULT = 100
 CHIME_FILE_NAME_MAX = 255
 CHIME_SHA256_LEN = 64
 CHIME_SLUG_FALLBACK = "tune"
+
+
+def _read_field_file(field_file) -> bytes:
+    """The bytes of a FileField's file, saved or still being uploaded (an
+    upload is left open and rewound, ready for the storage to save it)."""
+    if not field_file._committed:
+        f = field_file.file
+        f.seek(0)
+        data = f.read()
+        f.seek(0)
+        return data
+    with field_file.storage.open(field_file.name, "rb") as f:
+        return f.read()
 
 
 class ChimeTune(models.Model):
@@ -214,9 +228,26 @@ class ChimeTune(models.Model):
     rendered = models.DateTimeField(null=True, blank=True, editable=False)
     render_error = models.TextField(blank=True, editable=False)
     pub_date = models.DateTimeField(auto_now=True)
+    midi = models.FileField(
+        upload_to=chime_files.MIDI_DIR, storage=chime_files.chime_storage, blank=True,
+        max_length=CHIME_FILE_NAME_MAX,
+        validators=[FileExtensionValidator(
+            [ext.lstrip(".") for ext in chime_files.MIDI_EXTENSIONS])],
+        help_text="Optional: the tune's MIDI file, for Play on the Chimes page")
+    notemap = models.FileField(
+        upload_to=chime_files.NOTEMAP_DIR, storage=chime_files.chime_storage, blank=True,
+        max_length=CHIME_FILE_NAME_MAX,
+        validators=[FileExtensionValidator(
+            [ext.lstrip(".") for ext in chime_files.NOTEMAP_EXTENSIONS])],
+        help_text="Optional: notemap.json from chime-build, so a dot follows the music")
+    bell_problems = models.TextField(
+        blank=True, editable=False,
+        help_text="Notes that are not on the 8 bells (from the note map or the MIDI)")
 
     class Meta:
         ordering = ["order", "title"]
+
+    FILE_FIELDS = ("source", "midi", "notemap")
 
     def __str__(self):
         return self.title
@@ -238,15 +269,46 @@ class ChimeTune(models.Model):
         Raises chimes.ChimeRenderError if that fails (render_error keeps why)."""
         if not self.slug:
             self.slug = self._unique_slug()
-        old_source = None
+        old_files = {}
         if self.pk:
-            old_source = (ChimeTune.objects.filter(pk=self.pk)
-                          .values_list("source", flat=True).first())
+            old_files = (ChimeTune.objects.filter(pk=self.pk)
+                         .values(*self.FILE_FIELDS).first()) or {}
+        self.bell_problems = self.check_bells()
         super().save(*args, **kwargs)
-        if old_source and old_source != self.source.name:
-            chime_files.chime_storage.delete(old_source)
+        for name in self.FILE_FIELDS:
+            old = old_files.get(name)
+            if old and old != getattr(self, name).name:
+                chime_files.chime_storage.delete(old)
         if render:
             self.render_pages()
+
+    def notemap_data(self):
+        """The note map as a dict, or None (no note map, or unreadable)."""
+        if not self.notemap:
+            return None
+        try:
+            return chime_notemap.load(_read_field_file(self.notemap).decode("utf-8"))
+        except (OSError, UnicodeDecodeError, chime_notemap.NotemapError):
+            return None
+
+    def check_bells(self) -> str:
+        """One line per note that is not one of the 8 bells: from the note map
+        (bar and beat) when there is one, else from the MIDI.  '' when all fit."""
+        data = self.notemap_data()
+        if data is not None:
+            return "\n".join(chime_notemap.describe_problem(p)
+                             for p in data.get("out_of_set") or [])
+        if not self.midi:
+            return ""
+        try:
+            played = chime_midi.notes(chime_midi.read_midi(_read_field_file(self.midi)))
+        except (OSError, chime_midi.MidiError):
+            return "the MIDI file could not be read"
+        allowed = set(chime_notemap.BELLS_8)
+        return "\n".join(
+            "%.2f s: %s (MIDI %d) is not one of the 8 bells"
+            % (n.sec, chime_midi.pitch_name(n.pitch), n.pitch)
+            for n in played if n.pitch not in allowed)
 
     def render_pages(self, force=False) -> bool:
         """Make the PNG pages from the source.  False if they were already up to
@@ -304,7 +366,53 @@ def _chime_tune_deleted(sender, instance, **kwargs):
     """A deleted tune takes its source and page images with it (admin bulk
     delete included)."""
     import shutil
-    if instance.source:
-        chime_files.chime_storage.delete(instance.source.name)
+    for name in ChimeTune.FILE_FIELDS:
+        f = getattr(instance, name)
+        if f:
+            chime_files.chime_storage.delete(f.name)
     if instance.pk is not None:
         shutil.rmtree(instance.pages_dir(), ignore_errors=True)
+
+
+CHIME_PORT_MAX = 100
+CHIME_OUTPUTS_PK = 1                    # one row: the player's switches
+
+
+class ChimeOutputs(models.Model):
+    """Where Play sends the tune: the MIDI out and HDMI audio switches on the
+    Chimes screen, kept here so they survive a reload or a restart.  The
+    row is made on first use from the settings' "chimes" defaults
+    (bells.chime_player.player_config); after that the screen (or the
+    admin) changes it.  midi_port blank: the setting, else the first allowed
+    port (never the Pico's)."""
+    midi_out = models.BooleanField("MIDI out", default=True)
+    midi_port = models.CharField(
+        "MIDI port", max_length=CHIME_PORT_MAX, blank=True,
+        help_text="ALSA sequencer port for aplaymidi -p, e.g. 14:0 or a client name; "
+                  "blank: the setting, else the first allowed port. Never the Pico.")
+    hdmi_audio = models.BooleanField("HDMI audio", default=False)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "chimes player outputs"
+        verbose_name_plural = "chimes player outputs"
+
+    def __str__(self):
+        return "MIDI out %s%s, HDMI audio %s" % (
+            "on" if self.midi_out else "off",
+            " (%s)" % self.midi_port if self.midi_port else "",
+            "on" if self.hdmi_audio else "off")
+
+    @classmethod
+    def current(cls):
+        row = cls.objects.filter(pk=CHIME_OUTPUTS_PK).first()
+        if row is None:
+            from . import chime_player
+            cfg = chime_player.player_config()
+            row, _ = cls.objects.get_or_create(pk=CHIME_OUTPUTS_PK, defaults={
+                "midi_out": cfg["midi_out"], "hdmi_audio": cfg["hdmi_audio"]})
+        return row
+
+    def as_dict(self):
+        return {"midi_out": self.midi_out, "midi_port": self.midi_port,
+                "hdmi_audio": self.hdmi_audio}

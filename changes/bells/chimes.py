@@ -37,6 +37,10 @@ PAGE_HEIGHT_PX = SCREEN_HEIGHT_PX                # every page is rendered this t
 
 SOURCES_DIR = "sources"                          # uploaded PDFs / images
 PAGES_DIR = "pages"                              # generated PNGs, one folder per tune
+MIDI_DIR = "midi"                                # optional MIDI per tune (Play)
+NOTEMAP_DIR = "notemaps"                         # optional note map per tune (the dot)
+MIDI_EXTENSIONS = (".mid", ".midi")
+NOTEMAP_EXTENSIONS = (".json",)
 PAGE_IMAGE_FORMAT = "png"
 PAGE_FILE_TEMPLATE = "page-{number:03d}.png"
 

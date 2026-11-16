@@ -14,6 +14,8 @@
   {% if prev_full_url %}<a class="fullbtn" id="chime-full-prev" href="{{ prev_full_url }}" title="Previous page">&#9664;</a>{% endif %}
   {% if next_full_url %}<a class="fullbtn" id="chime-full-next" href="{{ next_full_url }}" title="Next page">&#9654;</a>{% endif %}
 
+  {% include "bells/chime_player.html" with image_id="chime-full-image" full=True %}
+
   <script nonce="{{ request.csp_nonce }}">
   (function () {
     "use strict";
@@ -23,6 +25,7 @@
       Escape: "{{ back_url|escapejs }}"
     };
     document.addEventListener("keydown", function (ev) {
+      if (ev.target && /^(BUTTON|INPUT)$/.test(ev.target.tagName)) { return; }   // the player's own
       var url = keys[ev.key];
       if (url) { window.location.href = url; }
     });

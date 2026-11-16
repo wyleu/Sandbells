@@ -1,0 +1,46 @@
+{% load static %}{% comment %}
+Play / Stop / tempo for a tune with a MIDI file, and the dot that follows the
+music over the sheet.  Included by chimes.html and chime_full.html with
+image_id (the sheet's <img>) and full ("1" in the full-screen view).
+{% endcomment %}
+{% if player %}
+<div id="chime-player" class="chime-player{% if full %} chime-player-full{% endif %}"
+     data-slug="{{ tune.slug }}" data-page="{{ page.number }}" data-image-id="{{ image_id }}"
+     data-full="{{ full|yesno:'1,' }}"
+     data-state-url="{{ player.state_url }}" data-play-url="{{ player.play_url }}"
+     data-stop-url="{{ player.stop_url }}" data-notemap-url="{{ player.notemap_url }}"
+     data-outputs-url="{{ player.outputs_url }}" data-ports-url="{{ player.ports_url }}"
+     data-page-url="{% if full %}{{ player.full_url }}{% else %}{{ player.page_url }}{% endif %}"
+     data-page-placeholder="{{ player.page_placeholder }}"
+     data-tempo-default="{{ player.tempo_default }}"
+     data-state-poll-ms="{{ player.state_poll_ms }}" data-dot-tick-ms="{{ player.dot_tick_ms }}">
+  {% csrf_token %}
+  <div class="chime-row">
+    <button type="button" id="chime-play" class="pagebtn">&#9654; Play</button>
+    <button type="button" id="chime-stop" class="pagebtn">&#9632; Stop</button>
+  </div>
+  <div class="chime-row chime-tempo">
+    <label for="chime-tempo">Tempo</label>
+    <input type="range" id="chime-tempo" min="{{ player.tempo_min }}" max="{{ player.tempo_max }}"
+           step="{{ player.tempo_step }}" value="{{ player.tempo_default }}">
+    <span id="chime-tempo-label">{{ player.tempo_default }}%</span>
+  </div>
+  <div class="chime-row chime-outputs">
+    <button type="button" id="chime-midi" class="chime-toggle" aria-pressed="{{ player.outputs.midi_out|yesno:'true,false' }}"
+            title="MIDI out (aplaymidi) on the next Play">MIDI out <b>{{ player.outputs.midi_out|yesno:'on,off' }}</b></button>
+    <button type="button" id="chime-hdmi" class="chime-toggle" aria-pressed="{{ player.outputs.hdmi_audio|yesno:'true,false' }}"
+            title="Bell samples on HDMI audio on the next Play">HDMI audio <b>{{ player.outputs.hdmi_audio|yesno:'on,off' }}</b></button>
+  </div>
+  <div class="chime-row">
+    <select id="chime-port" title="MIDI out port (aplaymidi -l, the Pico left out)">
+      <option value="{{ player.outputs.midi_port }}" selected>{% if player.outputs.midi_port %}{{ player.outputs.midi_port }}{% else %}port: automatic{% endif %}</option>
+    </select>
+  </div>
+  <span id="chime-status" class="chime-status"></span>
+  {% if player.bell_problem_count %}
+    <span class="chime-warning" title="{{ player.bell_problems|join:'&#10;' }}">&#9888; {{ player.bell_problem_count }} note{{ player.bell_problem_count|pluralize }} not on the 8 bells</span>
+  {% endif %}
+</div>
+<div id="chime-dot" class="chime-dot" hidden></div>
+<script src="{% static 'js/chime_player.js' %}?v={{ git_hash }}"></script>
+{% endif %}

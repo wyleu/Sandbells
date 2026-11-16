@@ -35,6 +35,7 @@
     </main>
 
     <aside id="chimes-menu" aria-label="tunes">
+      {% if tune %}{% include "bells/chime_player.html" with image_id="chimes-image" full=False %}{% endif %}
       <table class="chimes_select">
         {% for t in tunes %}
           <tr>
@@ -62,6 +63,7 @@
       Enter: "{{ full_url|escapejs }}"
     };
     document.addEventListener("keydown", function (ev) {
+      if (ev.target && /^(BUTTON|INPUT)$/.test(ev.target.tagName)) { return; }   // the player's own
       var url = keys[ev.key];
       if (url) { window.location.href = url; }
     });
