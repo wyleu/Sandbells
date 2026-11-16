@@ -1,7 +1,8 @@
 #!/bin/bash
 # master_install.sh
 # Sandbells Master Installer - Orchestrates the numbered install steps
-# Now includes steps 12 (Django), 13 (Gunicorn/Nginx), 14 (Kiosk systemd)
+# Runs every install-steps/[0-9][0-9]-*.sh in order (Django, kiosk, ingest,
+# HDMI helper, Chimes player, …).  New numbered steps are picked up automatically.
 
 START_TIME=$(date +%s)
 
@@ -34,7 +35,7 @@ if [[ "$1" == "--quick" || "$1" == "-q" ]]; then
 fi
 
 echo "Starting Sandbells installation steps..."
-echo "New steps included: 12-django-venv, 13-gunicorn-nginx, 14-kiosk-systemd"
+echo "Running every install-steps/[0-9][0-9]-*.sh in order (including 21-chimes)."
 echo ""
 
 STEPS_DIR="./install-steps"

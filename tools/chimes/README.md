@@ -8,7 +8,7 @@ Runs on the desk Pi (LilyPond 2.24, poppler-utils), not on the kiosk.
 
 Output: `OUT/<slug>/` (tune.json, score.pdf, tune.midi, notemap.json,
 pages/page-NNN.png, overlay/ with --overlay) and `OUT/<slug>.chime.zip`.
-On sandbells: `manage.py chime_load <slug>.chime.zip`.
+On sandbells: `manage.py chime_load <slug>.chime.zip`, or put the zips in `~/Downloads/chime-bundles` and run install step 21 (`bash ~/Code/Sandbells/install-steps/21-chimes.sh true`), which also installs aplaymidi, fluidsynth, the 8-bell soundfont if found, and adds the gunicorn user to group audio.  See docs/chimes.md.
 
 * The .ly is not edited.  `chime-notemap.ily` is loaded with
   `lilypond -dinclude-settings=...`: an engraver in every Voice records each

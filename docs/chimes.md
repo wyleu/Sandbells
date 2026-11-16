@@ -109,3 +109,46 @@ when named in `soundfont`; spaces in the path are fine.
 * JS helpers: `node --test changes/bells/js_tests/*.test.js`.
 
 Rollback of this part: `python manage.py migrate bells 0005`.
+
+## Install on a Pi
+
+On a machine that already has Sandbells, after this code is on disk:
+
+```
+bash ~/Code/Sandbells/install-steps/21-chimes.sh true
+```
+
+The step is idempotent and safe to re-run.  It:
+
+* installs `alsa-utils` (aplaymidi), `poppler-utils` (already in step 05)
+  and `fluidsynth` if they are missing; `fluid-soundfont-gm` is optional
+  and a missing package does not fail the step
+* copies `sandbach_bells_8.sf2` to `/usr/local/share/sounds/sf2/` when
+  a source file is given (`SANDBELLS_CHIME_SOUNDFONT` or `--soundfont=PATH`)
+  or found in the repo assets or `~/Downloads`; if it is not found the
+  step warns and continues (HDMI audio then uses FluidR3_GM if that
+  package is installed, else stays off).  The font is not in the repo.
+* adds the gunicorn service user (the `User=` of the installed
+  `gunicorn.service`, or of `systemd/gunicorn.service` in the repo) to
+  group `audio`, which ALSA sequencer and HDMI audio need.  It does not
+  restart gunicorn; if the user was just added, run
+  `sudo systemctl restart gunicorn` so the membership is picked up
+* runs `manage.py migrate bells` and `collectstatic` (same idea as
+  step 18, so this step can be run on its own after a pull)
+* loads every `*.chime.zip` in `~/Downloads/chime-bundles`
+  (`SANDBELLS_CHIME_BUNDLES` or `--bundles=DIR` to change that)
+
+It does not edit `/etc/sandbells/settings.json` and does not open or
+write any MIDI port (the Pico's port is never touched).
+`master_install.sh` runs this step too (it runs every `install-steps/NN-*.sh`).
+
+To load the tune archive by hand, unpack it first:
+
+```
+tar -xzf ~/Downloads/chime-bundles.tgz -C ~/Downloads
+bash ~/Code/Sandbells/install-steps/21-chimes.sh true
+```
+
+`--dry-run` (or `SANDBELLS_CHIME_DRY_RUN=1`) prints the actions and
+changes nothing.
+

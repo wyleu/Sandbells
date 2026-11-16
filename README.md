@@ -252,7 +252,7 @@ Sandbells/
 └── README.md
 ```
 
-`master_install.sh` runs every `install-steps/[0-9][0-9]-*.sh` in filename order (including `16-early-status` when present).
+`master_install.sh` runs every `install-steps/[0-9][0-9]-*.sh` in filename order (including `16-early-status` and `21-chimes` when present). By hand: `bash ~/Code/Sandbells/install-steps/21-chimes.sh true` (see [docs/chimes.md](docs/chimes.md)).
 
 Useful display URLs (behind the kiosk / nginx root):
 
@@ -261,6 +261,7 @@ Useful display URLs (behind the kiosk / nginx root):
 - `/layout-test/6/Rounds/Kings/Kennet/` — fixed three-method path
 - `/swing/6/` — circle animation
 - `/farm/status/` — farm / multi-Pi status
+- `/chimes/` — handbell tune sheets (Play, MIDI out, HDMI audio); see [docs/chimes.md](docs/chimes.md)
 - `/sandtest/` — control page for the Sandtest rig (Pico 2 W opto outputs and mirror); see [docs/sandtest.md](docs/sandtest.md)
 
 ---
