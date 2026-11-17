@@ -472,7 +472,8 @@ test("USB: no socket; polls, takes the kinds from the heartbeat, POSTs info and 
   assert.equal(r.xhrs[0].url, "/farm/heads/serial/?after=0&midi_after=0");
   assert.ok(r.timers.some((t) => t.kind === "i" && t.ms === 400));
   serialUp(r);
-  assert.deepEqual(posts(r).map((x) => x.body), [{ cmd: "align", info: true }, { cmd: "align", ch: 1, scope: true }]);
+  assert.deepEqual(posts(r).map((x) => x.body), [{ cmd: "align", info: true }, { cmd: "align", saved: true },
+                                                 { cmd: "align", ch: 1, scope: true }]);
   assert.equal(posts(r)[0].headers["X-CSRFToken"], "tok+en");
   assert.equal(posts(r)[0].url, "/farm/heads/serial/cmd/");
   assert.equal(r.tabs().length, 4);

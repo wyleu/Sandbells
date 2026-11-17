@@ -100,6 +100,23 @@ class HeadsCcDecoder:
         ch = raw.get(C.HEADS_CC_HEAD)
         flags = raw.get(C.HEADS_CC_FLAGS, 0)
         tower = C.HEADS_TOWER_QUIET if flags & C.HEADS_FLAG_QUIET else C.HEADS_TOWER_BUSY
+        if C.HEADS_CC_SLOT in raw:
+            # one channel's saved line-up values (head_store); no flags
+            label = "".join(chr(raw.get(C.HEADS_CC_LABEL + j, 0))
+                            for j in range(C.HEADS_LABEL_MAX)
+                            if raw.get(C.HEADS_CC_LABEL + j, 0))
+            saved = raw[C.HEADS_CC_SLOT] == 1
+            body = {"ch": ch, "saved": saved,
+                    "drv": _duty(_v14(raw, C.HEADS_CC_DRV)) if saved else None,
+                    "thr": _duty(_v14(raw, C.HEADS_CC_THR)) if saved else None,
+                    "label": label if saved else None, "via": "midi"}
+            return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_slot", "body": body}
+        if C.HEADS_CC_SWEEP in raw:
+            body = {"ch": ch, "i": raw[C.HEADS_CC_SWEEP],
+                    "drv": _duty(_v14(raw, C.HEADS_CC_DRV)), "ma": _ma(_v14(raw, C.HEADS_CC_MA)),
+                    "pt": _volts(_v14(raw, C.HEADS_CC_PT)),
+                    "pt_span": _volts(_v14(raw, C.HEADS_CC_PT_SPAN)), "tower": tower, "via": "midi"}
+            return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_sweep", "body": body}
         if C.HEADS_CC_ACK_WHAT in raw:
             why = raw.get(C.HEADS_CC_ACK_WHY, 0)
             body = {"what": C.HEADS_WHAT.get(raw[C.HEADS_CC_ACK_WHAT], "bad"),

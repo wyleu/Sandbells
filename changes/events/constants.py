@@ -458,12 +458,13 @@ SERIAL_CMD_SOCK_MODE = 0o660    # gunicorn and ingest_serial both run as sandbel
 SERIAL_CMD_MAX_B = 256          # one command (sandswing align_scope.MSG_MAX_B)
 SERIAL_CMD_QUEUE_MAX_B = 2048   # bytes waiting for the port; more: dropped (counted)
 SERIAL_CMD_NAME = "align"       # the only command the page may send
-SERIAL_CMD_KEYS = ("cmd", "ch", "scope", "thr", "drive", "info", "thr_mid")   # align_scope._KEYS
+SERIAL_CMD_KEYS = ("cmd", "ch", "scope", "thr", "drive", "info", "thr_mid",
+                   "sweep", "use", "save", "label", "forget", "saved")   # align_scope._KEYS
 SERIAL_CMD_MAX_CH = 16          # a channel number above this is refused here already
 SERIAL_HEADS_PATH = "/run/sandbells-ingest/serial_heads.json"
 SERIAL_HEADS_ENV = "SANDBELLS_SERIAL_HEADS"
 SERIAL_HEADS_SCHEMA = "sandbells.serial_heads/v1"
-SERIAL_HEADS_TYPES = ("align", "align_ack", "align_info")
+SERIAL_HEADS_TYPES = ("align", "align_ack", "align_info", "align_sweep", "align_slot")
 SERIAL_HEADS_KEEP = 12          # newest scope lines kept in the file (the page asks after=<n>)
 SERIAL_HEADS_POLL_MS = 400      # the page's poll (the Pico sends a frame every 500 ms)
 SERIAL_HEADS_LIVE_MS = 3000     # the page: no new line for this long while scoping: "no frames"
@@ -494,6 +495,9 @@ HEADS_CC_FLAGS = 103
 HEADS_CC_ACK_WHAT = 104
 HEADS_CC_ACK_WHY = 105
 HEADS_CC_SEQ = 106
+HEADS_CC_SWEEP = 107            # a sweep point report: the point's index
+HEADS_CC_SLOT = 108             # a saved-values report: 1 saved, 0 empty
+HEADS_CC_LABEL = 109            # .. + HEADS_LABEL_MAX - 1: the label, one ASCII char each
 HEADS_CC_THR = 20
 HEADS_CC_RB = 21
 HEADS_CC_DRV = 22
@@ -513,12 +517,15 @@ HEADS_FLAG_BROKE = 2
 HEADS_FLAG_BUSY = 4
 HEADS_FLAG_QUIET = 8
 HEADS_FLAG_SCOPE = 16
-HEADS_WHAT = {1: "thr", 2: "drive", 3: "scope", 4: "bad", 5: "thr_mid"}
+HEADS_WHAT = {1: "thr", 2: "drive", 3: "scope", 4: "bad", 5: "thr_mid", 6: "sweep",
+              7: "sweep_end", 8: "use", 9: "save", 10: "forget", 11: "saved"}
 HEADS_WHY = {1: "not an active head", 2: "tower not quiet: strokes in progress",
              3: "survey running", 4: "old head has no threshold", 5: "too fast",
              6: "at limit", 7: "laser is off", 8: "laser current over its limit",
              9: "busy", 10: "timeout", 11: "head gone", 12: "low memory",
-             13: "bad command", 127: "refused"}
+             13: "bad command", 14: "beam broken", 15: "stopped",
+             16: "no PT wire on this channel", 17: "sweep running",
+             18: "not saved", 19: "bad label", 20: "near threshold", 127: "refused"}
 HEADS_TOWER_QUIET = "inactive"  # what align.js calls a quiet tower
 HEADS_TOWER_BUSY = "active"
 # the page's trace from MIDI: one sample per report (beam low if any low
@@ -527,6 +534,23 @@ HEADS_TRACE_MS = 2000
 HEADS_TRACE_MAX = 64
 MIDI_HEADS_PATH = "/run/sandbells-ingest/midi_heads.json"
 MIDI_HEADS_ENV = "SANDBELLS_MIDI_HEADS"
+
+# ---- head line-up (sandswing sweep.py / head_store.py) ------------------------
+# The page's "Find best brightness" sweeps the drive of the head with the PT
+# wire; it suggests the lowest drive whose PT level is within plateau_frac of
+# the level at full drive, plus margin_frac, and keeps the threshold in the
+# same proportion to the PT level as now.  Below min_range_v of PT change
+# over the whole sweep it suggests nothing (the PT is not seeing the laser,
+# or is saturated).  settings.json "sandheads": {"sweep": {...}} overrides.
+HEADS_LINEUP_SLOTS = 8          # channels with saved values (head_store.SLOTS)
+HEADS_LABEL_MAX = 8             # head_store.LABEL_MAX
+HEADS_LABEL_CHARS = ("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                     "-_./# ")  # head_store.LABEL_CHARS
+HEADS_SWEEP_SETTINGS_KEY = "sandheads"
+HEADS_SWEEP_DEFAULTS = {"plateau_frac": 0.05, "margin_frac": 0.2, "min_range_v": 0.05}
+HEADS_SWEEP_POINTS_MAX = 64     # sweep.SWEEP_POINTS_MAX
+HEADS_SWEEP_END_MAX_LEN = 40    # the end reason kept with a logged sweep
+HEADS_SWEEP_LOG_MAX_B = 8192    # one logged sweep (the page's POST)
 
 # ---- PT level log (day / night drift of the phototransistor) -----------------
 # The heartbeat's body "pt" = [ch, volts, spread] (sandswing pt_level.brief, the

@@ -31,3 +31,26 @@ the Pico's data port open (or `?via=serial` / `?via=ws`).
 spread) with the threshold target/readback as `HeadLevel` rows, at most one
 per head every 5 min (`PT_LOG_EVERY_S`).  CSV: `/farm/heads/pt-log.csv?days=7`
 (linked from the page; days 1-366).  Needs `manage.py migrate` (0003).
+
+## Line-up: "Find best brightness" (head with the PT wire)
+
+A new head goes in channel 1 (the Orange/White PT wire).  On its panel:
+type the number written on the head, keep the tower quiet, press **Find
+best brightness**.  The Pico steps the laser drive from full down to the
+floor (sandswing `sweep.py`); each point (drive, PT level, laser mA) comes
+back as an `align_sweep` doc (CC_SWEEP report) and the curve fills in.
+**Stop**, a stroke, a beam break or the timeout ends it and the Pico puts
+the drive back.  At the end the page suggests the lowest drive whose PT is
+within `plateau_frac` of the full-drive PT, plus `margin_frac`, and a
+threshold in the same proportion to the PT as now; under `min_range_v` of
+PT change it suggests nothing.  Defaults `HEADS_SWEEP_DEFAULTS`; override
+in settings.json `"sandheads": {"sweep": {...}}` (read only).
+
+* **Use this** sets the suggestion live (`use`), nothing kept.
+* **Save for channel N** keeps the head's live drive and threshold with its
+  number in the Pico's NVM for channel N (`save`); used at every start in
+  place of the defaults.  The saved list (`align_slot` docs, asked with
+  `saved` when the page connects) has a **Forget** (two presses) per channel.
+* Every finished or stopped sweep is logged (`HeadSweep`, POST
+  `/farm/heads/sweep-log/`); CSV `/farm/heads/sweep-log.csv?days=30`.
+  Needs `manage.py migrate` (0004).

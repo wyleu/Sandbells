@@ -133,3 +133,28 @@ class HeadLevel(models.Model):
 
     def __str__(self):
         return "%s ch %d %.3f V" % (self.at, self.ch, self.pt_v)
+
+
+class HeadSweep(models.Model):
+    """One line-up sweep of a head (sandswing sweep.py: drive stepped from
+    full down to the floor, PT level and laser current at each step), as the
+    sandheads page saw it, with the number written on the head, so the same
+    head can be compared by day and by night (/farm/heads/sweep-log.csv)."""
+    at = models.DateTimeField(default=timezone.now, db_index=True)
+    ch = models.PositiveSmallIntegerField(help_text="1-based channel it was swept in")
+    label = models.CharField(max_length=C.HEADS_LABEL_MAX, blank=True, default="",
+                             help_text="the number written on the head")
+    end = models.CharField(max_length=C.HEADS_SWEEP_END_MAX_LEN, blank=True, default="",
+                           help_text="'' every point; else why it ended early")
+    points = models.JSONField(default=list,
+                              help_text="[[drive duty, mA, PT volts, PT spread], ...] full drive first")
+    drv_before = models.IntegerField(null=True, blank=True)
+    thr_before = models.IntegerField(null=True, blank=True)
+    suggested_drv = models.IntegerField(null=True, blank=True)
+    suggested_thr = models.IntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["at"]
+
+    def __str__(self):
+        return "%s ch %d %s (%d points)" % (self.at, self.ch, self.label, len(self.points or []))

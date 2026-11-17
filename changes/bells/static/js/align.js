@@ -33,6 +33,7 @@
   var VREF = 3.3;
   var STORE_KEY = "sandheadsHead";   // sessionStorage; the URL hash is #head=N
   var MAX_HEADS = 16;
+  var LINEUP_WHAT = ["sweep", "sweep_end", "use", "save", "forget", "saved"];
 
   var CFG = { wsUrls: [], keepAliveMs: 2000, windowMs: 2000, via: "ws" };
   var S = {
@@ -185,6 +186,11 @@
     right.appendChild(n);
     body.appendChild(right);
     root.appendChild(body);
+    // the line-up (lineup.js): only shown on the head with the PT wire
+    if (window.Lineup) {
+      card.lineup = window.Lineup.attach(card, { send: send, log: logSweep, cfg: CFG.lineup });
+      root.appendChild(card.lineup.box);
+    }
     card.root = root;
     return card;
   }
@@ -254,6 +260,7 @@
     card.thrR.sub.textContent = card.thr === null || noThr || !active ? "" : String(card.thr);
     card.drvR.val.textContent = active ? pct(card.drv) : "—";
     card.drvR.sub.textContent = card.drv === null || !active ? "" : String(card.drv);
+    if (card.lineup) card.lineup.refresh({ active: active, quiet: quiet, noThr: noThr, ptCh: S.ptCh });
   }
 
   function refreshAll() {
@@ -453,7 +460,23 @@
     var b = m.body || {};
     var card = S.cards[b.ch];
     setTower(b.tower);
-    if (b.what === "bad") return;
+    if (inList(b.what, LINEUP_WHAT)) {
+      // forget / saved carry no head: the head on show has the line-up
+      var lc = card && card.lineup ? card : S.cards[S.shown];
+      if (lc && lc.lineup) {
+        if (b.thr !== undefined && lc === card) card.thr = b.thr;
+        if (b.drv !== undefined && lc === card) card.drv = b.drv;
+        lc.lineup.ack(b);
+        refreshCard(lc);
+      }
+      return;
+    }
+    if (b.what === "bad") {
+      // a refused line-up command (a bad label) must not vanish silently
+      var sc = S.cards[S.shown];
+      if (sc && sc.lineup && b.why) sc.lineup.ack({ what: "bad", ok: false, why: b.why });
+      return;
+    }
     if (!card) return;
     if (b.thr !== undefined) card.thr = b.thr;
     if (b.drv !== undefined) card.drv = b.drv;
@@ -484,6 +507,11 @@
     var b = m.body || {};
     S.heardHb = 1;
     setTower(b.tower);
+    // [ch, volts, spread]: the channel with the PT wire (the USB path has no align_info)
+    if (b.pt && b.pt.length && typeof b.pt[0] === "number" && b.pt[0] !== S.ptCh) {
+      S.ptCh = b.pt[0];
+      refreshAll();
+    }
     if (b.chan && b.chan.length) {
       var kinds = [];
       for (var i = 0; i < b.chan.length; i++) kinds.push(b.chan[i][0]);
@@ -511,6 +539,28 @@
     else if (m.type === "align_ack") onAck(m);
     else if (m.type === "align_info") onInfo(m);
     else if (m.type === "heartbeat") onHeartbeat(m);
+    else if (m.type === "align_sweep") onSweep(m);
+    else if (m.type === "align_slot" && window.Lineup) window.Lineup.slot(m.body);
+  }
+
+  function onSweep(m) {
+    var b = m.body || {};
+    var card = S.cards[b.ch];
+    if (card && card.lineup) card.lineup.point(b);
+  }
+
+  /* a finished sweep to the log (HeadSweep): best effort, the page shows the result anyway */
+  function logSweep(obj) {
+    var url = (CFG.serial || {}).sweepLogUrl;
+    if (!url) return false;
+    try {
+      var x = new window.XMLHttpRequest();
+      x.open("POST", url, true);
+      x.setRequestHeader("Content-Type", "application/json");
+      x.setRequestHeader("X-CSRFToken", csrfToken());
+      x.send(JSON.stringify(obj));
+    } catch (e) { return false; }
+    return true;
   }
 
   function stopTimers() {
@@ -535,6 +585,7 @@
     S.serialUp = !!(r && r.running && r.connected);
     if (S.serialUp && !was) {                    // (re)connected: ask again
       send({ cmd: "align", info: true });
+      send({ cmd: "align", saved: true });       // the line-up values kept on the Pico
       if (S.want) send({ cmd: "align", ch: S.want, scope: true });
     }
     if (r && r.heartbeat) onHeartbeat(r.heartbeat);
@@ -600,6 +651,7 @@
       S.heardHb = 0;
       setLink("pill-ok", "live");
       send({ cmd: "align", info: true });
+      send({ cmd: "align", saved: true });       // the line-up values kept on the Pico
       if (S.want) send({ cmd: "align", ch: S.want, scope: true });
       S.keepTimer = setInterval(keepAlive, CFG.keepAliveMs || 2000);
     };

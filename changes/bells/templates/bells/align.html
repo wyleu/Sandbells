@@ -24,9 +24,10 @@
     </div>
   </header>
 
-  <p id="align-note">Live adjustments only: they are <strong>not saved</strong> to settings.json,
-    and a reboot returns the head to its saved values.
-    {% if cfg %}<a id="align-ptlog" href="{{ cfg.serial.logUrl }}?days=7">PT level log (CSV, last 7 days)</a>{% endif %}</p>
+  <p id="align-note">The − and + buttons are live adjustments only: <strong>not saved</strong> to settings.json,
+    and a reboot returns the head to its saved values.  Only “Save for channel” (on the head with the PT wire) keeps values, on the concentrator.
+    {% if cfg %}<a id="align-ptlog" href="{{ cfg.serial.logUrl }}?days=7">PT level log (CSV, last 7 days)</a>
+    · <a id="align-sweeplog" href="{{ cfg.serial.sweepCsvUrl }}?days=30">Line-up sweeps (CSV, last 30 days)</a>{% endif %}</p>
 
   <nav id="align-heads" role="tablist" aria-label="heads"></nav>
 
@@ -41,6 +42,7 @@
   {% if cfg %}
   {{ cfg|json_script:"align-cfg" }}
   <script src="{% static 'js/reconnect_delay.js' %}?v={{ git_hash }}"></script>
+  <script src="{% static 'js/lineup.js' %}?v={{ git_hash }}"></script>
   <script src="{% static 'js/align.js' %}?v={{ git_hash }}"></script>
   <script>
     Align.start(JSON.parse(document.getElementById("align-cfg").textContent));

@@ -45,6 +45,27 @@ def _int(v):
     return isinstance(v, int) and not isinstance(v, bool)
 
 
+def _duty(v):
+    return _int(v) and 0 <= v <= C.HEADS_DUTY_FULL
+
+
+def _slot(v):
+    if not _int(v) or not 1 <= v <= C.HEADS_LINEUP_SLOTS:
+        raise ValueError("bad channel")
+    return v
+
+
+def check_label(s):
+    """The number written on a head (sandswing head_store.check_label):
+    at most HEADS_LABEL_MAX of HEADS_LABEL_CHARS.  -> str; ValueError."""
+    if s is None:
+        return ""
+    if not isinstance(s, str) or len(s) > C.HEADS_LABEL_MAX or any(
+            ch not in C.HEADS_LABEL_CHARS for ch in s):
+        raise ValueError("bad label")
+    return s.strip()
+
+
 def check_command(doc):
     """A page command (parsed JSON) -> its line (bytes, no newline), built
     from the checked fields only.  ValueError(reason) if it is not one."""
@@ -54,8 +75,14 @@ def check_command(doc):
         if k not in C.SERIAL_CMD_KEYS:
             raise ValueError("unknown key %r" % str(k)[:20])
     out = {"cmd": C.SERIAL_CMD_NAME}
+    if "label" in doc and "save" not in doc:
+        raise ValueError("label without save")
     if doc.get("info") is True:
         out["info"] = True
+    elif doc.get("saved") is True:
+        out["saved"] = True
+    elif "forget" in doc:
+        out["forget"] = _slot(doc["forget"])
     else:
         ch = doc.get("ch")
         if not _int(ch) or not 1 <= ch <= C.SERIAL_CMD_MAX_CH:
@@ -69,6 +96,19 @@ def check_command(doc):
             if doc["thr_mid"] is not True:
                 raise ValueError("bad thr_mid")
             out["thr_mid"] = True
+        elif "sweep" in doc:
+            if not isinstance(doc["sweep"], bool):
+                raise ValueError("bad sweep")
+            out["sweep"] = doc["sweep"]
+        elif "use" in doc:
+            u = doc["use"]
+            if (not isinstance(u, list) or len(u) != 2 or not _duty(u[0])
+                    or not (u[1] is None or _duty(u[1]))):
+                raise ValueError("bad use")
+            out["use"] = [u[0], u[1]]
+        elif "save" in doc:
+            out["save"] = _slot(doc["save"])
+            out["label"] = check_label(doc.get("label"))
         else:
             for key in ("thr", "drive"):
                 if key in doc:

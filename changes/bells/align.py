@@ -64,13 +64,41 @@ def pick(instances, index=None):
     return None, None
 
 
-def page_config(inst, via=VIA_WS, serial_urls=None):
+def sweep_settings(path=None):
+    """The line-up suggestion's numbers: HEADS_SWEEP_DEFAULTS, each
+    overridden by settings.json "sandheads": {"sweep": {...}} when it is a
+    number from 0 up to (not including) 1 (min_range_v: any positive
+    number).  Read only; a missing or bad file means the defaults."""
+    from events import constants as EC
+    from events.config import settings_path
+    out = dict(EC.HEADS_SWEEP_DEFAULTS)
+    try:
+        cfg = json.loads(open(path or settings_path()).read())
+        sec = ((cfg.get(EC.HEADS_SWEEP_SETTINGS_KEY) or {}).get("sweep") or {})
+    except (OSError, ValueError, AttributeError):
+        return out
+    if not isinstance(sec, dict):
+        return out
+    for k in out:
+        v = sec.get(k)
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or v <= 0:
+            continue
+        if k != "min_range_v" and v >= 1:
+            continue
+        out[k] = v
+    return out
+
+
+def page_config(inst, via=VIA_WS, serial_urls=None, sweep=None):
     """The dict the page's JS reads (rendered with json_script).
-    serial_urls: {"cmdUrl", "pollUrl", "logUrl"} (the views' reverse())."""
+    serial_urls: {"cmdUrl", "pollUrl", "logUrl", ...} (the views' reverse()).
+    sweep: sweep_settings() (the line-up suggestion)."""
     from events import constants as EC
     cfg = {"id": inst.get("id", ""), "name": inst.get("name", ""),
            "wsUrls": ws_urls(inst), "keepAliveMs": KEEPALIVE_MS,
-           "windowMs": WINDOW_MS, "activeKinds": list(ACTIVE_KINDS), "via": via}
+           "windowMs": WINDOW_MS, "activeKinds": list(ACTIVE_KINDS), "via": via,
+           "lineup": dict(sweep or EC.HEADS_SWEEP_DEFAULTS, slots=EC.HEADS_LINEUP_SLOTS,
+                          labelMax=EC.HEADS_LABEL_MAX)}
     if serial_urls:
         cfg["serial"] = dict(serial_urls, pollMs=EC.SERIAL_HEADS_POLL_MS,
                              liveMs=EC.SERIAL_HEADS_LIVE_MS)

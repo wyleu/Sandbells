@@ -609,7 +609,9 @@ def farm_heads(request, index=None):
         via = align.pick_via(inst, serial_open, request.GET.get("via"))
         cfg = align.page_config(inst, via, {
             "cmdUrl": reverse("farm_heads_serial_cmd"), "pollUrl": reverse("farm_heads_serial"),
-            "logUrl": reverse("farm_heads_pt_log")})
+            "logUrl": reverse("farm_heads_pt_log"),
+            "sweepLogUrl": reverse("farm_heads_sweep_log"),
+            "sweepCsvUrl": reverse("farm_heads_sweep_csv")}, align.sweep_settings())
     return render(request, "bells/align.html", {
         "inst": inst,
         "index": i,
@@ -678,4 +680,30 @@ def farm_heads_pt_log(request):
     days = max(1, min(days, EVENTS.PT_LOG_DAYS_MAX))
     r = HttpResponse(rows_csv(days), content_type="text/csv; charset=utf-8")
     r["Content-Disposition"] = 'inline; filename="pt-level-%dd.csv"' % days
+    return r
+
+@require_POST
+def farm_heads_sweep_log(request):
+    """The sandheads page logs a finished line-up sweep (points, label,
+    suggestion) as a HeadSweep row.  Nothing goes to the Pico."""
+    from events import sweeplog
+    if len(request.body) > EVENTS.HEADS_SWEEP_LOG_MAX_B:
+        return JsonResponse({"ok": False, "error": "too long"}, status=400)
+    try:
+        row = sweeplog.save(json.loads(request.body.decode("utf-8")))
+    except (ValueError, UnicodeDecodeError) as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    return JsonResponse({"ok": True, "id": row.id})
+
+
+def farm_heads_sweep_csv(request):
+    """The line-up sweep log (HeadSweep) as CSV: ?days=N, as the PT log."""
+    from events.sweeplog import rows_csv
+    try:
+        days = int(request.GET.get("days") or EVENTS.PT_LOG_DAYS_DEFAULT)
+    except ValueError:
+        return HttpResponse("bad days", status=400, content_type="text/plain")
+    days = max(1, min(days, EVENTS.PT_LOG_DAYS_MAX))
+    r = HttpResponse(rows_csv(days), content_type="text/csv; charset=utf-8")
+    r["Content-Disposition"] = 'inline; filename="sweeps-%dd.csv"' % days
     return r
