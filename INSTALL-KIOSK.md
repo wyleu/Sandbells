@@ -32,7 +32,7 @@ chmod +x master_install.sh install-steps/*.sh start-kiosk-solo.sh
 # ./install-steps/12-django-venv.sh
 # ./install-steps/13-gunicorn-nginx.sh
 # ./install-steps/14-kiosk-systemd.sh
-install-steps/21-chimes.sh            ← Chimes player packages, soundfont, audio group, bundles
+install-steps/21-chimes.sh            ← Chimes player packages, soundfont, audio group, qmidinet, bundles
 
 sudo reboot
 ```
@@ -51,7 +51,7 @@ After reboot you should see the Sandbells interface full-screen on the HDMI moni
 | 18   | `18-ingest.sh`            | Checks websocket-client + migrations, installs and enables `sandbells-ingest.service` |
 | 19   | `19-power.sh`             | `/etc/sudoers.d/sandbells-power` (0440, `visudo -cf`): the gunicorn user may run only `systemctl reboot` and `systemctl poweroff` without a password, for the Reboot / Shut down buttons on the farm status page (see docs/power.md) |
 | 20   | `20-hdmi.sh`              | Install `/usr/local/sbin/sandbells-hdmi` and apply `display.hdmi` from settings to the Pi's boot files (forced 1920×1080@60 for the tower splitter; see docs/hdmi.md). Does not edit settings.json. |
-| 21   | `21-chimes.sh`            | Chimes player: `alsa-utils`, `poppler-utils`, `fluidsynth` (optional `fluid-soundfont-gm`), Sandbach 8-bell soundfont if found, gunicorn user in group `audio`, `migrate bells` / `collectstatic`, load `*.chime.zip` from `~/Downloads/chime-bundles`. Does not edit settings.json. |
+| 21   | `21-chimes.sh`            | Chimes player: `alsa-utils`, `poppler-utils`, `fluidsynth`, `qmidinet` (optional `fluid-soundfont-gm`), Sandbach 8-bell soundfont if found, gunicorn user in group `audio`, QmidiNet helper and units (wired first, then Wi-Fi, enabled at boot), `migrate bells` / `collectstatic`, load `*.chime.zip` from `~/Downloads/chime-bundles`. Does not edit settings.json. |
 
 `master_install.sh` automatically runs every `install-steps/NN-*.sh` in order, so the new steps are picked up with no further changes.
 

@@ -1,7 +1,8 @@
-"""Install step 21 (Chimes player packages, soundfont, audio group, bundles).
+"""Install step 21 (Chimes player packages, soundfont, audio group, qmidinet, bundles).
 
 Nothing here installs packages or changes the host: bash -n, a few text
-guards, and the stubbed sandbox in install-steps/tests/test-21-chimes.sh.
+guards, the stubbed sandbox in install-steps/tests/test-21-chimes.sh, and
+the interface-choice tests in install-steps/tests/test-sandbells-qmidinet.sh.
 """
 
 import os
@@ -15,6 +16,8 @@ HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 STEP = REPO / "install-steps" / "21-chimes.sh"
 SANDBOX = REPO / "install-steps" / "tests" / "test-21-chimes.sh"
+QMIDINET_HELPER = REPO / "install-steps" / "sandbells-qmidinet.sh"
+QMIDINET_SANDBOX = REPO / "install-steps" / "tests" / "test-sandbells-qmidinet.sh"
 # HERE is changes/bells; parents[1] is the Sandbells repo root (same as tests_power.py).
 
 
@@ -30,6 +33,12 @@ class ChimesInstallStepTests(SimpleTestCase):
         self.assertIn("alsa-utils", text)
         self.assertIn("poppler-utils", text)
         self.assertIn("fluidsynth", text)
+        self.assertIn("qmidinet", text)
+        self.assertIn("QMIDINET_HELPER_NAME=", text)
+        self.assertIn("sandbells-qmidinet.sh", text)
+        self.assertIn("sandbells-qmidinet.service", text)
+        self.assertIn("sandbells-qmidinet-select.service", text)
+        self.assertIn("group_from_unit", text)
         self.assertIn("OPTIONAL_PACKAGES=", text)
         self.assertIn("fluid-soundfont-gm", text)
         self.assertIn("SOUNDFONT_NAME=", text)
@@ -67,6 +76,21 @@ class ChimesInstallStepTests(SimpleTestCase):
         self.assertTrue(os.access(SANDBOX, os.X_OK))
         p = subprocess.run(
             ["bash", str(SANDBOX)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+
+    def test_qmidinet_helper_and_interface_choice(self):
+        self.assertTrue(QMIDINET_HELPER.is_file())
+        self.assertTrue(os.access(QMIDINET_HELPER, os.X_OK))
+        self.assertEqual(
+            subprocess.run(["bash", "-n", str(QMIDINET_HELPER)], check=False).returncode, 0)
+        self.assertTrue(os.access(QMIDINET_SANDBOX, os.X_OK))
+        p = subprocess.run(
+            ["bash", str(QMIDINET_SANDBOX)],
             capture_output=True,
             text=True,
             timeout=60,

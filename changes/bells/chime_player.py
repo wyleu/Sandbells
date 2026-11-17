@@ -11,7 +11,8 @@ row; the settings below are only its first values):
   MIDI out    aplaymidi -p PORT (a tempo-scaled copy of the tune).  Never the
               Pico's usb_midi port: ingest_midi reads it.  Ports whose client
               or port name contains one of EXCLUDED_PORT_NAMES are left out of
-              every list and refused.
+              every list and refused.  QmidiNet (QMIDINET_CLIENT_NAME) is kept
+              when that service is running.
   HDMI audio  bell samples, fluidsynth -n on the HDMI ALSA device.
 Both off: Play still runs the dot, silently.
 
@@ -70,6 +71,9 @@ PANIC_FILE_NAME = "player-all-off.mid"
 # The Pico 2 W's usb_midi port belongs to ingest_midi: never a destination.
 # (events.constants.MIDI_CARD_MATCH is what ingest_midi looks for.)
 EXCLUDED_PORT_NAMES = ("Pico", "CircuitPython", "Pico 2 W")
+# ALSA client created by qmidinet (install-steps/sandbells-qmidinet.sh).
+# Listed like any other port; not excluded.  midi_port may be "QmidiNet".
+QMIDINET_CLIENT_NAME = "QmidiNet"
 MIDI_THROUGH_NAME = "Midi Through"     # last choice when picking a port by itself
 PORT_ID_RE = re.compile(r"^\d+:\d+$")
 # aplaymidi -l:  " 14:0    Midi Through                     Midi Through Port-0"

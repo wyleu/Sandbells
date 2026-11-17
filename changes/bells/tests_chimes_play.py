@@ -232,6 +232,13 @@ APLAYMIDI_LIST = """ Port    Client name                      Port name
  20:0    Roland SC-8820                   Roland SC-8820 MIDI 1
  24:0    Pico 2 W                         Pico 2 W MIDI 1
 """
+# aplaymidi -l when sandbells-qmidinet is running (typical client/port names).
+PORT_QMIDINET = "128:0"
+APLAYMIDI_LIST_QMIDINET = """ Port    Client name                      Port name
+ 14:0    Midi Through                     Midi Through Port-0
+ 24:0    Pico 2 W                         Pico 2 W MIDI 1
+ 128:0   QmidiNet                         Network 1
+"""
 FAKE_APLAYMIDI = """#!%s
 import os, shutil, sys, time
 log = open(os.environ["FAKE_AP_LOG"], "a")
@@ -410,6 +417,20 @@ class ChimePortTests(TestCase):
         self.assertEqual([p["id"] for p in ports], [PORT_THROUGH, PORT_ROLAND])
         self.assertEqual(left_out, [PORT_PICO])
         self.assertEqual(ports[1]["client"], "Roland SC-8820")
+
+    def test_qmidinet_is_listed_and_the_pico_is_still_left_out(self):
+        ports, left_out = chime_player.parse_ports(APLAYMIDI_LIST_QMIDINET)
+        self.assertEqual([p["id"] for p in ports], [PORT_THROUGH, PORT_QMIDINET])
+        self.assertEqual(left_out, [PORT_PICO])
+        self.assertEqual(ports[1]["client"], chime_player.QMIDINET_CLIENT_NAME)
+        self.assertEqual(ports[1]["name"], "Network 1")
+        self.assertEqual(chime_player.pick_port("", ports), PORT_QMIDINET)
+        self.assertEqual(chime_player.pick_port("QmidiNet", ports), PORT_QMIDINET)
+        self.assertEqual(chime_player.pick_port("network 1", ports), PORT_QMIDINET)
+        with self.assertRaisesRegex(chime_player.PlayerError, "Pico"):
+            chime_player.pick_port("Pico 2 W", ports, left_out=left_out)
+        with self.assertRaisesRegex(chime_player.PlayerError, "Pico"):
+            chime_player.pick_port(PORT_PICO, ports, left_out=left_out)
 
     def test_circuitpython_and_extra_names_are_left_out_too(self):
         text = APLAYMIDI_LIST + " 28:0    CircuitPython usb_midi.ports[0]  CircuitPython MIDI 1\n"

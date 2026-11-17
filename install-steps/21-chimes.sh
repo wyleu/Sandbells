@@ -5,7 +5,9 @@
 #   * alsa-utils (aplaymidi) for MIDI out
 #   * poppler-utils (pdftoppm) for page images (also installed by step 05)
 #   * fluidsynth for HDMI audio of the bell samples
+#   * qmidinet for MIDI over the network (wired first, then Wi-Fi)
 #   * fluid-soundfont-gm, optional fallback font if the 8-bell font is missing
+#   * sandbells-qmidinet.sh and the qmidinet systemd units, enabled at boot
 #   * sandbach_bells_8.sf2 into /usr/local/share/sounds/sf2/ when a source
 #     file is given or found (repo assets or ~/Downloads); warn and continue
 #     if it is not found (HDMI audio then uses the GM fallback, or stays off)
@@ -15,8 +17,9 @@
 #   * every *.chime.zip in a configurable directory (default
 #     ~/Downloads/chime-bundles) loaded with manage.py chime_load
 #
-# Does not edit /etc/sandbells/settings.json.  Does not open or write any
-# MIDI port (the Pico's port is never touched).
+# Does not edit /etc/sandbells/settings.json.  Does not open or write the
+# Pico's MIDI port.  Starting the qmidinet service creates QmidiNet's own
+# ALSA port, which Chimes can play to.
 #
 # Idempotent and safe to re-run.  master_install runs every
 # install-steps/[0-9][0-9]-*.sh, so it needs no edit there.  By hand,
@@ -80,6 +83,7 @@ REQUIRED_PACKAGES=(
     alsa-utils        # aplaymidi: MIDI out
     poppler-utils     # pdftoppm: tune PDFs -> page images
     fluidsynth        # HDMI audio of the bell samples
+    qmidinet          # MIDI over the network (UDP/IP multicast)
 )
 OPTIONAL_PACKAGES=(
     fluid-soundfont-gm    # FluidR3_GM.sf2 fallback; missing package is not a failure
@@ -93,6 +97,23 @@ SOUNDFONT_DST_MODE="644"
 DOWNLOADS_DIR="${XDG_DOWNLOAD_DIR:-$HOME/Downloads}"
 DEFAULT_BUNDLES_DIR="${DOWNLOADS_DIR}/chime-bundles"
 BUNDLE_SUFFIX=".chime.zip"
+
+# qmidinet helper and units.  SANDBELLS_INSTALL_ROOT prefixes destinations
+# in the sandbox tests (must not write to the host's /usr or /etc).
+INSTALL_ROOT="${SANDBELLS_INSTALL_ROOT:-}"
+QMIDINET_HELPER_NAME="sandbells-qmidinet.sh"
+QMIDINET_HELPER_SRC="${SCRIPT_DIR}/${QMIDINET_HELPER_NAME}"
+QMIDINET_HELPER_DST="${SANDBELLS_QMIDINET_HELPER_DST:-${INSTALL_ROOT}/usr/local/sbin/${QMIDINET_HELPER_NAME}}"
+QMIDINET_UNIT_NAME="sandbells-qmidinet.service"
+QMIDINET_SELECT_UNIT_NAME="sandbells-qmidinet-select.service"
+QMIDINET_UNIT_SRC="${REPO_DIR}/systemd/${QMIDINET_UNIT_NAME}"
+QMIDINET_SELECT_UNIT_SRC="${REPO_DIR}/systemd/${QMIDINET_SELECT_UNIT_NAME}"
+SYSTEMD_DIR="${SANDBELLS_SYSTEMD_DIR:-${INSTALL_ROOT}/etc/systemd/system}"
+QMIDINET_UNIT_DST="${SYSTEMD_DIR}/${QMIDINET_UNIT_NAME}"
+QMIDINET_SELECT_UNIT_DST="${SYSTEMD_DIR}/${QMIDINET_SELECT_UNIT_NAME}"
+QMIDINET_DROPIN_DST="${SYSTEMD_DIR}/${QMIDINET_UNIT_NAME}.d/user.conf"
+HELPER_MODE="755"
+UNIT_MODE="644"
 
 # Seconds to wait at each pause() in quick mode (same idea as steps 19 and 20).
 QUICK_PAUSE_S=1
@@ -142,6 +163,57 @@ pick_gunicorn_unit() {
 user_from_unit() {
     # The User= line of a systemd service file (last one wins).
     sed -n 's/^[[:space:]]*User=[[:space:]]*\([^[:space:]]*\).*/\1/p' "$1" | tail -n 1
+}
+
+group_from_unit() {
+    # The Group= line, or the user name if Group= is missing.
+    local group
+    group="$(sed -n 's/^[[:space:]]*Group=[[:space:]]*\([^[:space:]]*\).*/\1/p' "$1" | tail -n 1)"
+    if [ -n "$group" ]; then
+        printf '%s\n' "$group"
+    else
+        user_from_unit "$1"
+    fi
+}
+
+install_file() {
+    # install -D -m MODE SRC DST; skip if already identical.
+    local mode="$1" src="$2" dst="$3"
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        echo "  unchanged: $dst"
+        return 1
+    fi
+    if [ "$DRY_RUN" = true ]; then
+        echo "  dry-run: sudo install -D -m $mode $src $dst"
+        return 0
+    fi
+    sudo install -D -m "$mode" "$src" "$dst"
+    echo "  installed $dst"
+    return 0
+}
+
+write_qmidinet_dropin() {
+    local dst="$1" user="$2" group="$3" tmp
+    tmp="$(mktemp)"
+    cat >"$tmp" <<EOF
+[Service]
+User=$user
+Group=$group
+EOF
+    if [ -f "$dst" ] && cmp -s "$tmp" "$dst"; then
+        rm -f "$tmp"
+        echo "  unchanged: $dst"
+        return 1
+    fi
+    if [ "$DRY_RUN" = true ]; then
+        rm -f "$tmp"
+        echo "  dry-run: sudo install -D -m $UNIT_MODE - $dst  (User=$user Group=$group)"
+        return 0
+    fi
+    sudo install -D -m "$UNIT_MODE" "$tmp" "$dst"
+    rm -f "$tmp"
+    echo "  installed $dst  (User=$user Group=$group)"
+    return 0
 }
 
 user_in_group() {
@@ -212,7 +284,7 @@ fi
 # ---------------------------------------------------------------------------
 # 1. Packages
 # ---------------------------------------------------------------------------
-echo "[1/5] Packages (skip if already installed)..."
+echo "[1/6] Packages (skip if already installed)..."
 TO_INSTALL=()
 for pkg in "${REQUIRED_PACKAGES[@]}"; do
     if package_installed "$pkg"; then
@@ -254,7 +326,7 @@ pause
 # ---------------------------------------------------------------------------
 # 2. Sandbach 8-bell soundfont
 # ---------------------------------------------------------------------------
-echo "[2/5] Soundfont $SOUNDFONT_NAME -> $SOUNDFONT_DST"
+echo "[2/6] Soundfont $SOUNDFONT_NAME -> $SOUNDFONT_DST"
 SOUNDFONT_SRC=""
 if SOUNDFONT_SRC="$(find_soundfont_source)"; then
     echo "  source: $SOUNDFONT_SRC"
@@ -283,7 +355,7 @@ pause
 # ---------------------------------------------------------------------------
 # 3. gunicorn user -> group audio
 # ---------------------------------------------------------------------------
-echo "[3/5] gunicorn user in group $AUDIO_GROUP..."
+echo "[3/6] gunicorn user in group $AUDIO_GROUP..."
 UNIT_SRC="$(pick_gunicorn_unit)"
 [ -f "$UNIT_SRC" ] || { echo "ERROR: missing gunicorn unit: $UNIT_SRC"; exit 1; }
 RUN_AS="$(user_from_unit "$UNIT_SRC")"
@@ -320,10 +392,60 @@ fi
 pause
 
 # ---------------------------------------------------------------------------
-# 4. migrate bells + collectstatic (same pattern as step 18, so this
+# 4. qmidinet helper + systemd units (wired first, then Wi-Fi)
+# ---------------------------------------------------------------------------
+echo "[4/6] QmidiNet helper and services..."
+for f in "$QMIDINET_HELPER_SRC" "$QMIDINET_UNIT_SRC" "$QMIDINET_SELECT_UNIT_SRC"; do
+    if [ ! -f "$f" ]; then
+        echo "ERROR: missing $f"
+        exit 1
+    fi
+done
+QMIDINET_CHANGED=false
+if install_file "$HELPER_MODE" "$QMIDINET_HELPER_SRC" "$QMIDINET_HELPER_DST"; then
+    QMIDINET_CHANGED=true
+fi
+if install_file "$UNIT_MODE" "$QMIDINET_UNIT_SRC" "$QMIDINET_UNIT_DST"; then
+    QMIDINET_CHANGED=true
+fi
+if install_file "$UNIT_MODE" "$QMIDINET_SELECT_UNIT_SRC" "$QMIDINET_SELECT_UNIT_DST"; then
+    QMIDINET_CHANGED=true
+fi
+RUN_GROUP="$(group_from_unit "$UNIT_SRC")"
+if ! [[ "$RUN_GROUP" =~ $USER_NAME_RE ]]; then
+    RUN_GROUP="$RUN_AS"
+fi
+if write_qmidinet_dropin "$QMIDINET_DROPIN_DST" "$RUN_AS" "$RUN_GROUP"; then
+    QMIDINET_CHANGED=true
+fi
+# Enable the select unit at boot.  It starts QmidiNet itself when a
+# network is ready.  The QmidiNet unit is not enabled on its own.
+if [ "$DRY_RUN" = true ]; then
+    echo "  dry-run: sudo systemctl daemon-reload"
+    echo "  dry-run: sudo systemctl enable $QMIDINET_SELECT_UNIT_NAME"
+    if [ "$QMIDINET_CHANGED" = true ]; then
+        echo "  dry-run: sudo systemctl try-restart $QMIDINET_SELECT_UNIT_NAME || sudo systemctl start $QMIDINET_SELECT_UNIT_NAME"
+    else
+        echo "  dry-run: sudo systemctl start $QMIDINET_SELECT_UNIT_NAME"
+    fi
+else
+    sudo systemctl daemon-reload
+    sudo systemctl enable "$QMIDINET_SELECT_UNIT_NAME"
+    if [ "$QMIDINET_CHANGED" = true ]; then
+        sudo systemctl try-restart "$QMIDINET_SELECT_UNIT_NAME" \
+            || sudo systemctl start "$QMIDINET_SELECT_UNIT_NAME"
+    else
+        sudo systemctl start "$QMIDINET_SELECT_UNIT_NAME"
+    fi
+    echo "  enabled and started $QMIDINET_SELECT_UNIT_NAME"
+fi
+pause
+
+# ---------------------------------------------------------------------------
+# 5. migrate bells + collectstatic (same pattern as step 18, so this
 #    step can be run on its own after a pull)
 # ---------------------------------------------------------------------------
-echo "[4/5] Django migrate bells + collectstatic..."
+echo "[5/6] Django migrate bells + collectstatic..."
 if [ ! -x "$VENV_PY" ]; then
     echo "ERROR: no venv at $VENV_PY (run step 12 first)"
     exit 1
@@ -352,7 +474,7 @@ fi
 pause
 
 # ---------------------------------------------------------------------------
-# 5. Load *.chime.zip bundles
+# 6. Load *.chime.zip bundles
 # ---------------------------------------------------------------------------
 if [ -n "$BUNDLES_ARG" ]; then
     BUNDLES_DIR="$BUNDLES_ARG"
@@ -362,7 +484,7 @@ else
     BUNDLES_DIR="$DEFAULT_BUNDLES_DIR"
 fi
 
-echo "[5/5] Loading Chimes bundles from $BUNDLES_DIR"
+echo "[6/6] Loading Chimes bundles from $BUNDLES_DIR"
 if [ ! -d "$BUNDLES_DIR" ]; then
     echo "  no directory $BUNDLES_DIR — skipped (set SANDBELLS_CHIME_BUNDLES or --bundles=DIR)"
 else
@@ -393,7 +515,9 @@ fi
 echo ""
 echo "Chimes install step completed."
 echo "  This step does not edit /etc/sandbells/settings.json and does not"
-echo "  open or write any MIDI port (the Pico's port is never touched)."
+echo "  open or write the Pico's MIDI port."
+echo "  QmidiNet (MIDI over the network) is started by $QMIDINET_SELECT_UNIT_NAME"
+echo "  when a wired or Wi-Fi address is available."
 if [ "$ADDED_TO_AUDIO" = true ]; then
     echo "  Next: $GUNICORN_RESTART_CMD"
 fi

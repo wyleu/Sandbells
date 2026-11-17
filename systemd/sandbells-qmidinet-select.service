@@ -1,0 +1,19 @@
+[Unit]
+Description=Choose a network for QmidiNet (wired first, then Wi-Fi)
+Documentation=file:///usr/local/sbin/sandbells-qmidinet.sh
+After=network-pre.target NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=simple
+# Sits in --loop: syncs once, then waits for a link or address change
+# (`ip monitor`) with a timeout of check_period_s (default 30), so it
+# is ready when a network appears, without polling hard.
+ExecStart=/usr/local/sbin/sandbells-qmidinet.sh --loop
+# Stop QmidiNet as well when this unit is stopped.
+ExecStop=/usr/local/sbin/sandbells-qmidinet.sh --stop
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

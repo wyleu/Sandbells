@@ -64,7 +64,9 @@ What each output does:
   refused by Play, the switch POST and the admin.  `GET /chimes/player/ports/`
   lists the allowed ports (`aplaymidi -l`, the Pico left out).
   Port "automatic": the first allowed port that is not Midi Through (Midi
-  Through if it is the only one).
+  Through if it is the only one).  When the QmidiNet service is running,
+  its ALSA port (`QmidiNet` / `Network 1`) is in the list; `midi_port`
+  may be set to `QmidiNet`.  The Pico filter is unchanged.
 * **HDMI audio:** bell samples through fluidsynth (`-n`: no MIDI input, so
   it never opens an ALSA MIDI port) on the HDMI ALSA device.  Needs
   `sudo apt install fluidsynth` and the soundfont.
@@ -84,6 +86,13 @@ that; nothing is written to any settings file): `"chimes"` in
 | `gain` | `0.6` | fluidsynth gain |
 | `program_changes` | `false` | send the file's programs to fluidsynth (MIDI out always sends them) |
 | `aplaymidi`, `fluidsynth` | `aplaymidi`, `fluidsynth` | program paths |
+| `qmidinet` | see below | MIDI over the network (a nested object) |
+| `qmidinet.wired_interface` | `""` (first ready ethernet) | use this interface when it has a link and address |
+| `qmidinet.wifi_interface` | `""` (first ready Wi-Fi) | used when wired is not ready |
+| `qmidinet.udp_addr` | `225.0.0.37` | QmidiNet / ipMIDI multicast address |
+| `qmidinet.udp_port` | `21928` | QmidiNet / ipMIDI UDP port |
+| `qmidinet.num_ports` | `1` | QmidiNet ALSA ports (`--num-ports`) |
+| `qmidinet.check_period_s` | `30` | how long the helper waits for a link or address change |
 
 Django settings `SANDBELLS_CHIMES_MIDI_PORT`, `SANDBELLS_CHIMES_HDMI_DEVICE`,
 `SANDBELLS_CHIMES_SOUNDFONT`, `SANDBELLS_CHIMES_GAIN`,
@@ -120,9 +129,20 @@ bash ~/Code/Sandbells/install-steps/21-chimes.sh true
 
 The step is idempotent and safe to re-run.  It:
 
-* installs `alsa-utils` (aplaymidi), `poppler-utils` (already in step 05)
-  and `fluidsynth` if they are missing; `fluid-soundfont-gm` is optional
-  and a missing package does not fail the step
+* installs `alsa-utils` (aplaymidi), `poppler-utils` (already in step 05),
+  `fluidsynth` and `qmidinet` if they are missing; `fluid-soundfont-gm` is
+  optional and a missing package does not fail the step
+* installs `/usr/local/sbin/sandbells-qmidinet.sh` and the systemd units
+  `sandbells-qmidinet.service` and `sandbells-qmidinet-select.service`.
+  The select unit is enabled at boot.  It starts QmidiNet headless
+  (`qmidinet --no-gui --jack-midi=no --alsa-midi=yes --interface=...`,
+  Qt platform `offscreen`) on a wired interface that has a link and an
+  address, or on Wi-Fi if wired is not ready.  If neither is up it waits
+  (`ip monitor`, with a timeout of `check_period_s`) and starts when a
+  network appears; if it was on Wi-Fi and wired comes up, it moves
+  QmidiNet to wired.  Interface names, the UDP address and port, and the
+  period come from named defaults or the optional `chimes.qmidinet`
+  settings above.  The step does not edit settings.json.
 * copies `sandbach_bells_8.sf2` to `/usr/local/share/sounds/sf2/` when
   a source file is given (`SANDBELLS_CHIME_SOUNDFONT` or `--soundfont=PATH`)
   or found in the repo assets or `~/Downloads`; if it is not found the
@@ -139,7 +159,8 @@ The step is idempotent and safe to re-run.  It:
   (`SANDBELLS_CHIME_BUNDLES` or `--bundles=DIR` to change that)
 
 It does not edit `/etc/sandbells/settings.json` and does not open or
-write any MIDI port (the Pico's port is never touched).
+write the Pico's MIDI port.  Starting QmidiNet creates its own ALSA
+port, which Chimes can play to.
 `master_install.sh` runs this step too (it runs every `install-steps/NN-*.sh`).
 
 To load the tune archive by hand, unpack it first:

@@ -261,7 +261,7 @@ Useful display URLs (behind the kiosk / nginx root):
 - `/layout-test/6/Rounds/Kings/Kennet/` — fixed three-method path
 - `/swing/6/` — circle animation
 - `/farm/status/` — farm / multi-Pi status
-- `/chimes/` — handbell tune sheets (Play, MIDI out, HDMI audio); see [docs/chimes.md](docs/chimes.md)
+- `/chimes/` — handbell tune sheets (Play, MIDI out, HDMI audio, QmidiNet); see [docs/chimes.md](docs/chimes.md)
 - `/sandtest/` — control page for the Sandtest rig (Pico 2 W opto outputs and mirror); see [docs/sandtest.md](docs/sandtest.md)
 
 ---

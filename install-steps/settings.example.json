@@ -57,5 +57,20 @@
         "ws_url": "ws://sandsense.local/ws"
       }
     ]
+  },
+  "chimes": {
+    "midi_out": true,
+    "midi_port": "",
+    "hdmi_audio": false,
+    "hdmi_device": "hdmi:CARD=vc4hdmi,DEV=0",
+    "gain": 0.6,
+    "qmidinet": {
+      "wired_interface": "",
+      "wifi_interface": "",
+      "udp_addr": "225.0.0.37",
+      "udp_port": 21928,
+      "num_ports": 1,
+      "check_period_s": 30
+    }
   }
 }

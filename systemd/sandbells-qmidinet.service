@@ -1,0 +1,30 @@
+[Unit]
+Description=QmidiNet MIDI-over-network gateway for Chimes
+Documentation=man:qmidinet(1)
+After=network-online.target sound.target
+Wants=sound.target
+# Started and stopped by sandbells-qmidinet-select when a wired or Wi-Fi
+# interface is ready (or when neither is).
+
+[Service]
+Type=simple
+# User= and Group= are written by install step 21 from the gunicorn
+# unit's User= (drop-in user.conf).  Never a hard-coded name here.
+SupplementaryGroups=audio
+# --no-gui still uses Qt; offscreen works with no display.
+Environment=QT_QPA_PLATFORM=offscreen
+EnvironmentFile=-/run/sandbells/qmidinet.env
+# Do not start until the select helper has chosen an interface.
+ExecStartPre=/bin/sh -c 'test -n "$QMIDINET_IFACE"'
+# Options from `man qmidinet` (Debian): --no-gui, --interface, --udp-addr
+# (default 225.0.0.37), --udp-port (default 21928), --num-ports (default 1),
+# --alsa-midi (default yes), --jack-midi (default no).
+ExecStart=/usr/bin/qmidinet --no-gui --jack-midi=${QMIDINET_JACK_MIDI} --alsa-midi=${QMIDINET_ALSA_MIDI} --interface=${QMIDINET_IFACE} --udp-addr=${QMIDINET_UDP_ADDR} --udp-port=${QMIDINET_UDP_PORT} --num-ports=${QMIDINET_NUM_PORTS}
+Restart=on-failure
+RestartSec=5
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+# Not enabled on its own; sandbells-qmidinet-select starts and stops it.

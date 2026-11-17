@@ -29,6 +29,8 @@ else
 fi
 
 WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/chimes-21-XXXXXX")"
+FAKE_ROOT="$WORKDIR/root"
+mkdir -p "$FAKE_ROOT"
 cleanup() { rm -rf "$WORKDIR"; }
 trap cleanup EXIT
 
@@ -47,7 +49,16 @@ mkdir -p "$STUBS" "$STATE" "$SF2_DST_DIR" "$BUNDLES_DIR" \
 
 cp "$STEP" "$FAKE_REPO/install-steps/21-chimes.sh"
 cp "$COMMON" "$FAKE_REPO/install-steps/sandbells-common.sh"
-chmod +x "$FAKE_REPO/install-steps/21-chimes.sh"
+HELPER="$STEPS_DIR/sandbells-qmidinet.sh"
+[ -f "$HELPER" ] || fail "missing $HELPER"
+cp "$HELPER" "$FAKE_REPO/install-steps/sandbells-qmidinet.sh"
+chmod +x "$FAKE_REPO/install-steps/21-chimes.sh" "$FAKE_REPO/install-steps/sandbells-qmidinet.sh"
+mkdir -p "$FAKE_REPO/systemd"
+for unit in sandbells-qmidinet.service sandbells-qmidinet-select.service; do
+    src="$STEPS_DIR/../systemd/$unit"
+    [ -f "$src" ] || fail "missing $src"
+    cp "$src" "$FAKE_REPO/systemd/$unit"
+done
 
 cat > "$FAKE_REPO/systemd/gunicorn.service" <<'EOF'
 [Unit]
@@ -257,6 +268,7 @@ run_step() {
         SANDBELLS_GUNICORN_UNIT="$FAKE_REPO/systemd/gunicorn.service" \
         SANDBELLS_CHIME_SOUNDFONT_DST="$SF2_DST_DIR/sandbach_bells_8.sf2" \
         SANDBELLS_CHIME_BUNDLES="$BUNDLES_DIR" \
+        SANDBELLS_INSTALL_ROOT="$FAKE_ROOT" \
         USER=tester \
         LANG=C \
         "$@"
@@ -273,9 +285,9 @@ fi
 pass "first stubbed run"
 
 grep -q "already installed: poppler-utils" "$OUT1" || fail "should skip poppler-utils"
-grep -q "installing: alsa-utils fluidsynth" "$OUT1" || {
+grep -q "installing: alsa-utils fluidsynth qmidinet" "$OUT1" || {
     cat "$OUT1" >&2
-    fail "should install alsa-utils and fluidsynth"
+    fail "should install alsa-utils, fluidsynth and qmidinet"
 }
 grep -q "optional: fluid-soundfont-gm" "$OUT1" || fail "should attempt optional font package"
 grep -q "gunicorn runs as: chimetest" "$OUT1" || fail "should read User= from the unit"
@@ -286,10 +298,20 @@ grep -q "loading $BUNDLES_DIR/the-boars-head-carol.chime.zip" "$OUT1" || fail "s
 grep -q "does not edit /etc/sandbells/settings.json" "$OUT1" || fail "should say it does not edit settings"
 
 [ -f "$SF2_DST_DIR/sandbach_bells_8.sf2" ] || fail "destination soundfont missing"
+[ -x "$FAKE_ROOT/usr/local/sbin/sandbells-qmidinet.sh" ] || fail "helper was not installed"
+[ -f "$FAKE_ROOT/etc/systemd/system/sandbells-qmidinet.service" ] || fail "qmidinet unit was not installed"
+[ -f "$FAKE_ROOT/etc/systemd/system/sandbells-qmidinet-select.service" ] || fail "select unit was not installed"
+[ -f "$FAKE_ROOT/etc/systemd/system/sandbells-qmidinet.service.d/user.conf" ] || fail "user drop-in was not installed"
+grep -q "^User=chimetest$" "$FAKE_ROOT/etc/systemd/system/sandbells-qmidinet.service.d/user.conf" \
+    || fail "drop-in should use User= from the gunicorn unit"
+grep -q "systemctl enable sandbells-qmidinet-select.service" "$LOG" \
+    || fail "select unit should be enabled"
+grep -q "installed $FAKE_ROOT/usr/local/sbin/sandbells-qmidinet.sh" "$OUT1" \
+    || fail "first run should install the helper"
 cmp -s "$FAKE_HOME/Downloads/sandbach_bells_8.sf2" "$SF2_DST_DIR/sandbach_bells_8.sf2" \
     || fail "installed soundfont does not match the source"
 
-grep -q "apt-get install --no-install-recommends -y alsa-utils fluidsynth" "$LOG" \
+grep -q "apt-get install --no-install-recommends -y alsa-utils fluidsynth qmidinet" "$LOG" \
     || fail "apt-get was not called for required packages"
 grep -q "apt-get install --no-install-recommends -y fluid-soundfont-gm" "$LOG" \
     || fail "apt-get was not called for the optional package"
@@ -326,6 +348,10 @@ grep -q "unchanged: $SF2_DST_DIR/sandbach_bells_8.sf2" "$OUT2" \
     || fail "second run should leave the soundfont in place"
 grep -q "already in group audio: chimetest" "$OUT2" \
     || fail "second run should leave group membership in place"
+grep -q "unchanged: $FAKE_ROOT/usr/local/sbin/sandbells-qmidinet.sh" "$OUT2" \
+    || fail "second run should leave the helper in place"
+grep -q "unchanged: $FAKE_ROOT/etc/systemd/system/sandbells-qmidinet.service" "$OUT2" \
+    || fail "second run should leave the qmidinet unit in place"
 if grep -q "apt-get install" "$LOG"; then
     fail "second run should not call apt-get install"
 fi
@@ -352,7 +378,9 @@ cp "$STATE/installed-dry.txt" "$STATE/installed.txt"
 
 OUT3="$WORKDIR/run-dry.out"
 : >"$LOG"
+DRY_ROOT="$WORKDIR/dry/root"
 if ! run_step env SANDBELLS_CHIME_DRY_RUN=1 SANDBELLS_CHIME_SOUNDFONT_DST="$SF2_DRY" \
+        SANDBELLS_INSTALL_ROOT="$DRY_ROOT" \
         "$FAKE_REPO/install-steps/21-chimes.sh" true --dry-run >"$OUT3" 2>&1; then
     cat "$OUT3" >&2
     fail "dry-run exited non-zero"
@@ -360,6 +388,11 @@ fi
 grep -q "dry-run: sudo apt-get install" "$OUT3" || fail "dry-run should print apt-get"
 grep -q "dry-run: sudo usermod -aG audio chimetest" "$OUT3" || fail "dry-run should print usermod"
 grep -q "dry-run: sudo install -D" "$OUT3" || fail "dry-run should print install"
+grep -q "dry-run: sudo systemctl enable sandbells-qmidinet-select.service" "$OUT3" \
+    || fail "dry-run should print enabling the select unit"
+if [ -e "$DRY_ROOT" ]; then
+    fail "dry-run must not write the qmidinet install root"
+fi
 grep -q "dry-run: .*manage.py chime_load" "$OUT3" || fail "dry-run should print chime_load"
 if [ -e "$SF2_DRY" ]; then
     fail "dry-run must not write the soundfont"
