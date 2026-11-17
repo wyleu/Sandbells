@@ -611,7 +611,12 @@ def farm_heads(request, index=None):
             "cmdUrl": reverse("farm_heads_serial_cmd"), "pollUrl": reverse("farm_heads_serial"),
             "logUrl": reverse("farm_heads_pt_log"),
             "sweepLogUrl": reverse("farm_heads_sweep_log"),
-            "sweepCsvUrl": reverse("farm_heads_sweep_csv")}, align.sweep_settings())
+            "sweepCsvUrl": reverse("farm_heads_sweep_csv"),
+            "chatterLogUrl": reverse("farm_heads_chatter_log"),
+            "chatterCsvUrl": reverse("farm_heads_chatter_csv"),
+            "sandtestCmdUrl": reverse("sandtest:cmd"),
+            "sandtestStatusUrl": reverse("sandtest:status")}, align.sweep_settings(),
+            align.chatter_settings())
     return render(request, "bells/align.html", {
         "inst": inst,
         "index": i,
@@ -694,6 +699,37 @@ def farm_heads_sweep_log(request):
     except (ValueError, UnicodeDecodeError) as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=400)
     return JsonResponse({"ok": True, "id": row.id})
+
+
+def farm_heads_chatter_log(request):
+    """The chatter test's results.  POST: the page logs one run (a
+    HeadChatter row).  GET: the newest HEADS_CHATTER_LIST_MAX rows as JSON,
+    for the page's table.  Nothing goes to the Pico."""
+    from events import chatterlog
+    if request.method == "GET":
+        return JsonResponse({"rows": chatterlog.rows()})
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    if len(request.body) > EVENTS.HEADS_CHATTER_LOG_MAX_B:
+        return JsonResponse({"ok": False, "error": "too long"}, status=400)
+    try:
+        row = chatterlog.save(json.loads(request.body.decode("utf-8")))
+    except (ValueError, UnicodeDecodeError) as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=400)
+    return JsonResponse({"ok": True, "row": chatterlog.as_dict(row)})
+
+
+def farm_heads_chatter_csv(request):
+    """The chatter-test log (HeadChatter) as CSV: ?days=N, as the PT log."""
+    from events.chatterlog import rows_csv
+    try:
+        days = int(request.GET.get("days") or EVENTS.PT_LOG_DAYS_DEFAULT)
+    except ValueError:
+        return HttpResponse("bad days", status=400, content_type="text/plain")
+    days = max(1, min(days, EVENTS.PT_LOG_DAYS_MAX))
+    r = HttpResponse(rows_csv(days), content_type="text/csv; charset=utf-8")
+    r["Content-Disposition"] = 'attachment; filename="chatter-%dd.csv"' % days
+    return r
 
 
 def farm_heads_sweep_csv(request):

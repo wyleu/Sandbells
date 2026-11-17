@@ -219,3 +219,21 @@ button.nudge:disabled { opacity: 0.4; cursor: default; }
 .lineup .lstatus { font-size: 1.05rem; min-height: 1.3em; }
 .lineup .lrow { display: flex; gap: 0.4rem 0.9rem; align-items: center; flex-wrap: wrap; padding: 0.25rem 0; }
 .lineup .lrow .lch { font-weight: 600; }
+/* the chatter test (chatter.js): the line-up's look, plus a results table */
+.chatter { margin-top: 0.8rem; padding-top: 0.6rem; border-top: 1px solid #3a3220; }
+.chatter.hidden { display: none; }
+.chatter h3 { margin: 0.2rem 0 0.4rem; font-size: 1.1rem; color: #f6e9c8; }
+.chatter .lnote { margin: 0.2rem 0 0.5rem; color: #d9c9a0; }
+.chatter .lacts { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.chatter button.big { font-size: 1.25rem; padding: 0.7rem 1.2rem; margin: 0.2rem 0.6rem 0.4rem 0;
+  background: #2f3d22; color: #fff3cf; border: 2px solid #6fdc7f; border-radius: 10px; cursor: pointer; }
+.chatter button.big.stop { background: #40341a; border-color: #fc3; }
+.chatter button.big:disabled { opacity: 0.45; cursor: default; }
+.chatter select.lslot { font-size: 1.1rem; padding: 0.3rem; background: #221d14; color: #fff3cf; }
+.chatter .lstatus { font-size: 1.05rem; min-height: 1.3em; }
+.chatter table.ctable { border-collapse: collapse; margin: 0.5rem 0; font-size: 0.95rem; width: 100%; }
+.chatter table.ctable th, .chatter table.ctable td { padding: 0.2rem 0.5rem; text-align: left;
+  border-bottom: 1px solid #3a3220; }
+.chatter table.ctable tr.good td { color: #b8f0c0; }
+.chatter table.ctable tr.bad td { color: #ffd08a; }
+.chatter a { color: #f6d27a; }

@@ -158,3 +158,39 @@ class HeadSweep(models.Model):
 
     def __str__(self):
         return "%s ch %d %s (%d points)" % (self.at, self.ch, self.label, len(self.points or []))
+
+
+class HeadChatter(models.Model):
+    """One chatter-test run on the sandheads page (sandswing chatter.py):
+    the laser drive and PWM speed it ran at, how many vane passes sandtest
+    made, and what the Pico counted -- transitions, those with one clean
+    edge, the most edges in one, the longest burst and spurious edges in a
+    steady state.  Kept so drives and speeds can be compared
+    (/farm/heads/chatter-log.csv)."""
+    at = models.DateTimeField(default=timezone.now, db_index=True)
+    ch = models.PositiveSmallIntegerField(help_text="1-based channel")
+    label = models.CharField(max_length=C.HEADS_LABEL_MAX, blank=True, default="",
+                             help_text="the number written on the head")
+    drv = models.IntegerField(help_text="laser drive duty 0-65535")
+    pwm_hz = models.IntegerField(null=True, blank=True,
+                                 help_text="laser PWM frequency the Pico reported")
+    passes = models.IntegerField(null=True, blank=True,
+                                 help_text="sandtest round trips; null: moved by hand")
+    expected = models.IntegerField(null=True, blank=True,
+                                   help_text="transitions the passes should give")
+    trans = models.IntegerField(null=True, blank=True)
+    clean = models.IntegerField(null=True, blank=True)
+    max_edges = models.IntegerField(null=True, blank=True)
+    mean_x10 = models.IntegerField(null=True, blank=True)
+    max_burst_ms = models.IntegerField(null=True, blank=True)
+    spurious = models.IntegerField(null=True, blank=True)
+    end = models.CharField(max_length=C.HEADS_CHATTER_END_MAX_LEN, blank=True, default="",
+                           help_text="'' a whole run; else why it ended early")
+
+    class Meta:
+        ordering = ["at"]
+
+    def __str__(self):
+        return "%s ch %d drive %d pwm %s: %s/%s clean" % (
+            self.at, self.ch, self.drv, self.pwm_hz, self.clean, self.trans)
+

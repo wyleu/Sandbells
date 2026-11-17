@@ -194,6 +194,17 @@
       card.lineup = window.Lineup.attach(card, { send: send, log: logSweep, cfg: CFG.lineup });
       root.appendChild(card.lineup.box);
     }
+    // the chatter test (chatter.js): on every active head
+    if (window.Chatter) {
+      var sc = CFG.serial || {};
+      card.chatter = window.Chatter.attach(card, {
+        send: send, cfg: CFG.chatter || {}, csrf: csrfToken,
+        urls: { chatterLogUrl: sc.chatterLogUrl, chatterCsvUrl: sc.chatterCsvUrl,
+                sandtestCmdUrl: sc.sandtestCmdUrl, sandtestStatusUrl: sc.sandtestStatusUrl },
+        label: function () { return card.lineup && card.lineup.v ? (card.lineup.v.label.value || "").trim() : ""; }
+      });
+      root.appendChild(card.chatter.box);
+    }
     card.root = root;
     return card;
   }
@@ -265,6 +276,7 @@
     card.drvR.sub.textContent = card.drv === null || !active ? "" : String(card.drv);
     if (card.lineup) card.lineup.refresh({ active: active, quiet: quiet, noThr: noThr, ptCh: S.ptCh,
                                          litLow: S.litLow });
+    if (card.chatter) card.chatter.refresh({ active: active, quiet: quiet });
   }
 
   function refreshAll() {
@@ -480,6 +492,15 @@
     var card = S.cards[b.ch];
     noteFlags(b);
     setTower(b.tower);
+    if (card && card.chatter) {
+      card.chatter.note(b);                      // every ack: the lasers' PWM speed
+      if (card.chatter.owns(b)) {                // a chatter test's own drive / PWM / count
+        if (b.drv !== undefined) card.drv = b.drv;
+        card.chatter.ack(b);
+        refreshCard(card);
+        return;
+      }
+    }
     if (inList(b.what, LINEUP_WHAT)) {
       // forget / saved carry no head: the head on show has the line-up
       var lc = card && card.lineup ? card : S.cards[S.shown];
@@ -561,6 +582,13 @@
     else if (m.type === "heartbeat") onHeartbeat(m);
     else if (m.type === "align_sweep") onSweep(m);
     else if (m.type === "align_slot" && window.Lineup) window.Lineup.slot(m.body);
+    else if (m.type === "align_chatter") onChatter(m);
+  }
+
+  function onChatter(m) {
+    var b = m.body || {};
+    var card = S.cards[b.ch];
+    if (card && card.chatter) card.chatter.report(b);
   }
 
   function onSweep(m) {

@@ -92,6 +92,8 @@ urlpatterns = [
     path("farm/heads/pt-log.csv", views.farm_heads_pt_log, name="farm_heads_pt_log"),
     path("farm/heads/sweep-log/", views.farm_heads_sweep_log, name="farm_heads_sweep_log"),
     path("farm/heads/sweep-log.csv", views.farm_heads_sweep_csv, name="farm_heads_sweep_csv"),
+    path("farm/heads/chatter-log/", views.farm_heads_chatter_log, name="farm_heads_chatter_log"),
+    path("farm/heads/chatter-log.csv", views.farm_heads_chatter_csv, name="farm_heads_chatter_csv"),
     # the page's first name: still works, goes to /farm/heads/
     path("farm/align/", views.farm_align, name="farm_align"),
     path("farm/align/<int:index>/", views.farm_align, name="farm_align_index"),

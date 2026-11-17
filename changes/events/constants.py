@@ -459,12 +459,14 @@ SERIAL_CMD_MAX_B = 256          # one command (sandswing align_scope.MSG_MAX_B)
 SERIAL_CMD_QUEUE_MAX_B = 2048   # bytes waiting for the port; more: dropped (counted)
 SERIAL_CMD_NAME = "align"       # the only command the page may send
 SERIAL_CMD_KEYS = ("cmd", "ch", "scope", "thr", "drive", "info", "thr_mid",
-                   "sweep", "use", "save", "label", "forget", "saved")   # align_scope._KEYS
+                   "sweep", "use", "save", "label", "forget", "saved",
+                   "pwm_hz", "chatter", "gap_ms")                    # align_scope._KEYS
 SERIAL_CMD_MAX_CH = 16          # a channel number above this is refused here already
 SERIAL_HEADS_PATH = "/run/sandbells-ingest/serial_heads.json"
 SERIAL_HEADS_ENV = "SANDBELLS_SERIAL_HEADS"
 SERIAL_HEADS_SCHEMA = "sandbells.serial_heads/v1"
-SERIAL_HEADS_TYPES = ("align", "align_ack", "align_info", "align_sweep", "align_slot")
+SERIAL_HEADS_TYPES = ("align", "align_ack", "align_info", "align_sweep", "align_slot",
+                      "align_chatter")
 SERIAL_HEADS_KEEP = 12          # newest scope lines kept in the file (the page asks after=<n>)
 SERIAL_HEADS_POLL_MS = 400      # the page's poll (the Pico sends a frame every 500 ms)
 SERIAL_HEADS_LIVE_MS = 3000     # the page: no new line for this long while scoping: "no frames"
@@ -504,8 +506,15 @@ HEADS_CC_DRV = 22
 HEADS_CC_MA = 23
 HEADS_CC_PT = 24
 HEADS_CC_PT_SPAN = 25
+HEADS_CC_PWM = 14               # every ack: the lasers' PWM frequency, HEADS_PWM_HZ_UNITS
+HEADS_PWM_HZ_UNITS = 10
+HEADS_CC_CHATTER = 117          # a chatter report (sandswing chatter.py): 1 counting, 0 stopped
+# a chatter report's 14-bit values, in this order (heads_cc.CHATTER_CCS):
+# transitions, clean, max edges, mean edges x10, longest burst ms, spurious edges
+HEADS_CC_CHATTER_14 = (("trans", 26), ("clean", 27), ("max_edges", 28), ("mean_x10", 29),
+                       ("max_burst_ms", 30), ("spurious", 31))
 HEADS_CC_14 = (HEADS_CC_THR, HEADS_CC_RB, HEADS_CC_DRV, HEADS_CC_MA, HEADS_CC_PT,
-               HEADS_CC_PT_SPAN)
+               HEADS_CC_PT_SPAN, HEADS_CC_PWM) + tuple(cc for _, cc in HEADS_CC_CHATTER_14)
 HEADS_CC_NONE = 16383
 HEADS_CC_MAX = 16382            # full duty (65535) is sent as this
 HEADS_DUTY_FULL = 65535
@@ -520,14 +529,17 @@ HEADS_FLAG_SCOPE = 16
 HEADS_FLAG_STUCK = 32           # not quiet only because of stuck heads: thr / drive allowed
 HEADS_FLAG_LIT_LOW = 64         # comparator low (held) = light on the PT (heads.pt_light "lowers")
 HEADS_WHAT = {1: "thr", 2: "drive", 3: "scope", 4: "bad", 5: "thr_mid", 6: "sweep",
-              7: "sweep_end", 8: "use", 9: "save", 10: "forget", 11: "saved"}
+              7: "sweep_end", 8: "use", 9: "save", 10: "forget", 11: "saved", 12: "pwm",
+              13: "chatter"}
 HEADS_WHY = {1: "not an active head", 2: "tower not quiet: strokes in progress",
              3: "survey running", 4: "old head has no threshold", 5: "too fast",
              6: "at limit", 7: "laser is off", 8: "laser current over its limit",
              9: "busy", 10: "timeout", 11: "head gone", 12: "low memory",
              13: "bad command", 14: "no light on the PT", 15: "stopped",
              16: "no PT wire on this channel", 17: "sweep running",
-             18: "not saved", 19: "bad label", 20: "near threshold", 127: "refused"}
+             18: "not saved", 19: "bad label", 20: "near threshold",
+             21: "PWM speed out of range", 22: "PWM speed not changed",
+             23: "no chatter test running", 127: "refused"}
 HEADS_TOWER_QUIET = "inactive"  # what align.js calls a quiet tower
 HEADS_TOWER_BUSY = "active"
 # the page's trace from MIDI: one sample per report (beam low if any low
@@ -555,6 +567,35 @@ HEADS_SWEEP_DEFAULTS = {"plateau_frac": 0.05, "margin_frac": 0.2, "min_range_v":
 HEADS_SWEEP_POINTS_MAX = 64     # sweep.SWEEP_POINTS_MAX
 HEADS_SWEEP_END_MAX_LEN = 40    # the end reason kept with a logged sweep
 HEADS_SWEEP_LOG_MAX_B = 8192    # one logged sweep (the page's POST)
+
+# ---- chatter test (sandswing chatter.py, laser.pwm_hz) ------------------------
+# Does a drive below 100 % (the laser chopped by its PWM) make the comparator
+# chatter?  The page sets a drive and a PWM speed, starts the Pico's counter,
+# has sandtest turn the vane through the beam `passes` round trips (each
+# crosses the beam twice: 4 transitions), stops the counter and keeps one
+# HeadChatter row per run.  settings.json "sandheads": {"chatter": {...}}.
+HEADS_PWM_HZ_MIN = 200          # sandswing tune.LASER_PWM_HZ_MIN
+HEADS_PWM_HZ_MAX = 150000       # sandswing tune.LASER_PWM_HZ_MAX
+HEADS_PWM_HZ_NOW = 1000         # the firmware's default (today's speed)
+HEADS_CHATTER_OPS = ("start", "stop", "report")
+HEADS_CHATTER_GAP_MIN_MS = 1    # sandswing chatter.CHATTER_GAP_MIN_MS
+HEADS_CHATTER_GAP_MAX_MS = 250  # sandswing chatter.CHATTER_GAP_MAX_MS (MIN_STROKE_GAP_MS)
+HEADS_CHATTER_SETTINGS_KEY = "chatter"     # under HEADS_SWEEP_SETTINGS_KEY
+HEADS_CHATTER_PCT_MAX = 100          # drives_pct: whole percents of full drive, 1..this
+HEADS_CHATTER_DEFAULTS = {
+    "passes": 10,               # sandtest round trips per run
+    "speed_dps": 4.0,           # vane speed, shaft degrees a second (sandtest scan's default)
+    "pad_deg": 2.0,             # past the head's window each side (sandtest scan's pad)
+    "face": "reflector",        # the vane face turned to the head
+    "fast_pwm_hz": 20000,       # "Run the set": the faster speed (the threshold PWM's, scope-tested)
+    "drives_pct": [100, 52, 25],   # "Run the set": at today's speed, then the last at fast_pwm_hz
+}
+HEADS_CHATTER_TRANS_PER_PASS = 4   # a round trip crosses the beam twice: in and out each time
+HEADS_CHATTER_LOG_MAX_B = 2048     # one logged run (the page's POST)
+HEADS_CHATTER_END_MAX_LEN = 40
+HEADS_CHATTER_LIST_MAX = 50        # rows the page shows
+HEADS_CHATTER_PASSES_MAX = 1000
+HEADS_CHATTER_COUNT_MAX = 16382    # a 14-bit CC saturates here
 
 # ---- PT level log (day / night drift of the phototransistor) -----------------
 # The heartbeat's body "pt" = [ch, volts, spread] (sandswing pt_level.brief, the

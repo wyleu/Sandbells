@@ -89,16 +89,59 @@ def sweep_settings(path=None):
     return out
 
 
-def page_config(inst, via=VIA_WS, serial_urls=None, sweep=None):
+def chatter_settings(path=None, read=True):
+    """The chatter test's numbers: HEADS_CHATTER_DEFAULTS, each overridden by
+    settings.json "sandheads": {"chatter": {...}} when it is the right kind
+    and in range (passes a whole number 1..HEADS_CHATTER_PASSES_MAX; speeds
+    and pad positive numbers; fast_pwm_hz within the Pico's PWM limits;
+    drives_pct whole percents 1..100; face a name).  Read only."""
+    from events import constants as EC
+    from events.config import settings_path
+    out = dict(EC.HEADS_CHATTER_DEFAULTS)
+    out["drives_pct"] = list(out["drives_pct"])
+    try:
+        cfg = json.loads(open(path or settings_path()).read()) if read else {}
+        sec = (cfg.get(EC.HEADS_SWEEP_SETTINGS_KEY) or {}).get(EC.HEADS_CHATTER_SETTINGS_KEY) or {}
+    except (OSError, ValueError, AttributeError):
+        sec = {}
+    if not isinstance(sec, dict):
+        sec = {}
+
+    def whole(v, lo, hi):
+        return isinstance(v, int) and not isinstance(v, bool) and lo <= v <= hi
+
+    def pos(v):
+        return isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
+    v = sec.get("passes")
+    if whole(v, 1, EC.HEADS_CHATTER_PASSES_MAX):
+        out["passes"] = v
+    for k in ("speed_dps", "pad_deg"):
+        if pos(sec.get(k)):
+            out[k] = sec[k]
+    if whole(sec.get("fast_pwm_hz"), EC.HEADS_PWM_HZ_MIN, EC.HEADS_PWM_HZ_MAX):
+        out["fast_pwm_hz"] = sec["fast_pwm_hz"]
+    d = sec.get("drives_pct")
+    if isinstance(d, list) and d and all(whole(x, 1, EC.HEADS_CHATTER_PCT_MAX) for x in d):
+        out["drives_pct"] = list(d)
+    if isinstance(sec.get("face"), str) and sec["face"].strip():
+        out["face"] = sec["face"].strip()
+    out.update(pwmMin=EC.HEADS_PWM_HZ_MIN, pwmMax=EC.HEADS_PWM_HZ_MAX, pwmNow=EC.HEADS_PWM_HZ_NOW,
+               transPerPass=EC.HEADS_CHATTER_TRANS_PER_PASS)
+    return out
+
+
+def page_config(inst, via=VIA_WS, serial_urls=None, sweep=None, chatter=None):
     """The dict the page's JS reads (rendered with json_script).
     serial_urls: {"cmdUrl", "pollUrl", "logUrl", ...} (the views' reverse()).
-    sweep: sweep_settings() (the line-up suggestion)."""
+    sweep: sweep_settings() (the line-up suggestion); chatter:
+    chatter_settings() (the chatter test)."""
     from events import constants as EC
     cfg = {"id": inst.get("id", ""), "name": inst.get("name", ""),
            "wsUrls": ws_urls(inst), "keepAliveMs": KEEPALIVE_MS,
            "windowMs": WINDOW_MS, "activeKinds": list(ACTIVE_KINDS), "via": via,
            "lineup": dict(sweep or EC.HEADS_SWEEP_DEFAULTS, slots=EC.HEADS_LINEUP_SLOTS,
-                          labelMax=EC.HEADS_LABEL_MAX)}
+                          labelMax=EC.HEADS_LABEL_MAX),
+           "chatter": chatter or chatter_settings(read=False)}
     if serial_urls:
         cfg["serial"] = dict(serial_urls, pollMs=EC.SERIAL_HEADS_POLL_MS,
                              liveMs=EC.SERIAL_HEADS_LIVE_MS)

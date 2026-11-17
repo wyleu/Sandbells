@@ -77,6 +77,8 @@ def check_command(doc):
     out = {"cmd": C.SERIAL_CMD_NAME}
     if "label" in doc and "save" not in doc:
         raise ValueError("label without save")
+    if "gap_ms" in doc and "chatter" not in doc:
+        raise ValueError("bad gap")
     if doc.get("info") is True:
         out["info"] = True
     elif doc.get("saved") is True:
@@ -109,6 +111,21 @@ def check_command(doc):
         elif "save" in doc:
             out["save"] = _slot(doc["save"])
             out["label"] = check_label(doc.get("label"))
+        elif "pwm_hz" in doc:
+            v = doc["pwm_hz"]
+            if not _int(v) or not C.HEADS_PWM_HZ_MIN <= v <= C.HEADS_PWM_HZ_MAX:
+                raise ValueError("bad pwm")
+            out["pwm_hz"] = v
+        elif "chatter" in doc:
+            if doc["chatter"] not in C.HEADS_CHATTER_OPS:
+                raise ValueError("bad chatter")
+            out["chatter"] = doc["chatter"]
+            if "gap_ms" in doc:
+                g = doc["gap_ms"]
+                if (doc["chatter"] != "start" or not _int(g)
+                        or not C.HEADS_CHATTER_GAP_MIN_MS <= g <= C.HEADS_CHATTER_GAP_MAX_MS):
+                    raise ValueError("bad gap")
+                out["gap_ms"] = g
         else:
             for key in ("thr", "drive"):
                 if key in doc:

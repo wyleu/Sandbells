@@ -64,3 +64,48 @@ in settings.json `"sandheads": {"sweep": {...}}` (read only).
 - `lit_low` (the Pico's `heads.pt_light`, default "lowers"): more light pulls
   the PT down and the comparator low.  The trace shows light green and no
   light purple, and the suggestion is worked out from the light side.
+
+## Chatter test (sw-chatter)
+
+Does a laser drive below 100 % (the laser chopped by its PWM) make the
+comparator chatter?  Each head's panel has a **Chatter test**: pick a drive %
+and a PWM speed, then **Start**; **Run the set** does 100 %, 52 % and 25 % at
+today's speed (1 kHz) and then the last one at `fast_pwm_hz` (20 kHz).
+**Stop** stops sandtest (`{"cmd":"stop"}`), keeps what was counted, and puts
+the drive and PWM speed back.  Nothing is kept on the Pico: drive and PWM
+speed are live only, and both go back at the end of every run.
+
+Per run the page sends, in order (the align command path; each waits for
+its ack, "tower not quiet" / "too fast" asked again every 1.5 s for a minute):
+
+1. `{"cmd":"align","ch":N,"use":[drive,null]}` and, if different from
+   now, `{"cmd":"align","ch":N,"pwm_hz":HZ}` (all lasers: they share PWM
+   slices);
+2. sandtest (`/sandtest/cmd`), only when a sandtest position is picked:
+   `{"cmd":"sweep","mode":"sweep","from_deg":S-pad,"to_deg":S,"speed_dps":v,"cycles":1}`
+   to wait just outside the window, polling `/sandtest/status` until it has
+   moved and stopped;
+3. `{"cmd":"align","ch":N,"chatter":"start"}`;
+4. sandtest `{"cmd":"sweep","mode":"sweep","from_deg":S,"to_deg":E,"speed_dps":v,"cycles":passes}`,
+   polled until done (S/E = the head's angle + the face's offset from
+   sandtest's status, -/+ half its window + `pad_deg`);
+5. half a second later `{"cmd":"align","ch":N,"chatter":"stop"}`: the Pico
+   sends the counts (`align_chatter`) and the page logs the run.
+
+With "Vane by hand" (no sandtest) a run counts until **Stop**.
+
+The counts (CC report, channel 16): CC 117 state (1 counting, 0 stopped),
+then 14-bit pairs 26/58 transitions, 27/59 clean (one edge), 28/60 most
+edges in one transition, 29/61 mean edges x10 (16383: none), 30/62 longest
+burst ms, 31/63 spurious edges (an even burst: no change of state).  Every
+ack now carries the lasers' PWM speed: CC 14/46, in units of 10 Hz.
+
+Results: the table under the buttons (newest first), green when every
+transition was clean.  Kept in `HeadChatter` (POST/GET
+`/farm/heads/chatter-log/`); CSV `/farm/heads/chatter-log.csv?days=30`.
+Needs `manage.py migrate events` (0005).  The expected transitions are
+4 per pass (the vane crosses the beam twice per round trip).
+
+Settings (read only), settings.json `"sandheads": {"chatter": {...}}`,
+defaults `HEADS_CHATTER_DEFAULTS`: `passes` 10, `speed_dps` 4.0, `pad_deg`
+2.0, `face` "reflector", `fast_pwm_hz` 20000, `drives_pct` [100, 52, 25].

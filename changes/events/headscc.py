@@ -48,6 +48,10 @@ def _on_ma(ma, drv):
     return round(ma * C.HEADS_DUTY_FULL / drv, C.HEADS_MA_DP)
 
 
+def _hz(v):
+    return None if v is None else v * C.HEADS_PWM_HZ_UNITS
+
+
 def _volts(v):
     return None if v is None else v / C.HEADS_MV_PER_V
 
@@ -113,6 +117,12 @@ class HeadsCcDecoder:
                     "thr": _duty(_v14(raw, C.HEADS_CC_THR)) if saved else None,
                     "label": label if saved else None, "via": "midi"}
             return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_slot", "body": body}
+        if C.HEADS_CC_CHATTER in raw:
+            # one channel's chatter counts (sandswing chatter.py, heads_cc.chatter)
+            body = {"ch": ch, "on": raw[C.HEADS_CC_CHATTER] == 1, "via": "midi"}
+            for key, cc in C.HEADS_CC_CHATTER_14:
+                body[key] = _v14(raw, cc)
+            return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_chatter", "body": body}
         if C.HEADS_CC_SWEEP in raw:
             body = {"ch": ch, "i": raw[C.HEADS_CC_SWEEP],
                     "drv": _duty(_v14(raw, C.HEADS_CC_DRV)), "ma": _ma(_v14(raw, C.HEADS_CC_MA)),
@@ -127,7 +137,9 @@ class HeadsCcDecoder:
                     "why": None if why == 0 else C.HEADS_WHY.get(why, C.HEADS_WHY[127]),
                     "thr": _duty(_v14(raw, C.HEADS_CC_THR)),
                     "drv": _duty(_v14(raw, C.HEADS_CC_DRV)), "tower": tower,
-                    "stuck": stuck, "lit_low": lit_low, "via": "midi"}
+                    "stuck": stuck, "lit_low": lit_low, "via": "midi",
+                    # older firmware sends no CC_PWM: None
+                    "pwm_hz": _hz(_v14(raw, C.HEADS_CC_PWM))}
             return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_ack", "body": body}
         if not ch:
             return None
