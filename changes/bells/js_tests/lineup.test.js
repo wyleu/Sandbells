@@ -86,7 +86,8 @@ const points = curve.map((d, i) => ({ i, drv: d, ma: +(30 * d / FULL).toFixed(2)
 test("suggest: lowest drive within plateau_frac of the full-drive PT, plus the margin; threshold in proportion", () => {
   const r = rig();
   const L = r.win.Lineup;
-  const s = L.suggest(points, OPT, 20000);
+  const UP = Object.assign({}, OPT, { light_lowers: false });   // a PT that rises with light
+  const s = L.suggest(points, UP, 20000);
   const top = ptOf(65535);
   const good = curve.filter((d) => Math.abs(ptOf(d) - top) <= top * OPT.plateau_frac);
   const low = Math.min(...good);
@@ -95,12 +96,37 @@ test("suggest: lowest drive within plateau_frac of the full-drive PT, plus the m
   assert.ok(s.thr < 20000 && s.thr > 18000, String(s.thr));        // PT a little under the top
   assert.ok(s.ma > 0 && s.ma < 30 * s.drv / FULL + 0.5);
   // flat: nothing suggested, and says why
-  const flat = L.suggest(points.map((p) => Object.assign({}, p, { pt: 1.5 })), OPT, 20000);
+  const flat = L.suggest(points.map((p) => Object.assign({}, p, { pt: 1.5 })), UP, 20000);
   assert.equal(flat.drv, null);
   assert.match(flat.why, /hardly changed/);
-  assert.equal(L.suggest(points.slice(0, 2), OPT, 1).drv, null);
+  assert.equal(L.suggest(points.slice(0, 2), UP, 1).drv, null);
   // an old head (no threshold): drive only
-  assert.equal(L.suggest(points, OPT, null).thr, null);
+  assert.equal(L.suggest(points, UP, null).thr, null);
+});
+
+// head 5 as measured (heads.pt_light "lowers", the default): ~2 V dark, 0.16 V on the reflector
+const DARK_V = 2.0, LIT_V = 0.16, VREF = 3.3;
+const ptLow = (d) => +(DARK_V - (DARK_V - LIT_V) * d / (d + 1000) * (65535 + 1000) / 65535).toFixed(3);
+const lowPts = curve.map((d, i) => ({ i, drv: d, ma: +(30 * d / FULL).toFixed(2), pt: ptLow(d), pt_span: 0.01 }));
+
+test("suggest, light lowers the PT (default): plateau and threshold measured from the light side", () => {
+  const r = rig();
+  const L = r.win.Lineup;
+  const thrNow = 32768;                                   // 1.65 V, as head 5 now
+  const s = L.suggest(lowPts, OPT, thrNow);
+  // the same answer as the rising arithmetic on the mirror
+  const mirror = L.suggest(lowPts.map((p) => Object.assign({}, p, { pt: VREF - p.pt })),
+                           Object.assign({}, OPT, { light_lowers: false }), FULL - thrNow);
+  assert.equal(s.drv, mirror.drv);
+  assert.equal(s.thr, FULL - mirror.thr);
+  assert.ok(s.drv < 65535 / 2, "well under full drive");
+  assert.ok(Math.abs(s.top - LIT_V) < 0.01, String(s.top));
+  const thrV = s.thr * VREF / FULL;
+  assert.ok(s.pt > LIT_V && s.pt < thrV && thrV < DARK_V, [s.pt, thrV].join(" "));  // light < thr < dark
+  assert.ok(s.thr >= thrNow, String(s.thr));             // less light: the threshold moves up, not to 3 V
+  // the old (rising) arithmetic on these points would put it above the dark level
+  const wrong = L.suggest(lowPts, Object.assign({}, OPT, { light_lowers: false }), thrNow);
+  assert.ok(wrong.drv === null || wrong.thr * VREF / FULL > DARK_V || wrong.drv >= 65535 / 2);
 });
 
 test("the line-up shows only on the PT head; a sweep fills the curve, suggests, and nothing changes until Use this", () => {

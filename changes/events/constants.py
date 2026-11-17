@@ -517,13 +517,15 @@ HEADS_FLAG_BROKE = 2
 HEADS_FLAG_BUSY = 4
 HEADS_FLAG_QUIET = 8
 HEADS_FLAG_SCOPE = 16
+HEADS_FLAG_STUCK = 32           # not quiet only because of stuck heads: thr / drive allowed
+HEADS_FLAG_LIT_LOW = 64         # comparator low (held) = light on the PT (heads.pt_light "lowers")
 HEADS_WHAT = {1: "thr", 2: "drive", 3: "scope", 4: "bad", 5: "thr_mid", 6: "sweep",
               7: "sweep_end", 8: "use", 9: "save", 10: "forget", 11: "saved"}
 HEADS_WHY = {1: "not an active head", 2: "tower not quiet: strokes in progress",
              3: "survey running", 4: "old head has no threshold", 5: "too fast",
              6: "at limit", 7: "laser is off", 8: "laser current over its limit",
              9: "busy", 10: "timeout", 11: "head gone", 12: "low memory",
-             13: "bad command", 14: "beam broken", 15: "stopped",
+             13: "bad command", 14: "no light on the PT", 15: "stopped",
              16: "no PT wire on this channel", 17: "sweep running",
              18: "not saved", 19: "bad label", 20: "near threshold", 127: "refused"}
 HEADS_TOWER_QUIET = "inactive"  # what align.js calls a quiet tower
@@ -539,7 +541,9 @@ MIDI_HEADS_ENV = "SANDBELLS_MIDI_HEADS"
 # The page's "Find best brightness" sweeps the drive of the head with the PT
 # wire; it suggests the lowest drive whose PT level is within plateau_frac of
 # the level at full drive, plus margin_frac, and keeps the threshold in the
-# same proportion to the PT level as now.  Below min_range_v of PT change
+# same proportion to the PT level as now, both measured from the light side
+# (the Pico's heads.pt_light, HEADS_FLAG_LIT_LOW: on head 5 more light pulls
+# the PT DOWN, so lineup.js works on VREF - PT).  Below min_range_v of PT change
 # over the whole sweep it suggests nothing (the PT is not seeing the laser,
 # or is saturated).  settings.json "sandheads": {"sweep": {...}} overrides.
 HEADS_LINEUP_SLOTS = 8          # channels with saved values (head_store.SLOTS)

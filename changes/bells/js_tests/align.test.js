@@ -525,3 +525,39 @@ test("USB: says what is missing; no commands go out until the port is there", ()
   r.xhrs[2].reply(500, {});
   assert.match(r.ids["align-link"].textContent, /poll failed \(500\)/);
 });
+
+test("a stuck head: threshold and drive allowed while the tower is awake only because of it", () => {
+  const r = rig();
+  const s = r.sockets[0];
+  s.open();
+  s.recv(r.msg("align_info", { kinds: r.kinds, tower: "inactive" }));
+  const c1 = r.cards()[0];
+  s.recv(r.msg("align_ack", { what: "thr", ch: 1, ok: true, thr: 33423, drv: 65535, tower: "active" }));
+  assert.equal(r.buttons(c1, "−")[0].disabled, true);   // strokes: paused
+  s.recv(r.msg("align_ack", { what: "thr", ch: 1, ok: true, thr: 33423, drv: 65535, tower: "active",
+                              stuck: true }));
+  assert.equal(r.buttons(c1, "−")[0].disabled, false);  // stuck: allowed
+  assert.equal(r.buttons(c1, "+")[1].disabled, false);
+  assert.match(r.ids["align-tower"].textContent, /stuck/);
+  s.recv(r.msg("align_ack", { what: "thr", ch: 1, ok: true, thr: 33423, drv: 65535, tower: "active",
+                              stuck: false }));
+  assert.equal(r.buttons(c1, "−")[0].disabled, true);   // a real bell again: paused
+  assert.equal(r.ids["align-tower"].textContent, "strokes in progress: adjusting paused");
+});
+
+test("the trace: with lit_low (the default) a low run is light (green), not purple", () => {
+  const r = rig();
+  r.sockets[0].open();
+  r.sockets[0].recv(r.msg("align_info", { kinds: r.kinds, tower: "inactive" }));
+  const purple = (lit_low) => {
+    r.sockets[0].recv(r.msg("align", { ch: 1, n: 16, dt: 20, bits: "0000", ma: 4.9, rb: 1, thr: 1,
+                                       drv: 65535, tower: "inactive", busy: false, lit_low }));
+    const canvas = r.cards()[0].find((e) => e.tag === "canvas")[0];
+    canvas.ctx.calls = [];
+    tick(r);
+    return canvas.ctx.calls.filter((c) => c[0] === "fillRect").length;
+  };
+  const lowIsLight = purple(true);                      // all low = light: background only
+  const lowIsDark = purple(false);                      // all low = no light: + a purple run
+  assert.ok(lowIsDark > lowIsLight, lowIsLight + " " + lowIsDark);
+});

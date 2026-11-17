@@ -25,7 +25,7 @@ SLOT = bytes.fromhex("bf6603bf6c01bf1611bf364abf1425bf340dbf6d48bf6e35bf6f00bf70
                      "bf7300bf7400bf6a02")
 EMPTY = bytes.fromhex("bf6604bf6c00bf167fbf367fbf147fbf347fbf6d00bf6e00bf6f00bf7000bf7100bf7200"
                       "bf7300bf7400bf6a03")
-# ack(None, "forget", ok), ack(1, "sweep_end", "beam broken", 20000, 65535, QUIET)
+# ack(None, "forget", ok), ack(1, "sweep_end", "no light on the PT", 20000, 65535, QUIET)
 ACK_FORGET = bytes.fromhex("bf6600bf6708bf680abf6900bf147fbf347fbf167fbf367fbf6a04")
 ACK_END = bytes.fromhex("bf6601bf6708bf6807bf690ebf1427bf3407bf167fbf367ebf6a05")
 
@@ -50,12 +50,37 @@ class Decode(SimpleTestCase):
         _, docs = decode(ACK_FORGET, ACK_END)
         f, e = docs[0]["body"], docs[1]["body"]
         self.assertEqual((f["what"], f["ok"], f["ch"]), ("forget", True, None))
-        self.assertEqual((e["what"], e["ok"], e["why"], e["ch"]), ("sweep_end", False, "beam broken", 1))
+        self.assertEqual((e["what"], e["ok"], e["why"], e["ch"]), ("sweep_end", False, "no light on the PT", 1))
 
     def test_codes_match_sandswing(self):
         self.assertEqual(C.HEADS_WHY[20], "near threshold")
         self.assertEqual(C.HEADS_WHAT[7], "sweep_end")
         self.assertLess(C.HEADS_CC_LABEL + C.HEADS_LABEL_MAX - 1, 120)   # below the mode messages
+
+
+# sandswing heads_cc at the sw-stuck-unlock commit: frame(1, BROKE|STUCK|LIT_LOW, thr 32768,
+# rb 32808, drive full, 30.2 mA, 0.16 V, 0.01 V); ack(1, "thr", ok, 32113, full, STUCK|LIT_LOW)
+FRAME_STUCK = bytes.fromhex("bf6601bf6762bf143fbf347fbf1540bf3509bf167fbf367ebf1717bf374cbf1801bf3820"
+                            "bf1900bf390abf6a01")
+ACK_STUCK = bytes.fromhex("bf6601bf6760bf6801bf6900bf143ebf345bbf167fbf367ebf6a02")
+
+
+class StuckAndPolarity(SimpleTestCase):
+    def test_flags_reach_the_page(self):
+        _, docs = decode(FRAME_STUCK, ACK_STUCK)
+        f, a = docs[0]["body"], docs[1]["body"]
+        self.assertEqual((f["tower"], f["stuck"], f["lit_low"], f["pt"]),
+                         (C.HEADS_TOWER_BUSY, True, True, 0.16))
+        self.assertFalse(f["busy"])                       # a full report while stuck
+        self.assertEqual((a["what"], a["ok"], a["stuck"], a["lit_low"]), ("thr", True, True, True))
+
+    def test_older_firmware_has_neither(self):
+        _, docs = decode(POINT)
+        self.assertEqual((docs[0]["body"]["stuck"], docs[0]["body"]["lit_low"]), (False, False))
+
+    def test_codes_match_sandswing(self):
+        self.assertEqual((C.HEADS_FLAG_STUCK, C.HEADS_FLAG_LIT_LOW), (32, 64))
+        self.assertEqual(C.HEADS_WHY[14], "no light on the PT")
 
 
 class Commands(SimpleTestCase):

@@ -43,8 +43,11 @@
     sel: 0,                      // the head on show (1-based), active or not
     want: 0,                     // the head being watched: sel when it is active, else none
     shown: 0, cards: {},
-    after: 0, midiAfter: 0, pollTimer: null, polling: false, serialUp: false
+    after: 0, midiAfter: 0, pollTimer: null, polling: false, serialUp: false,
+    stuck: false, stuckAt: 0,    // not quiet only because of stuck heads (sandswing stuck.py)
+    litLow: true                 // comparator low = light on the PT (heads.pt_light "lowers")
   };
+  var STUCK_FRESH_MS = 3000;     // a "stuck" report counts this long (busy reports come each 1 s)
 
   function $(id) { return document.getElementById(id); }
 
@@ -252,7 +255,7 @@
       "Nothing to watch or adjust: this channel is " + kindWord(kind) + ". Pick a head marked with a green dot.";
     var quiet = S.tower === "inactive";
     var noThr = inList(kind, NO_THRESHOLD);
-    var busy = card.locked || !quiet || !active;
+    var busy = card.locked || !adjustable() || !active;
     card.thrB.dn.disabled = card.thrB.up.disabled = card.midB.disabled = busy || noThr;
     card.drvB.dn.disabled = card.drvB.up.disabled = busy;
     card.thrB.box.title = noThr ? "old heads have no threshold" : "";
@@ -260,7 +263,8 @@
     card.thrR.sub.textContent = card.thr === null || noThr || !active ? "" : String(card.thr);
     card.drvR.val.textContent = active ? pct(card.drv) : "—";
     card.drvR.sub.textContent = card.drv === null || !active ? "" : String(card.drv);
-    if (card.lineup) card.lineup.refresh({ active: active, quiet: quiet, noThr: noThr, ptCh: S.ptCh });
+    if (card.lineup) card.lineup.refresh({ active: active, quiet: quiet, noThr: noThr, ptCh: S.ptCh,
+                                         litLow: S.litLow });
   }
 
   function refreshAll() {
@@ -336,6 +340,17 @@
     card.msg.className = "msg" + (refused ? " refused" : "");
   }
 
+  /* stuck / lit_low ride on frames, acks and sweep points (absent: older firmware) */
+  function noteFlags(b) {
+    if (b.stuck !== undefined) { S.stuck = !!b.stuck; S.stuckAt = Date.now(); }
+    if (b.lit_low !== undefined) S.litLow = !!b.lit_low;
+  }
+
+  function stuckNow() { return S.stuck && Date.now() - S.stuckAt < STUCK_FRESH_MS; }
+
+  /* thr / drive allowed: a quiet tower, or awake only because of a stuck head */
+  function adjustable() { return S.tower === "inactive" || stuckNow(); }
+
   function setTower(t) {
     if (!t) return;
     S.tower = t;
@@ -344,6 +359,9 @@
     if (t === "inactive") {
       pill.className = "pill pill-ok";
       pill.textContent = "tower quiet";
+    } else if (stuckNow()) {
+      pill.className = "pill pill-busy";
+      pill.textContent = "a head is stuck (always on or flickering): threshold and drive allowed";
     } else {
       pill.className = "pill pill-busy";
       pill.textContent = "strokes in progress: adjusting paused";
@@ -419,6 +437,7 @@
   function onFrame(m) {
     var b = m.body || {};
     var card = S.cards[b.ch];
+    noteFlags(b);
     setTower(b.tower);
     if (!card || b.ch !== S.want) return;       // a late frame of a head we stopped watching
     card.n = b.n || 0;
@@ -459,6 +478,7 @@
   function onAck(m) {
     var b = m.body || {};
     var card = S.cards[b.ch];
+    noteFlags(b);
     setTower(b.tower);
     if (inList(b.what, LINEUP_WHAT)) {
       // forget / saved carry no head: the head on show has the line-up
@@ -724,7 +744,9 @@
       var x1 = xOf(run[1]) + per;
       var high = run[2] === 1;
       var y = high ? yHi : yLo;
-      if (!high) {                              // beam broken / comparator low
+      // light on the PT: comparator low with heads.pt_light "lowers" (default)
+      var lit = S.litLow ? !high : high;
+      if (!lit) {                               // no light: purple
         g.fillStyle = "rgba(150, 110, 220, 0.28)";
         g.fillRect(x0, 0, x1 - x0, H);
       }
@@ -736,7 +758,7 @@
         g.lineTo(x0, y);
         g.stroke();
       }
-      g.strokeStyle = high ? "#6fdc7f" : "#b48cff";
+      g.strokeStyle = lit ? "#6fdc7f" : "#b48cff";
       g.lineWidth = 2.5;
       g.beginPath();
       g.moveTo(x0, y);

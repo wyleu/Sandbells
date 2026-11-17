@@ -6,7 +6,8 @@
  * laser current written by the full-drive and suggested points.  At the end
  * it suggests the lowest drive whose PT level is within plateau_frac of the
  * full-drive level, plus margin_frac, and the threshold kept in the same
- * proportion to the PT level as now.  Nothing changes until "Use this" (live
+ * proportion to the PT level as now, both from the light side (lit_low: the
+ * Pico's heads.pt_light; more light pulls head 5's PT down).  Nothing changes until "Use this" (live
  * only) or "Save for channel N" (kept on the concentrator, used at every
  * start).  Errors stay on screen until the next press.
  *
@@ -18,6 +19,7 @@
   "use strict";
 
   var FULL = 65535;
+  var VREF = 3.3;                 // the PT and threshold scale (sandswing signal_bands.VREF)
   var PCT = 100;
   var MIN_POINTS = 3;             // fewer: nothing to judge a curve by
   var LOCK_MS = 400;              // one press, one command
@@ -61,8 +63,29 @@
     return p.length ? p[0][key] : null;
   }
 
-  /* -> {drv, thr, ma, pt, top, topMa, good} or {drv: null, why} */
+  /* opt.light_lowers (heads.pt_light "lowers", the default): more light pulls
+     the PT DOWN.  Then the arithmetic runs on the mirror (VREF - PT, and
+     FULL - threshold), so "within plateau_frac of the full-drive level" and
+     "the threshold in the same proportion" are measured from the light side. */
   function suggest(points, opt, thrNow) {
+    if (opt.light_lowers === false) return suggestUp(points, opt, thrNow);
+    var m = [];
+    for (var i = 0; i < points.length; i++) {
+      var q = {};
+      for (var k in points[i]) if (points[i].hasOwnProperty(k)) q[k] = points[i][k];
+      if (typeof q.pt === "number") q.pt = VREF - q.pt;
+      m.push(q);
+    }
+    var r = suggestUp(m, opt, typeof thrNow === "number" ? FULL - thrNow : thrNow);
+    if (r.drv === null) return r;
+    r.pt = r.pt === null ? null : VREF - r.pt;
+    r.top = VREF - r.top;
+    if (r.thr !== null) r.thr = FULL - r.thr;
+    return r;
+  }
+
+  /* -> {drv, thr, ma, pt, top, topMa, good} or {drv: null, why}; light raises the PT */
+  function suggestUp(points, opt, thrNow) {
     var p = sorted(points);
     if (p.length < MIN_POINTS) return { drv: null, why: "Too few readings to judge (" + p.length + ")." };
     var lo = p[0].pt, hi = p[0].pt;
@@ -270,7 +293,10 @@
     var done = DONE.indexOf(why) >= 0;
     if (done) {
       var noThr = !!v.st.noThr;
-      v.sug = suggest(v.points, v.api.cfg || {}, noThr ? null : v.thr0);
+      var opt = {}, cfg = v.api.cfg || {};
+      for (var k in cfg) if (cfg.hasOwnProperty(k)) opt[k] = cfg[k];
+      opt.light_lowers = v.st.litLow !== false;        // the Pico's heads.pt_light
+      v.sug = suggest(v.points, opt, noThr ? null : v.thr0);
       if (v.sug.drv === null) {
         v.status.textContent = v.result = v.sug.why;
       } else {

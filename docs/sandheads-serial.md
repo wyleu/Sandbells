@@ -54,3 +54,13 @@ in settings.json `"sandheads": {"sweep": {...}}` (read only).
 * Every finished or stopped sweep is logged (`HeadSweep`, POST
   `/farm/heads/sweep-log/`); CSV `/farm/heads/sweep-log.csv?days=30`.
   Needs `manage.py migrate` (0004).
+
+## Stuck heads and PT polarity (sw-stuck-unlock)
+
+- If the tower is awake only because a head is stuck (held or flickering, no
+  clear gap for the Pico's `tune.stuck_after_s`), the reports carry `stuck`
+  and the threshold / drive buttons work again; the pill says so.  Sweep and
+  Save still wait for a quiet tower.
+- `lit_low` (the Pico's `heads.pt_light`, default "lowers"): more light pulls
+  the PT down and the comparator low.  The trace shows light green and no
+  light purple, and the suggestion is worked out from the light side.

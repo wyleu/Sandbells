@@ -1,5 +1,5 @@
 /* align.css -- the sandheads page (was "Alignment").  Warm and homely like the farm pages:
-   green (clear / ok), purple (beam broken), a little gold.  The alarm colour
+   green (light on the PT / ok), purple (no light; heads.pt_light sets which comparator level that is), a little gold.  The alarm colour
    is kept for "not coming" and is not used here. */
 
 html, body { height: 100%; margin: 0; }

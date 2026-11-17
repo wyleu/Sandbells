@@ -100,6 +100,8 @@ class HeadsCcDecoder:
         ch = raw.get(C.HEADS_CC_HEAD)
         flags = raw.get(C.HEADS_CC_FLAGS, 0)
         tower = C.HEADS_TOWER_QUIET if flags & C.HEADS_FLAG_QUIET else C.HEADS_TOWER_BUSY
+        stuck = bool(flags & C.HEADS_FLAG_STUCK)        # align.js: thr / drive allowed
+        lit_low = bool(flags & C.HEADS_FLAG_LIT_LOW)    # align.js: held (bit 0) = light
         if C.HEADS_CC_SLOT in raw:
             # one channel's saved line-up values (head_store); no flags
             label = "".join(chr(raw.get(C.HEADS_CC_LABEL + j, 0))
@@ -115,7 +117,8 @@ class HeadsCcDecoder:
             body = {"ch": ch, "i": raw[C.HEADS_CC_SWEEP],
                     "drv": _duty(_v14(raw, C.HEADS_CC_DRV)), "ma": _ma(_v14(raw, C.HEADS_CC_MA)),
                     "pt": _volts(_v14(raw, C.HEADS_CC_PT)),
-                    "pt_span": _volts(_v14(raw, C.HEADS_CC_PT_SPAN)), "tower": tower, "via": "midi"}
+                    "pt_span": _volts(_v14(raw, C.HEADS_CC_PT_SPAN)), "tower": tower,
+                    "stuck": stuck, "lit_low": lit_low, "via": "midi"}
             return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_sweep", "body": body}
         if C.HEADS_CC_ACK_WHAT in raw:
             why = raw.get(C.HEADS_CC_ACK_WHY, 0)
@@ -123,7 +126,8 @@ class HeadsCcDecoder:
                     "ch": ch or None, "ok": why == 0,
                     "why": None if why == 0 else C.HEADS_WHY.get(why, C.HEADS_WHY[127]),
                     "thr": _duty(_v14(raw, C.HEADS_CC_THR)),
-                    "drv": _duty(_v14(raw, C.HEADS_CC_DRV)), "tower": tower, "via": "midi"}
+                    "drv": _duty(_v14(raw, C.HEADS_CC_DRV)), "tower": tower,
+                    "stuck": stuck, "lit_low": lit_low, "via": "midi"}
             return {"schema": C.SERIAL_HB_SCHEMA, "type": "align_ack", "body": body}
         if not ch:
             return None
@@ -145,6 +149,7 @@ class HeadsCcDecoder:
                 "ma": last["ma"], "ma_on": _on_ma(last["ma"], last["drv"]), "rb": last["rb"], "thr": last["thr"], "drv": last["drv"],
                 "pt": _volts(_v14(raw, C.HEADS_CC_PT)),
                 "pt_span": _volts(_v14(raw, C.HEADS_CC_PT_SPAN)),
-                "tower": tower, "busy": bool(flags & C.HEADS_FLAG_BUSY) or not full,
+                "tower": tower, "stuck": stuck, "lit_low": lit_low,
+                "busy": bool(flags & C.HEADS_FLAG_BUSY) or not full,
                 "seq": raw.get(C.HEADS_CC_SEQ), "via": "midi"}
         return {"schema": C.SERIAL_HB_SCHEMA, "type": "align", "body": body}
