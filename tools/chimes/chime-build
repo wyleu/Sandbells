@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """chime-build -- turn a LilyPond tune into a Sandbells Chimes bundle.
 
-    chime-build TUNE.ly [-o OUTDIR] [--allow] [--overlay]
+    chime-build TUNE.ly [-o OUTDIR] [--allow] [--pages-ok] [--overlay]
 
 Runs LilyPond on the tune (its file is not edited: chime-notemap.ily is
 loaded with -dinclude-settings), renders the PDF pages to PNGs 1080 px tall
@@ -14,6 +14,10 @@ with pdftoppm (the same as Sandbells does), reads the MIDI, and writes
 Every note is checked against the 8 Sandbach bells (F5 down to F4).  Any
 other note is listed with its bar, beat and pitch, and nothing is written
 (exit 2) unless --allow is given.  Notes are never transposed or bent.
+
+The house rule is one page per tune (PAGE_LIMIT).  If the PDF has more
+pages, a warning names the tune and the page count, and nothing is written
+(exit 3) unless --pages-ok is given.
 
 No \\midi block in the tune: a MIDI file is made from the printed notes at
 --tempo (repeats then play once, as printed).
@@ -55,7 +59,9 @@ PDFTOPPM_TIMEOUT_S = 120
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 PNG_IHDR_SIZE_AT = 16                            # width, height follow the IHDR tag
 EXIT_OUT_OF_SET = 2
+EXIT_TOO_MANY_PAGES = 3
 EXIT_FAILED = 1
+PAGE_LIMIT = 1                               # house rule: one page per tune
 REPORT_MAX_LINES = 40                            # out-of-set notes listed one by one
 OVERLAY_DOT_RADIUS_PX = 9
 OVERLAY_HEAD_OUTLINE_PX = 2
@@ -186,6 +192,8 @@ def main(argv=None):
     ap.add_argument("--title", help="menu title (default: the .ly header title)")
     ap.add_argument("--allow", action="store_true",
                     help="build even if some notes are not on the 8 bells")
+    ap.add_argument("--pages-ok", action="store_true",
+                    help="build even if the PDF has more than PAGE_LIMIT pages")
     ap.add_argument("--overlay", action="store_true",
                     help="also draw the note map over the pages (overlay/, needs Pillow)")
     ap.add_argument("--tempo", type=float, default=DEFAULT_TEMPO_BPM,
@@ -244,6 +252,18 @@ def main(argv=None):
                      "to build anyway" % len(problems), EXIT_OUT_OF_SET)
         else:
             print("all notes are on the 8 bells")
+
+        n_pages = len(pages)
+        if n_pages > PAGE_LIMIT:
+            print("%s is %d pages.  Each tune should fit on one page, "
+                  "so it can be read on the stand." % (title, n_pages),
+                  file=sys.stderr)
+            if not args.pages_ok:
+                fail("%s is %d pages; the limit is %d.  Rearrange the layout, "
+                     "or use --pages-ok if this tune genuinely needs more than "
+                     "one page." % (title, n_pages, PAGE_LIMIT),
+                     EXIT_TOO_MANY_PAGES)
+            print("building anyway (--pages-ok)")
 
         bundle = out_root / slug
         if bundle.exists():

@@ -5,6 +5,7 @@ Runs on the desk Pi (LilyPond 2.24, poppler-utils), not on the kiosk.
     tools/chimes/chime-build ~/Documents/Sandbells-docs/Chimes/boars-head-carol.ly -o ~/chime-bundles
     tools/chimes/chime-build TUNE.ly -o OUT --overlay      # also draw the note map on the pages
     tools/chimes/chime-build TUNE.ly -o OUT --allow        # build even with notes off the bells
+    tools/chimes/chime-build TUNE.ly -o OUT --pages-ok     # build even if the PDF is more than one page
 
 Output: `OUT/<slug>/` (tune.json, score.pdf, tune.midi, notemap.json,
 pages/page-NNN.png, overlay/ with --overlay) and `OUT/<slug>.chime.zip`.
@@ -30,3 +31,7 @@ On sandbells: `manage.py chime_load <slug>.chime.zip`.
   (bells 1-8, `BELLS_8` in `changes/bells/chime_notemap.py`).  Anything else is
   listed with bar, beat and pitch and nothing is written (exit 2) unless
   `--allow`.  Notes are never transposed or bent.
+* **One-page check (strict):** a tune should be one page (`PAGE_LIMIT` in
+  `chime-build`), so it can be read on the stand.  If the PDF has more pages
+  the tune and the page count are printed, and nothing is written (exit 3)
+  unless `--pages-ok` is given.
