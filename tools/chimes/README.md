@@ -10,6 +10,11 @@ Output: `OUT/<slug>/` (tune.json, score.pdf, tune.midi, notemap.json,
 pages/page-NNN.png, overlay/ with --overlay) and `OUT/<slug>.chime.zip`.
 On sandbells: `manage.py chime_load <slug>.chime.zip`.
 
+* A tune colours its note heads by including `bell-colours.ily` (the same
+  eight colours as the front page, `BELL_COLOURS` in
+  `changes/bells/static/js/bell_band.js`, by bell number so F5 and F4 differ).
+  `chime-build` adds this folder to LilyPond's include path.  For Frescobaldi,
+  copy `bell-colours.ily` next to the tune.
 * The .ly is not edited.  `chime-notemap.ily` is loaded with
   `lilypond -dinclude-settings=...`: an engraver in every Voice records each
   note head's moment, bar, beat, pitch and tie, and the PostScript backend's

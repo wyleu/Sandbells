@@ -88,7 +88,8 @@ def png_size(path):
 def run_lilypond(lilypond, ly, work):
     out = work / ly.stem
     env = dict(os.environ, CHIME_NOTEMAP_OUT=str(work / "notemap.tsv"))
-    cmd = [lilypond, "-dinclude-settings=%s" % NOTEMAP_ILY, "-I", str(ly.parent),
+    cmd = [lilypond, "-dinclude-settings=%s" % NOTEMAP_ILY,
+           "-I", str(HERE), "-I", str(ly.parent),
            "-o", str(out), str(ly)]
     print("running: " + " ".join(cmd))
     try:
