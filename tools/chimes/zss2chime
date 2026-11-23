@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""zss2chime: one Zynthian .zss snapshot -> one coloured house-style chime .ly
+(all sequences joined in snapshot order) -> chime-build bundle.
+
+  zss2chime SNAP.zss -o OUTDIR [--title "Little Donkey"] [--slug little-donkey]
+            [--order 0,32,64,96,128] [--tempo 70] [--raw] [--one-page|--no-one-page] [--no-build]
+            [--chime-build PATH] [--lilypond-bin DIR]
+
+Order: sequences that hold notes, in snapshot order (scene, phrase/bank, seq).
+--order lists the sequence numbers shown by --list (repeats allowed).
+Python 3 standard library only.
+"""
+import argparse, os, re, subprocess, sys
+from fractions import Fraction as F
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import zss2ly as z
+
+
+def seq_len(seq, notes, patns):
+    """Length in beats: end of last placed pattern (so trailing rests count)."""
+    end = F(0)
+    for t in seq['tracks']:
+        q = t.get('ppqn_guess') or 24
+        for pos, pid in t['patns'].items():
+            p = patns.get(pid)
+            if p: end = max(end, F(pos, q) + p['beats'])
+    for st, du, *_ in notes: end = max(end, st + du)
+    return end
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('zss'); ap.add_argument('-o', default='.')
+    ap.add_argument('--title'); ap.add_argument('--slug')
+    ap.add_argument('--order', help='comma list of sequence numbers')
+    ap.add_argument('--tempo', type=float, help='override snapshot tempo')
+    ap.add_argument('--list', action='store_true', help='list sequences and stop')
+    ap.add_argument('--raw', action='store_true', help='keep the data note lengths (no rhythm filling)')
+    ap.add_argument('--one-page', dest='one_page', action='store_true', default=True,
+                    help='fit the sheet on one A4 landscape page at staff size 48 (house default, as Chirpy Chirpy)')
+    ap.add_argument('--no-one-page', dest='one_page', action='store_false',
+                    help='allow the sheet to run onto further pages')
+    ap.add_argument('--no-build', action='store_true')
+    ap.add_argument('--chime-build', default=os.environ.get('CHIME_BUILD') or str(Path(__file__).resolve().with_name('chime-build')))
+    ap.add_argument('--lilypond-bin', help='dir put first on PATH for chime-build')
+    a = ap.parse_args()
+    snap, st = z.load(a.zss)
+    stem = Path(a.zss).stem
+    title = a.title or stem
+    slug = a.slug or re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+    have = {}
+    for i, s in enumerate(st['seqs']):
+        n = z.seq_notes(s, st['patns'])
+        if n: have[i] = (s, n)
+    for i, (s, n) in have.items():
+        bells = ' '.join('/'.join(str(z.BELLS.get(x[2], z.nname(x[2]))) for x in n if x[0] == t)
+                         for t in sorted({x[0] for x in n}))
+        print(f'seq {i:4}  {s["where"]} "{s["name"]}"  {len(n)} notes: {bells}')
+    if a.list: return
+    order = [int(x) for x in a.order.split(',')] if a.order else list(have)
+    for i in order:
+        if i not in have: sys.exit(f'--order: sequence {i} has no notes (see --list)')
+    first = have[order[0]][0]
+    tempo = a.tempo or first['tempo'] or st['tempo'] or 100
+    bpb = first['bpb'] or st['bpb'] or 4
+    allnotes, at, ends = [], F(0), []
+    for i in order:
+        s, n = have[i]
+        allnotes += [(t + at, *rest) for t, *rest in n]
+        at += seq_len(s, n, st['patns']); ends.append(at)
+    out = Path(a.o); out.mkdir(parents=True, exist_ok=True)
+    ly = out / f'{slug}.ly'
+    bad = z.write_ly(ly, title, sorted(allnotes), tempo, bpb,
+                     fill=not a.raw, ends=ends, one_page=a.one_page,
+                     note=f'Joined from {Path(a.zss).name}, sequences {",".join(map(str, order))}.')
+    off = sorted({z.nname(x[2]) for x in allnotes if x[2] not in z.BELLS})
+    print(f'bell colours: {z.load_bell_colours()[1]}')
+    print(f'wrote {ly}: {len(allnotes)} notes, {float(at):g} beats, tempo {tempo:g}, {bpb}/4, order {order}, one_page={a.one_page}')
+    if bad: print(f'!! durations not expressible at beats {bad}')
+    if off: print(f'!! notes off the 8 bells: {off}')
+    if a.no_build: return
+    env = dict(os.environ)
+    if a.lilypond_bin: env['PATH'] = a.lilypond_bin + os.pathsep + env['PATH']
+    r = subprocess.run([a.chime_build, str(ly), '-o', str(out)], env=env)
+    sys.exit(r.returncode)
+
+
+if __name__ == '__main__':
+    main()
